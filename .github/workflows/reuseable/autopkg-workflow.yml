@@ -103,7 +103,12 @@ jobs:
           echo "Setting up environment for AutoPkg..."
           # Create Munki repo directory if specified
           mkdir -p ${{ inputs.munki_repo_path }}
-      
+          
+      - name: Verify Git installation
+        run: |
+          git --version
+          which git
+    
       - name: Install AutoPkg
         id: install-autopkg
         run: |
