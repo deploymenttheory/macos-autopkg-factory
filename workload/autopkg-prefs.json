@@ -1,15 +1,29 @@
 {
   "CACHE_DIR": "~/Library/AutoPkg/Cache",
   "MUNKI_REPO": "/Volumes/munki_repo",
-  "RECIPE_OVERRIDE_DIRS": [
-    "~/Library/AutoPkg/RecipeOverrides"
-  ],
   "RECIPE_REPO_DIR": "~/Library/AutoPkg/RecipeRepos",
+  
   "RECIPE_SEARCH_DIRS": [
     ".",
     "~/Library/AutoPkg/Recipes",
     "/Library/AutoPkg/Recipes"
   ],
+  
+  "RECIPE_OVERRIDE_DIRS": [
+    "~/Library/AutoPkg/RecipeOverrides"
+  ],
+  
+  "GIT_PATH": "/usr/local/bin/git",
+  
   "GITHUB_TOKEN_PATH": "~/.autopkg_gh_token",
-  "FAIL_RECIPES_WITHOUT_TRUST_INFO": false
+  
+  "FAIL_RECIPES_WITHOUT_TRUST_INFO": false,
+  
+  "JSS_URL": "https://jamf.example.com:8443",
+  "API_USERNAME": "apiuser",
+  "API_PASSWORD": "apipassword",
+  
+  "FW_SERVER_URL": "https://filewave.example.com:20443",
+  
+  "VPPIMPORTER_COUNTRY": "US"
 }

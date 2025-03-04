@@ -32,6 +32,10 @@ jobs:
       # Enable external preferences file
       use_pref_file: true
       pref_file_path: /tmp/autopkg_preferences.plist
+      # Additional preference settings
+      cache_dir: /custom/autopkg/cache
+      github_token_path: ~/.autopkg_gh_token
+      fail_recipes_without_trust_info: true
 
   # Do something with the results
   process-results:
