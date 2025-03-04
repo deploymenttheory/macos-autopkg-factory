@@ -1,0 +1,231 @@
+name: Reusable AutoPkg Workflow
+
+# Define this as a reusable workflow
+on:
+  workflow_call:
+    inputs:
+      recipe_name:
+        description: 'Recipe to run (leave empty to just list recipes)'
+        required: false
+        type: string
+        default: ''
+      munki_repo_path:
+        description: 'Path to Munki repo'
+        required: false
+        type: string
+        default: '/tmp/munki_repo'
+      recipe_repos:
+        description: 'Additional recipe repositories to add (comma-separated)'
+        required: false
+        type: string
+        default: ''
+      upload_results:
+        description: 'Whether to upload results as artifacts'
+        required: false
+        type: boolean
+        default: true
+      use_pref_file:
+        description: 'Whether to use an external preferences file'
+        required: false
+        type: boolean
+        default: false
+      pref_file_path:
+        description: 'Path to the external preferences file (plist or JSON)'
+        required: false
+        type: string
+        default: '/tmp/autopkg_prefs.plist'
+      pref_file_content:
+        description: 'Content for the preferences file (base64 encoded)'
+        required: false
+        type: string
+        default: ''
+      use_beta:
+        description: 'Use beta version of AutoPkg'
+        required: false
+        type: boolean
+        default: false
+      force_update:
+        description: 'Force update of AutoPkg even if already installed'
+        required: false
+        type: boolean
+        default: false
+      fail_recipes:
+        description: 'Fail if recipes are not verified'
+        required: false
+        type: boolean
+        default: true
+      github_token:
+        description: 'GitHub token for API rate limiting'
+        required: false
+        type: string
+        default: ''
+      private_repo_path:
+        description: 'Path to private recipe repository'
+        required: false
+        type: string
+        default: ''
+      private_repo_url:
+        description: 'URL of private recipe repository'
+        required: false
+        type: string
+        default: ''
+      repo_list_path:
+        description: 'Path to file containing list of repos to add'
+        required: false
+        type: string
+        default: ''
+      recipe_list_path:
+        description: 'Path to file containing list of recipes'
+        required: false
+        type: string
+        default: ''
+      jss_url:
+        description: 'URL of the Jamf server'
+        required: false
+        type: string
+        default: ''
+      jss_user:
+        description: 'Jamf API username'
+        required: false
+        type: string
+        default: ''
+      jss_pass:
+        description: 'Jamf API password'
+        required: false
+        type: string
+        default: ''
+      smb_url:
+        description: 'SMB URL for distribution point'
+        required: false
+        type: string
+        default: ''
+      smb_user:
+        description: 'SMB username'
+        required: false
+        type: string
+        default: ''
+      smb_pass:
+        description: 'SMB password'
+        required: false
+        type: string
+        default: ''
+      use_jamf_uploader:
+        description: 'Use jamf-upload repo instead of grahampugh-recipes'
+        required: false
+        type: boolean
+        default: false
+      jcds2_mode:
+        description: 'Set to JCDS2 mode'
+        required: false
+        type: boolean
+        default: false
+      slack_webhook:
+        description: 'Slack webhook URL'
+        required: false
+        type: string
+        default: ''
+      slack_username:
+        description: 'Slack display name'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      autopkg_version:
+        description: 'Installed AutoPkg version'
+        value: ${{ jobs.run-autopkg.outputs.autopkg_version }}
+      recipes_added:
+        description: 'Number of recipe repositories added'
+        value: ${{ jobs.run-autopkg.outputs.recipes_added }}
+
+jobs:
+  run-autopkg:
+    name: Run AutoPkg
+    runs-on: macos-latest
+    outputs:
+      autopkg_version: ${{ steps.run-go-components.outputs.autopkg_version }}
+      recipes_added: ${{ steps.run-go-components.outputs.recipes_added }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Get AutoPkg Go Components
+        run: |
+          mkdir -p ${{ github.workspace }}/autopkg-go
+          cd ${{ github.workspace }}/autopkg-go
+          
+          # Copy Go files from the repository
+          # Assuming components and main are in the .github/autopkg-go directory
+          cp -r ${{ github.workspace }}/.github/autopkg-go/* .
+          
+          # Initialize Go module
+          go mod init github.com/${{ github.repository_owner }}/autopkg-go
+          go mod tidy
+      
+      - name: Run AutoPkg Go Components
+        id: run-go-components
+        working-directory: ${{ github.workspace }}/autopkg-go
+        run: |
+          # Build the Go application
+          go build -o autopkg-runner
+          
+          # Run the Go application with appropriate flags
+          ./autopkg-runner \
+            --force ${{ inputs.force_update }} \
+            --beta ${{ inputs.use_beta }} \
+            --fail ${{ inputs.fail_recipes }} \
+            --prefs "${{ inputs.pref_file_path }}" \
+            --replace-prefs ${{ inputs.use_pref_file }} \
+            --github-token "${{ inputs.github_token }}" \
+            --recipe-repos "${{ inputs.recipe_repos }}" \
+            --recipe-list "${{ inputs.recipe_list_path }}" \
+            --repo-list "${{ inputs.repo_list_path }}" \
+            --private-repo "${{ inputs.private_repo_path }}" \
+            --private-repo-url "${{ inputs.private_repo_url }}" \
+            --jss-url "${{ inputs.jss_url }}" \
+            --jss-user "${{ inputs.jss_user }}" \
+            --jss-pass "${{ inputs.jss_pass }}" \
+            --smb-url "${{ inputs.smb_url }}" \
+            --smb-user "${{ inputs.smb_user }}" \
+            --smb-pass "${{ inputs.smb_pass }}" \
+            --jamf-uploader-repo ${{ inputs.use_jamf_uploader }} \
+            --jcds2-mode ${{ inputs.jcds2_mode }} \
+            --slack-webhook "${{ inputs.slack_webhook }}" \
+            --slack-user "${{ inputs.slack_username }}"
+          
+          # Extract outputs
+          AUTOPKG_VERSION=$(autopkg version)
+          echo "autopkg_version=${AUTOPKG_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Count recipe repos - this is an estimate based on input params
+          REPOS_COUNT=1  # Start with 1 for the core recipes repo
+          if [ -n "${{ inputs.recipe_repos }}" ]; then
+            # Count commas in recipe_repos string and add 1
+            EXTRA_REPOS=$(echo "${{ inputs.recipe_repos }}" | tr -cd ',' | wc -c)
+            REPOS_COUNT=$((REPOS_COUNT + EXTRA_REPOS + 1))
+          fi
+          
+          # Add repos from repo list file if specified
+          if [ -n "${{ inputs.repo_list_path }}" ] && [ -f "${{ inputs.repo_list_path }}" ]; then
+            REPO_LIST_COUNT=$(wc -l < "${{ inputs.repo_list_path }}" | tr -d '[:space:]')
+            REPOS_COUNT=$((REPOS_COUNT + REPO_LIST_COUNT))
+          fi
+          
+          echo "recipes_added=${REPOS_COUNT}" >> $GITHUB_OUTPUT
+      
+      - name: Run Recipe (if specified)
+        if: ${{ inputs.recipe_name != '' }}
+        run: |
+          autopkg run "${{ inputs.recipe_name }}" --prefs "${{ inputs.pref_file_path }}"
+      
+      - name: Upload results
+        if: ${{ inputs.recipe_name != '' && inputs.upload_results == true }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: autopkg-results
+          path: ~/Library/AutoPkg/Cache/
+          retention-days: 5
