@@ -1,0 +1,220 @@
+name: Reusable AutoPkg Workflow
+
+# Define this as a reusable workflow
+on:
+  workflow_call:
+    inputs:
+      recipe_name:
+        description: 'Recipe to run (leave empty to just list recipes)'
+        required: false
+        type: string
+        default: ''
+      munki_repo_path:
+        description: 'Path to Munki repo'
+        required: false
+        type: string
+        default: '/tmp/munki_repo'
+      recipe_repos:
+        description: 'Additional recipe repositories to add (comma-separated)'
+        required: false
+        type: string
+        default: ''
+      upload_results:
+        description: 'Whether to upload results as artifacts'
+        required: false
+        type: boolean
+        default: true
+      use_pref_file:
+        description: 'Whether to use an external preferences file'
+        required: false
+        type: boolean
+        default: false
+      pref_file_path:
+        description: 'Path to the external preferences file (plist or JSON)'
+        required: false
+        type: string
+        default: '/tmp/autopkg_prefs.plist'
+      pref_file_content:
+        description: 'Content for the preferences file (base64 encoded)'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      autopkg_version:
+        description: 'Installed AutoPkg version'
+        value: ${{ jobs.run-autopkg.outputs.autopkg_version }}
+      recipes_added:
+        description: 'Number of recipe repositories added'
+        value: ${{ jobs.run-autopkg.outputs.recipes_added }}
+
+jobs:
+  run-autopkg:
+    name: Run AutoPkg
+    runs-on: macos-latest
+    outputs:
+      autopkg_version: ${{ steps.install-autopkg.outputs.version }}
+      recipes_added: ${{ steps.add-repos.outputs.repos_count }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up environment
+        run: |
+          echo "Setting up environment for AutoPkg..."
+          # Create Munki repo directory if specified
+          mkdir -p ${{ inputs.munki_repo_path }}
+      
+      - name: Install AutoPkg
+        id: install-autopkg
+        run: |
+          echo "Downloading latest AutoPkg release..."
+          # Get latest release URL
+          LATEST_RELEASE_URL=$(curl -s https://api.github.com/repos/autopkg/autopkg/releases/latest | grep "browser_download_url.*pkg" | cut -d '"' -f 4)
+          echo "Latest AutoPkg release URL: $LATEST_RELEASE_URL"
+          
+          # Download the package
+          curl -L -o /tmp/AutoPkg.pkg "$LATEST_RELEASE_URL"
+          
+          # Install the package
+          sudo /usr/sbin/installer -pkg /tmp/AutoPkg.pkg -target /
+          
+          # Verify installation and capture version
+          VERSION=$(autopkg version)
+          echo "AutoPkg $VERSION installed successfully"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Configure preferences via plist file
+        if: ${{ inputs.use_pref_file == true }}
+        run: |
+          echo "Setting up external preferences file..."
+          
+          # If pref_file_content is provided, decode and write it to the file
+          if [ -n "${{ inputs.pref_file_content }}" ]; then
+            echo "Creating preferences file from provided content"
+            echo "${{ inputs.pref_file_content }}" | base64 --decode > ${{ inputs.pref_file_path }}
+          else
+            # Create a basic preferences file if none exists
+            if [ ! -f "${{ inputs.pref_file_path }}" ]; then
+              echo "Creating new preferences file at ${{ inputs.pref_file_path }}"
+              
+              # Determine file format based on extension
+              if [[ "${{ inputs.pref_file_path }}" == *.json ]]; then
+                # Create JSON preferences file
+                cat > ${{ inputs.pref_file_path }} << EOF
+                {
+                  "MUNKI_REPO": "${{ inputs.munki_repo_path }}",
+                  "CACHE_DIR": "~/Library/AutoPkg/Cache",
+                  "RECIPE_SEARCH_DIRS": [".", "~/Library/AutoPkg/Recipes", "/Library/AutoPkg/Recipes"],
+                  "RECIPE_OVERRIDE_DIRS": ["~/Library/AutoPkg/RecipeOverrides"],
+                  "RECIPE_REPO_DIR": "~/Library/AutoPkg/RecipeRepos"
+                }
+                EOF
+              else
+                # Create Plist preferences file
+                /usr/libexec/PlistBuddy -c "Add :MUNKI_REPO string ${{ inputs.munki_repo_path }}" ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :CACHE_DIR string ~/Library/AutoPkg/Cache" ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :RECIPE_SEARCH_DIRS array" ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :RECIPE_SEARCH_DIRS:0 string ." ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :RECIPE_SEARCH_DIRS:1 string ~/Library/AutoPkg/Recipes" ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :RECIPE_SEARCH_DIRS:2 string /Library/AutoPkg/Recipes" ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :RECIPE_OVERRIDE_DIRS array" ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :RECIPE_OVERRIDE_DIRS:0 string ~/Library/AutoPkg/RecipeOverrides" ${{ inputs.pref_file_path }}
+                /usr/libexec/PlistBuddy -c "Add :RECIPE_REPO_DIR string ~/Library/AutoPkg/RecipeRepos" ${{ inputs.pref_file_path }}
+              fi
+            else
+              echo "Using existing preferences file at ${{ inputs.pref_file_path }}"
+              
+              # Update MUNKI_REPO in the existing file
+              if [[ "${{ inputs.pref_file_path }}" == *.json ]]; then
+                # Update JSON file (requires jq)
+                brew install jq
+                TMP_FILE=$(mktemp)
+                jq '.MUNKI_REPO = "${{ inputs.munki_repo_path }}"' ${{ inputs.pref_file_path }} > $TMP_FILE
+                mv $TMP_FILE ${{ inputs.pref_file_path }}
+              else
+                # Update plist file
+                if /usr/libexec/PlistBuddy -c "Print :MUNKI_REPO" ${{ inputs.pref_file_path }} &>/dev/null; then
+                  /usr/libexec/PlistBuddy -c "Set :MUNKI_REPO ${{ inputs.munki_repo_path }}" ${{ inputs.pref_file_path }}
+                else
+                  /usr/libexec/PlistBuddy -c "Add :MUNKI_REPO string ${{ inputs.munki_repo_path }}" ${{ inputs.pref_file_path }}
+                fi
+              fi
+            fi
+          fi
+          
+          echo "Preferences file ready at ${{ inputs.pref_file_path }}"
+          cat ${{ inputs.pref_file_path }}
+          
+          # Clear existing preferences to ensure we only use the file
+          defaults delete com.github.autopkg || true
+          
+          # Set PREFS_PATH environment variable for subsequent steps
+          echo "PREFS_PATH=${{ inputs.pref_file_path }}" >> $GITHUB_ENV
+      
+      - name: Configure Munki preferences via defaults
+        if: ${{ inputs.use_pref_file != true }}
+        run: |
+          # Set Munki repo path for AutoPkg using defaults command
+          defaults write com.github.autopkg MUNKI_REPO ${{ inputs.munki_repo_path }}
+          echo "MUNKI_REPO set to ${{ inputs.munki_repo_path }}"
+      
+      - name: Add recipe repositories
+        id: add-repos
+        run: |
+          # Add the core AutoPkg recipe repository
+          echo "Adding core AutoPkg recipe repository..."
+          
+          # Check if we're using external prefs file
+          if [ -n "$PREFS_PATH" ]; then
+            PREFS_ARG="--prefs $PREFS_PATH"
+            echo "Using external preferences file: $PREFS_PATH"
+            autopkg repo-add recipes $PREFS_ARG
+          else
+            autopkg repo-add recipes
+          fi
+          
+          # Initialize repo counter
+          REPO_COUNT=1
+          
+          # Add additional repositories if specified
+          if [ -n "${{ inputs.recipe_repos }}" ]; then
+            IFS=',' read -ra REPOS <<< "${{ inputs.recipe_repos }}"
+            for REPO in "${REPOS[@]}"; do
+              echo "Adding recipe repository: $REPO"
+              if [ -n "$PREFS_ARG" ]; then
+                autopkg repo-add "$REPO" $PREFS_ARG
+              else
+                autopkg repo-add "$REPO"
+              fi
+              REPO_COUNT=$((REPO_COUNT+1))
+            done
+          fi
+          
+          echo "repos_count=$REPO_COUNT" >> $GITHUB_OUTPUT
+      
+      - name: List available recipes
+        run: |
+          echo "Available recipes:"
+          if [ -n "$PREFS_PATH" ]; then
+            autopkg list-recipes --prefs $PREFS_PATH
+          else
+            autopkg list-recipes
+          fi
+      
+      - name: Run specified recipe
+        if: ${{ inputs.recipe_name != '' }}
+        run: |
+          echo "Running recipe: ${{ inputs.recipe_name }}"
+          if [ -n "$PREFS_PATH" ]; then
+            autopkg run ${{ inputs.recipe_name }} --prefs $PREFS_PATH
+          else
+            autopkg run ${{ inputs.recipe_name }}
+          fi
+      
+      - name: Upload results
+        if: ${{ inputs.recipe_name != '' && inputs.upload_results == true }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: autopkg-results
+          path: ~/Library/AutoPkg/Cache/
+          retention-days: 5

@@ -1,0 +1,43 @@
+name: Run Firefox Package Build with Custom Prefs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-prefs-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up base64 encoded prefs content
+        id: prefs
+        run: |
+          # This is a base64 encoded version of a plist file with AutoPkg preferences
+          # In a real scenario, you might store this in a GitHub Secret or generate it dynamically
+          PREFS_CONTENT=$(cat << 'EOF' | base64
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CACHE_DIR</key>
+              <string>/custom/cache/location</string>
+              <key>MUNKI_REPO</key>
+              <string>/Volumes/munki_repo</string>
+              <key>GITHUB_TOKEN_PATH</key>
+              <string>~/.autopkg_gh_token</string>
+          </dict>
+          </plist>
+          EOF
+          )
+          
+          # Output the content for use in the next job
+          echo "content=$PREFS_CONTENT" >> $GITHUB_OUTPUT
+    outputs:
+      prefs_content: ${{ steps.prefs.outputs.content }}
+
+  run-autopkg:
+    needs: deploy-prefs-and-run
+    uses: ./.github/workflows/reuseable/autopkg-workflow.yml
+    with:
+      recipe_name: Firefox.pkg
+      use_pref_file: true
+      pref_file_path: /tmp/firefox_autopkg.plist
+      pref_file_content: ${{ needs.deploy-prefs-and-run.outputs.prefs_content }}
