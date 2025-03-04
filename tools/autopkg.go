@@ -1,214 +1,821 @@
 package autopkg
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 )
 
 // Config holds all the configuration options for AutoPkg operations
 type Config struct {
-	MunkiRepoPath   string
-	UsePrefsFile    bool
+	// Basic AutoPkg settings
+	ForceUpdate     bool
+	UseBeta         bool
+	FailRecipes     bool
 	PrefsFilePath   string
-	PrefsFileContent string
+	ReplacePrefs    bool
+	GitHubToken     string
+	
+	// Recipe and repo settings
 	RecipeRepos     []string
-	RecipeName      string
-	UploadResults   bool
+	RecipeLists     []string
+	RepoListPath    string
+	
+	// Private repo settings
+	PrivateRepoPath string
+	PrivateRepoURL  string
+	
+	// JamfUploader settings
+	JSSUrl          string
+	JSSUser         string
+	JSSPass         string
+	SMBUrl          string
+	SMBUser         string
+	SMBPass         string
+	UseJamfUploader bool
+	JCDS2Mode       bool
+	
+	// Slack settings
+	SlackWebhook    string
+	SlackUsername   string
 }
 
-// SetupEnvironment prepares the environment for AutoPkg
-func SetupEnvironment(config *Config) error {
-	fmt.Println("Setting up environment for AutoPkg...")
+// Logger wraps the log function
+func Logger(message string) {
+	cmd := exec.Command("/usr/bin/logger", "-t", "AutoPkg_Setup", message)
+	_ = cmd.Run()
+	fmt.Println(message)
+}
+
+// RootCheck ensures the script is not running as root
+func RootCheck() error {
+	if os.Geteuid() == 0 {
+		return fmt.Errorf("this script is NOT MEANT to run as root; please run without sudo")
+	}
+	return nil
+}
+
+// CheckCommandLineTools verifies Xcode command line tools are installed
+func CheckCommandLineTools() error {
+	// Check if command line tools are installed
+	cmd := exec.Command("xcode-select", "-p")
+	if err := cmd.Run(); err != nil {
+		return installCommandLineTools()
+	}
 	
-	// Create Munki repo directory if specified
-	if err := os.MkdirAll(config.MunkiRepoPath, 0755); err != nil {
-		return fmt.Errorf("failed to create Munki repo directory: %w", err)
+	// Verify git is working
+	gitCmd := exec.Command("git", "--version")
+	if err := gitCmd.Run(); err != nil {
+		return installCommandLineTools()
+	}
+	
+	Logger("Xcode Command Line Tools installed and functional")
+	return nil
+}
+
+// installCommandLineTools installs the Xcode command line tools
+func installCommandLineTools() error {
+	fmt.Println("Installing the command line tools...")
+	
+	// Using an external script for this, but could be implemented directly
+	cmd := exec.Command("zsh", "./XcodeCLTools-install.zsh")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to install Xcode command line tools: %w", err)
+	}
+	
+	// Verify installation worked
+	gitCmd := exec.Command("git", "--version")
+	if err := gitCmd.Run(); err != nil {
+		return fmt.Errorf("Xcode Command Line Tools failed to install: %w", err)
 	}
 	
 	return nil
 }
 
 // InstallAutoPkg downloads and installs the latest AutoPkg release
-func InstallAutoPkg() (string, error) {
+func InstallAutoPkg(config *Config) (string, error) {
+	autopkgPath := "/usr/local/bin/autopkg"
+	
+	// Only install if not present or forced update requested
+	if _, err := os.Stat(autopkgPath); !os.IsNotExist(err) && !config.ForceUpdate {
+		// Get current version
+		versionCmd := exec.Command(autopkgPath, "version")
+		versionOutput, err := versionCmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("failed to get AutoPkg version: %w", err)
+		}
+		version := strings.TrimSpace(string(versionOutput))
+		return version, nil
+	}
+	
 	fmt.Println("Downloading latest AutoPkg release...")
 	
-	// Get latest release URL
-	latestReleaseURL, err := getLatestAutoPkgReleaseURL()
-	if err != nil {
-		return "", fmt.Errorf("failed to get latest AutoPkg release URL: %w", err)
+	var releaseURL string
+	var err error
+	
+	// Get release URL based on config
+	if config.UseBeta {
+		releaseURL, err = getBetaAutoPkgReleaseURL()
+	} else {
+		releaseURL, err = getLatestAutoPkgReleaseURL()
 	}
-	fmt.Printf("Latest AutoPkg release URL: %s\n", latestReleaseURL)
+	
+	if err != nil {
+		return "", fmt.Errorf("failed to get AutoPkg release URL: %w", err)
+	}
+	fmt.Printf("AutoPkg release URL: %s\n", releaseURL)
 	
 	// Download the package
-	pkgPath := "/tmp/AutoPkg.pkg"
-	if err := downloadFile(latestReleaseURL, pkgPath); err != nil {
+	pkgPath := "/tmp/autopkg-latest.pkg"
+	if err := downloadFile(releaseURL, pkgPath); err != nil {
 		return "", fmt.Errorf("failed to download AutoPkg package: %w", err)
 	}
 	
 	// Install the package
-	cmd := exec.Command("sudo", "/usr/sbin/installer", "-pkg", pkgPath, "-target", "/")
+	cmd := exec.Command("sudo", "installer", "-pkg", pkgPath, "-target", "/")
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to install AutoPkg package: %w", err)
 	}
 	
 	// Verify installation and capture version
-	versionCmd := exec.Command("autopkg", "version")
+	versionCmd := exec.Command(autopkgPath, "version")
 	versionOutput, err := versionCmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get AutoPkg version: %w", err)
 	}
 	
 	version := strings.TrimSpace(string(versionOutput))
-	fmt.Printf("AutoPkg %s installed successfully\n", version)
+	Logger(fmt.Sprintf("AutoPkg %s Installed", version))
 	
 	return version, nil
 }
 
-// ConfigurePrefsFile sets up the external preferences file for AutoPkg
-func ConfigurePrefsFile(config *Config) (string, error) {
-	if !config.UsePrefsFile {
-		return "", nil
+// SetupPreferencesFile initializes or updates the AutoPkg preferences file
+func SetupPreferencesFile(config *Config) (string, error) {
+	// Determine preferences file location
+	if config.PrefsFilePath == "" {
+		currentUser, err := user.Current()
+		if err != nil {
+			return "", fmt.Errorf("failed to get current user: %w", err)
+		}
+		config.PrefsFilePath = filepath.Join(currentUser.HomeDir, "Library/Preferences/com.github.autopkg.plist")
 	}
 	
-	fmt.Println("Setting up external preferences file...")
+	// Remove existing prefs if requested
+	if config.ReplacePrefs {
+		if err := os.Remove(config.PrefsFilePath); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("Warning: failed to remove existing preferences file: %v\n", err)
+		}
+	}
 	
-	// If PrefsFileContent is provided, decode and write it to the file
-	if config.PrefsFileContent != "" {
-		fmt.Println("Creating preferences file from provided content")
-		decoded, err := base64.StdEncoding.DecodeString(config.PrefsFileContent)
+	// Set up Git path
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		return "", fmt.Errorf("git executable not found: %w", err)
+	}
+	
+	cmd := exec.Command("defaults", "write", config.PrefsFilePath, "GIT_PATH", gitPath)
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to set GIT_PATH: %w", err)
+	}
+	fmt.Printf("Wrote GIT_PATH %s to %s\n", gitPath, config.PrefsFilePath)
+	
+	// Set up GitHub token
+	if config.GitHubToken != "" {
+		currentUser, err := user.Current()
 		if err != nil {
-			return "", fmt.Errorf("failed to decode preferences file content: %w", err)
+			return "", fmt.Errorf("failed to get current user: %w", err)
 		}
 		
-		if err := os.WriteFile(config.PrefsFilePath, decoded, 0644); err != nil {
-			return "", fmt.Errorf("failed to write preferences file: %w", err)
+		tokenPath := filepath.Join(currentUser.HomeDir, "Library/AutoPkg/gh_token")
+		
+		// Create directory if it doesn't exist
+		tokenDir := filepath.Dir(tokenPath)
+		if err := os.MkdirAll(tokenDir, 0755); err != nil {
+			return "", fmt.Errorf("failed to create token directory: %w", err)
 		}
+		
+		// Write the token
+		if err := os.WriteFile(tokenPath, []byte(config.GitHubToken), 0600); err != nil {
+			return "", fmt.Errorf("failed to write GitHub token: %w", err)
+		}
+		fmt.Printf("Wrote GITHUB_TOKEN to %s\n", tokenPath)
+		
+		// Set the token path in preferences
+		cmd := exec.Command("defaults", "write", config.PrefsFilePath, "GITHUB_TOKEN_PATH", tokenPath)
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("failed to set GITHUB_TOKEN_PATH: %w", err)
+		}
+		fmt.Printf("Wrote GITHUB_TOKEN_PATH to %s\n", config.PrefsFilePath)
+	}
+	
+	// Configure FAIL_RECIPES_WITHOUT_TRUST_INFO
+	failValue := "true"
+	if !config.FailRecipes {
+		failValue = "false"
+	}
+	
+	cmd = exec.Command("defaults", "write", config.PrefsFilePath, "FAIL_RECIPES_WITHOUT_TRUST_INFO", "-bool", failValue)
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to set FAIL_RECIPES_WITHOUT_TRUST_INFO: %w", err)
+	}
+	fmt.Printf("Wrote FAIL_RECIPES_WITHOUT_TRUST_INFO %s to %s\n", failValue, config.PrefsFilePath)
+	
+	// Configure JCDS2 mode
+	if config.JCDS2Mode {
+		cmd = exec.Command("defaults", "write", config.PrefsFilePath, "jcds2_mode", "-bool", "true")
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("failed to set jcds2_mode: %w", err)
+		}
+		fmt.Printf("Wrote jcds2_mode true to %s\n", config.PrefsFilePath)
 	} else {
-		// Check if the preferences file already exists
-		if _, err := os.Stat(config.PrefsFilePath); os.IsNotExist(err) {
-			fmt.Printf("Creating new preferences file at %s\n", config.PrefsFilePath)
-			
-			// Determine file format based on extension
-			ext := filepath.Ext(config.PrefsFilePath)
-			if ext == ".json" {
-				// Create JSON preferences file
-				prefs := map[string]interface{}{
-					"MUNKI_REPO":          config.MunkiRepoPath,
-					"CACHE_DIR":           "~/Library/AutoPkg/Cache",
-					"RECIPE_SEARCH_DIRS":  []string{".", "~/Library/AutoPkg/Recipes", "/Library/AutoPkg/Recipes"},
-					"RECIPE_OVERRIDE_DIRS": []string{"~/Library/AutoPkg/RecipeOverrides"},
-					"RECIPE_REPO_DIR":     "~/Library/AutoPkg/RecipeRepos",
-				}
-				
-				jsonData, err := json.MarshalIndent(prefs, "", "  ")
-				if err != nil {
-					return "", fmt.Errorf("failed to marshal JSON preferences: %w", err)
-				}
-				
-				if err := os.WriteFile(config.PrefsFilePath, jsonData, 0644); err != nil {
-					return "", fmt.Errorf("failed to write JSON preferences file: %w", err)
-				}
-			} else {
-				// Create Plist preferences file using PlistBuddy
-				if err := createPlistPrefs(config.PrefsFilePath, config.MunkiRepoPath); err != nil {
-					return "", fmt.Errorf("failed to create plist preferences: %w", err)
-				}
-			}
-		} else {
-			fmt.Printf("Using existing preferences file at %s\n", config.PrefsFilePath)
-			
-			// Update MUNKI_REPO in the existing file
-			ext := filepath.Ext(config.PrefsFilePath)
-			if ext == ".json" {
-				// Update JSON file (requires jq)
-				if err := updateJSONPrefs(config.PrefsFilePath, config.MunkiRepoPath); err != nil {
-					return "", fmt.Errorf("failed to update JSON preferences: %w", err)
-				}
-			} else {
-				// Update plist file
-				if err := updatePlistPrefs(config.PrefsFilePath, config.MunkiRepoPath); err != nil {
-					return "", fmt.Errorf("failed to update plist preferences: %w", err)
-				}
-			}
+		// Check if jcds2_mode exists and delete it if it does
+		checkCmd := exec.Command("defaults", "read", config.PrefsFilePath, "jcds2_mode")
+		if checkCmd.Run() == nil {
+			cmd = exec.Command("defaults", "delete", config.PrefsFilePath, "jcds2_mode")
+			_ = cmd.Run()
 		}
 	}
 	
-	fmt.Printf("Preferences file ready at %s\n", config.PrefsFilePath)
+	// Ensure RECIPE_SEARCH_DIRS exists
+	cmd = exec.Command("defaults", "read", config.PrefsFilePath, "RECIPE_SEARCH_DIRS")
+	if cmd.Run() != nil {
+		cmd = exec.Command("defaults", "write", config.PrefsFilePath, "RECIPE_SEARCH_DIRS", "-array")
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("failed to create RECIPE_SEARCH_DIRS: %w", err)
+		}
+	}
 	
-	// Clear existing preferences to ensure we only use the file
-	clearCmd := exec.Command("defaults", "delete", "com.github.autopkg")
-	_ = clearCmd.Run() // Ignore errors if the domain doesn't exist
+	// Ensure RECIPE_REPOS exists
+	cmd = exec.Command("defaults", "read", config.PrefsFilePath, "RECIPE_REPOS")
+	if cmd.Run() != nil {
+		cmd = exec.Command("defaults", "write", config.PrefsFilePath, "RECIPE_REPOS", "-dict")
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("failed to create RECIPE_REPOS: %w", err)
+		}
+	}
 	
 	return config.PrefsFilePath, nil
 }
 
-// ConfigureMunkiPreferences sets Munki preferences directly via defaults command
-func ConfigureMunkiPreferences(config *Config) error {
-	if config.UsePrefsFile {
+// ConfigureSlack sets up Slack integration
+func ConfigureSlack(config *Config, prefsPath string) error {
+	if config.SlackUsername == "" && config.SlackWebhook == "" {
 		return nil
 	}
 	
-	cmd := exec.Command("defaults", "write", "com.github.autopkg", "MUNKI_REPO", config.MunkiRepoPath)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to set MUNKI_REPO preference: %w", err)
+	if config.SlackUsername != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "SLACK_USERNAME", config.SlackUsername)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set SLACK_USERNAME: %w", err)
+		}
+		fmt.Printf("Wrote SLACK_USERNAME %s to %s\n", config.SlackUsername, prefsPath)
 	}
 	
-	fmt.Printf("MUNKI_REPO set to %s\n", config.MunkiRepoPath)
+	if config.SlackWebhook != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "SLACK_WEBHOOK", config.SlackWebhook)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set SLACK_WEBHOOK: %w", err)
+		}
+		fmt.Printf("Wrote SLACK_WEBHOOK %s to %s\n", config.SlackWebhook, prefsPath)
+	}
+	
 	return nil
 }
 
-// AddRecipeRepositories adds AutoPkg recipe repositories
-func AddRecipeRepositories(config *Config, prefsPath string) (int, error) {
-	fmt.Println("Adding core AutoPkg recipe repository...")
-	
-	// Add the core recipes repository
-	var args []string
-	if prefsPath != "" {
-		args = []string{"repo-add", "recipes", "--prefs", prefsPath}
-		fmt.Printf("Using external preferences file: %s\n", prefsPath)
-	} else {
-		args = []string{"repo-add", "recipes"}
+// SetupPrivateRepo adds a private AutoPkg repo
+func SetupPrivateRepo(config *Config, prefsPath string) error {
+	if config.PrivateRepoPath == "" || config.PrivateRepoURL == "" {
+		return nil
 	}
 	
-	cmd := exec.Command("autopkg", args...)
+	// Clone the repo if it doesn't exist
+	if _, err := os.Stat(config.PrivateRepoPath); os.IsNotExist(err) {
+		cmd := exec.Command("git", "clone", config.PrivateRepoURL, config.PrivateRepoPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to clone private repo: %w", err)
+		}
+	}
+	
+	// Check if RECIPE_REPOS exists in prefs
+	cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_REPOS", prefsPath)
 	if err := cmd.Run(); err != nil {
-		return 0, fmt.Errorf("failed to add core recipe repository: %w", err)
+		// Need to create it
+		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Add :RECIPE_REPOS dict", prefsPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to create RECIPE_REPOS: %w", err)
+		}
 	}
 	
-	// Initialize repo counter
-	repoCount := 1
+	// Check if the private repo is already in RECIPE_REPOS
+	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Print :RECIPE_REPOS:%s", config.PrivateRepoPath), prefsPath)
+	if err := cmd.Run(); err != nil {
+		// Need to add it
+		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_REPOS:%s dict", config.PrivateRepoPath), prefsPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to add private repo to RECIPE_REPOS: %w", err)
+		}
+		
+		cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_REPOS:%s:URL string %s", config.PrivateRepoPath, config.PrivateRepoURL), prefsPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to add private repo URL: %w", err)
+		}
+	}
 	
-	// Add additional repositories if specified
-	for _, repo := range config.RecipeRepos {
+	// Check if RECIPE_SEARCH_DIRS exists
+	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_SEARCH_DIRS", prefsPath)
+	if err := cmd.Run(); err != nil {
+		// Need to create it
+		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Add :RECIPE_SEARCH_DIRS array", prefsPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to create RECIPE_SEARCH_DIRS: %w", err)
+		}
+	}
+	
+	// Get current RECIPE_SEARCH_DIRS to check if private repo is already there
+	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_SEARCH_DIRS", prefsPath)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to read RECIPE_SEARCH_DIRS: %w", err)
+	}
+	
+	// Check if private repo is already in RECIPE_SEARCH_DIRS
+	if !strings.Contains(string(output), config.PrivateRepoPath) {
+		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_SEARCH_DIRS: string '%s'", config.PrivateRepoPath), prefsPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to add private repo to RECIPE_SEARCH_DIRS: %w", err)
+		}
+	}
+	
+	Logger("Private AutoPkg Repo Configured")
+	return nil
+}
+
+// ConfigureJamfUploader sets up JamfUploader settings
+func ConfigureJamfUploader(config *Config, prefsPath string) error {
+	if config.JSSUrl == "" {
+		return nil
+	}
+	
+	// Set JSS URL
+	cmd := exec.Command("defaults", "write", prefsPath, "JSS_URL", config.JSSUrl)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to set JSS_URL: %w", err)
+	}
+	
+	// Set API username
+	if config.JSSUser != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "API_USERNAME", config.JSSUser)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set API_USERNAME: %w", err)
+		}
+	} else {
+		// Check if API_USERNAME already exists
+		cmd := exec.Command("defaults", "read", prefsPath, "API_USERNAME")
+		if err := cmd.Run(); err != nil {
+			// Prompt for API username
+			var username string
+			fmt.Print("API_USERNAME required. Please enter: ")
+			_, err := fmt.Scanln(&username)
+			if err != nil {
+				return fmt.Errorf("failed to read API_USERNAME: %w", err)
+			}
+			
+			cmd := exec.Command("defaults", "write", prefsPath, "API_USERNAME", username)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set API_USERNAME: %w", err)
+			}
+		}
+	}
+	
+	// Set API password
+	if config.JSSPass == "-" {
+		// Prompt for password
+		var password string
+		fmt.Print("API_PASSWORD required. Please enter: ")
+		_, err := fmt.Scanln(&password)
+		if err != nil {
+			return fmt.Errorf("failed to read API_PASSWORD: %w", err)
+		}
+		
+		cmd := exec.Command("defaults", "write", prefsPath, "API_PASSWORD", password)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set API_PASSWORD: %w", err)
+		}
+	} else if config.JSSPass != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "API_PASSWORD", config.JSSPass)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set API_PASSWORD: %w", err)
+		}
+	} else {
+		// Check if API_PASSWORD already exists
+		cmd := exec.Command("defaults", "read", prefsPath, "API_PASSWORD")
+		if err := cmd.Run(); err != nil {
+			// Prompt for API password
+			var password string
+			fmt.Print("API_PASSWORD required. Please enter: ")
+			_, err := fmt.Scanln(&password)
+			if err != nil {
+				return fmt.Errorf("failed to read API_PASSWORD: %w", err)
+			}
+			
+			cmd := exec.Command("defaults", "write", prefsPath, "API_PASSWORD", password)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set API_PASSWORD: %w", err)
+			}
+		}
+	}
+	
+	// Configure SMB settings if URL is provided
+	if config.SMBUrl != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "SMB_URL", config.SMBUrl)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set SMB_URL: %w", err)
+		}
+		
+		// Set SMB username
+		if config.SMBUser != "" {
+			cmd := exec.Command("defaults", "write", prefsPath, "SMB_USERNAME", config.SMBUser)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set SMB_USERNAME: %w", err)
+			}
+		} else {
+			// Check if SMB_USERNAME already exists
+			cmd := exec.Command("defaults", "read", prefsPath, "SMB_USERNAME")
+			if err := cmd.Run(); err != nil {
+				// Prompt for SMB username
+				var username string
+				fmt.Print("SMB_USERNAME required. Please enter: ")
+				_, err := fmt.Scanln(&username)
+				if err != nil {
+					return fmt.Errorf("failed to read SMB_USERNAME: %w", err)
+				}
+				
+				cmd := exec.Command("defaults", "write", prefsPath, "SMB_USERNAME", username)
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("failed to set SMB_USERNAME: %w", err)
+				}
+			}
+		}
+		
+		// Set SMB password
+		if config.SMBPass == "-" {
+			// Prompt for password
+			var password string
+			fmt.Print("SMB_PASSWORD required. Please enter: ")
+			_, err := fmt.Scanln(&password)
+			if err != nil {
+				return fmt.Errorf("failed to read SMB_PASSWORD: %w", err)
+			}
+			
+			cmd := exec.Command("defaults", "write", prefsPath, "SMB_PASSWORD", password)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set SMB_PASSWORD: %w", err)
+			}
+		} else if config.SMBPass != "" {
+			cmd := exec.Command("defaults", "write", prefsPath, "SMB_PASSWORD", config.SMBPass)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set SMB_PASSWORD: %w", err)
+			}
+		} else {
+			// Check if SMB_PASSWORD already exists
+			cmd := exec.Command("defaults", "read", prefsPath, "SMB_PASSWORD")
+			if err := cmd.Run(); err != nil {
+				// Prompt for SMB password
+				var password string
+				fmt.Print("SMB_PASSWORD required. Please enter: ")
+				_, err := fmt.Scanln(&password)
+				if err != nil {
+					return fmt.Errorf("failed to read SMB_PASSWORD: %w", err)
+				}
+				
+				cmd := exec.Command("defaults", "write", prefsPath, "SMB_PASSWORD", password)
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("failed to set SMB_PASSWORD: %w", err)
+				}
+			}
+		}
+	}
+	
+	Logger("JamfUploader configured.")
+	return nil
+}
+
+// AddAutoPkgRepos adds required and additional AutoPkg repositories
+func AddAutoPkgRepos(config *Config, prefsPath string) error {
+	var repos []string
+	
+	// Determine which JamfUploader repo to use
+	if config.UseJamfUploader {
+		// Check if grahampugh-recipes exists and delete it
+		repoOutput, err := exec.Command("autopkg", "list-repos", "--prefs", prefsPath).Output()
+		if err == nil && strings.Contains(string(repoOutput), "grahampugh-recipes") {
+			cmd := exec.Command("autopkg", "repo-delete", "grahampugh-recipes", "--prefs", prefsPath)
+			_ = cmd.Run()
+		}
+		
+		repos = append(repos, "grahampugh/jamf-upload")
+	} else {
+		// Check if grahampugh/jamf-upload exists and delete it
+		repoOutput, err := exec.Command("autopkg", "list-repos", "--prefs", prefsPath).Output()
+		if err == nil && strings.Contains(string(repoOutput), "grahampugh/jamf-upload") {
+			cmd := exec.Command("autopkg", "repo-delete", "grahampugh/jamf-upload", "--prefs", prefsPath)
+			_ = cmd.Run()
+		}
+		
+		repos = append(repos, "grahampugh-recipes")
+	}
+	
+	// Add repos from repo list file if specified
+	if config.RepoListPath != "" && fileExists(config.RepoListPath) {
+		file, err := os.Open(config.RepoListPath)
+		if err != nil {
+			return fmt.Errorf("failed to open repo list file: %w", err)
+		}
+		defer file.Close()
+		
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			repo := strings.TrimSpace(scanner.Text())
+			if repo != "" {
+				repos = append(repos, repo)
+			}
+		}
+		
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("failed to read repo list file: %w", err)
+		}
+	}
+	
+	// Add all specified repositories
+	for _, repo := range repos {
 		if repo == "" {
 			continue
 		}
 		
 		fmt.Printf("Adding recipe repository: %s\n", repo)
+		cmd := exec.Command("autopkg", "repo-add", repo, "--prefs", prefsPath)
 		
-		args := []string{"repo-add", repo}
-		if prefsPath != "" {
-			args = append(args, "--prefs", prefsPath)
-		}
-		
-		cmd := exec.Command("autopkg", args...)
+		// Just log an error but continue with other repos
 		if err := cmd.Run(); err != nil {
-			fmt.Printf("Warning: failed to add recipe repository %s: %v\n", repo, err)
+			fmt.Printf("ERROR: could not add %s to %s\n", repo, prefsPath)
+		} else {
+			fmt.Printf("Added %s to %s\n", repo, prefsPath)
+		}
+	}
+	
+	Logger("AutoPkg Repos Configured")
+	return nil
+}
+
+// ProcessRecipeLists processes any specified recipe lists to ensure parent recipe repos are added
+func ProcessRecipeLists(config *Config, prefsPath string) error {
+	if len(config.RecipeLists) == 0 {
+		return nil
+	}
+	
+	for _, listPath := range config.RecipeLists {
+		if !fileExists(listPath) {
+			fmt.Printf("Warning: Recipe list file %s does not exist\n", listPath)
 			continue
 		}
 		
-		repoCount++
+		file, err := os.Open(listPath)
+		if err != nil {
+			return fmt.Errorf("failed to open recipe list file: %w", err)
+		}
+		
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			recipe := strings.TrimSpace(scanner.Text())
+			if recipe == "" {
+				continue
+			}
+			
+			// Use autopkg info to get parent recipe info, which will add required repos
+			cmd := exec.Command("autopkg", "info", "-p", recipe, "--prefs", prefsPath)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			_ = cmd.Run() // We just run this to add parent repos, don't care about the output
+		}
+		
+		file.Close()
+		
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("failed to read recipe list file: %w", err)
+		}
 	}
 	
-	return repoCount, nil
+	Logger("AutoPkg Repos for all parent recipes added")
+	return nil
 }
+
+// Helper functions
+
+// fileExists checks if a file exists
+func fileExists(filepath string) bool {
+	info, err := os.Stat(filepath)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+// readJSONFile reads a JSON file into a map
+func readJSONFile(filepath string) (map[string]interface{}, error) {
+	data, err := os.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+	
+	var result map[string]interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, err
+	}
+	
+	return result, nil
+}
+
+// writeJSONFile writes a map to a JSON file
+func writeJSONFile(filepath string, data map[string]interface{}) error {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	
+	return os.WriteFile(filepath, jsonData, 0644)
+}
+
+// updateJSONFile updates a specific key in a JSON file
+func updateJSONFile(filepath string, key string, value interface{}) error {
+	// Read the current JSON
+	data, err := readJSONFile(filepath)
+	if err != nil {
+		// If the file doesn't exist or can't be parsed, create a new map
+		if os.IsNotExist(err) || err.Error() == "unexpected end of JSON input" {
+			data = make(map[string]interface{})
+		} else {
+			return err
+		}
+	}
+	
+	// Update the key
+	data[key] = value
+	
+	// Write the updated JSON back to the file
+	return writeJSONFile(filepath, data)
+}
+
+// getLatestAutoPkgReleaseURL retrieves the URL of the latest AutoPkg release
+func getLatestAutoPkgReleaseURL() (string, error) {
+	resp, err := http.Get("https://api.github.com/repos/autopkg/autopkg/releases/latest")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	
+	var release struct {
+		Assets []struct {
+			BrowserDownloadURL string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+	
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", err
+	}
+	
+	for _, asset := range release.Assets {
+		if strings.HasSuffix(asset.BrowserDownloadURL, ".pkg") {
+			return asset.BrowserDownloadURL, nil
+		}
+	}
+	
+	return "", fmt.Errorf("no pkg asset found in the latest release")
+}
+
+// getBetaAutoPkgReleaseURL retrieves the URL of the beta AutoPkg release
+func getBetaAutoPkgReleaseURL() (string, error) {
+	resp, err := http.Get("https://api.github.com/repos/autopkg/autopkg/releases/tags/v3.0.0RC1")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	
+	var release struct {
+		Assets []struct {
+			BrowserDownloadURL string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+	
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", err
+	}
+	
+	for _, asset := range release.Assets {
+		if strings.HasSuffix(asset.BrowserDownloadURL, ".pkg") {
+			return asset.BrowserDownloadURL, nil
+		}
+	}
+	
+	return "", fmt.Errorf("no pkg asset found in the beta release")
+}
+
+// downloadFile downloads a file from the given URL to the specified path
+func downloadFile(url, filepath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	
+	_, err = io.Copy(out, resp.Body)
+	return err
+} {
+		cmd := exec.Command("defaults", "write", prefsPath, "API_PASSWORD", config.JSSPass)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set API_PASSWORD: %w", err)
+		}
+	} else {
+		// Check if API_PASSWORD already exists
+		cmd := exec.Command("defaults", "read", prefsPath, "API_PASSWORD")
+		if err := cmd.Run(); err != nil {
+			// Prompt for API password
+			var password string
+			fmt.Print("API_PASSWORD required. Please enter: ")
+			_, err := fmt.Scanln(&password)
+			if err != nil {
+				return fmt.Errorf("failed to read API_PASSWORD: %w", err)
+			}
+			
+			cmd := exec.Command("defaults", "write", prefsPath, "API_PASSWORD", password)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set API_PASSWORD: %w", err)
+			}
+		}
+	}
+	
+	// Configure SMB settings if URL is provided
+	if config.SMBUrl != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "SMB_URL", config.SMBUrl)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set SMB_URL: %w", err)
+		}
+		
+		// Set SMB username
+		if config.SMBUser != "" {
+			cmd := exec.Command("defaults", "write", prefsPath, "SMB_USERNAME", config.SMBUser)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set SMB_USERNAME: %w", err)
+			}
+		} else {
+			// Check if SMB_USERNAME already exists
+			cmd := exec.Command("defaults", "read", prefsPath, "SMB_USERNAME")
+			if err := cmd.Run(); err != nil {
+				// Prompt for SMB username
+				var username string
+				fmt.Print("SMB_USERNAME required. Please enter: ")
+				_, err := fmt.Scanln(&username)
+				if err != nil {
+					return fmt.Errorf("failed to read SMB_USERNAME: %w", err)
+				}
+				
+				cmd := exec.Command("defaults", "write", prefsPath, "SMB_USERNAME", username)
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("failed to set SMB_USERNAME: %w", err)
+				}
+			}
+		}
+		
+		// Set SMB password
+		if config.SMBPass == "-" {
+			// Prompt for password
+			var password string
+			fmt.Print("SMB_PASSWORD required. Please enter: ")
+			_, err := fmt.Scanln(&password)
+			if err != nil {
+				return fmt.Errorf("failed to read SMB_PASSWORD: %w", err)
+			}
+			
+			cmd := exec.Command("defaults", "write", prefsPath, "SMB_PASSWORD", password)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to set SMB_PASSWORD: %w", err)
+			}
+		} else if config.SMBPass !=
 
 // ListRecipes lists all available AutoPkg recipes
 func ListRecipes(prefsPath string) error {
