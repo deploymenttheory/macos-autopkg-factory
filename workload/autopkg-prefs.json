@@ -1,0 +1,15 @@
+{
+  "CACHE_DIR": "~/Library/AutoPkg/Cache",
+  "MUNKI_REPO": "/Volumes/munki_repo",
+  "RECIPE_OVERRIDE_DIRS": [
+    "~/Library/AutoPkg/RecipeOverrides"
+  ],
+  "RECIPE_REPO_DIR": "~/Library/AutoPkg/RecipeRepos",
+  "RECIPE_SEARCH_DIRS": [
+    ".",
+    "~/Library/AutoPkg/Recipes",
+    "/Library/AutoPkg/Recipes"
+  ],
+  "GITHUB_TOKEN_PATH": "~/.autopkg_gh_token",
+  "FAIL_RECIPES_WITHOUT_TRUST_INFO": false
+}

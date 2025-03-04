@@ -1,0 +1,45 @@
+name: Run Chrome Package Build
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+  # Scheduled trigger (weekly on Monday at 1:00 AM)
+  schedule:
+    - cron: '0 1 * * 1'
+
+jobs:
+  # This job sets up prerequisites
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up variables
+        id: setup
+        run: |
+          echo "Running setup..."
+          echo "current_date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+    outputs:
+      run_date: ${{ steps.setup.outputs.current_date }}
+
+  # Call the reusable AutoPkg workflow
+  run-autopkg:
+    needs: prepare
+    uses: ./.github/workflows/reuseable/autopkg-workflow.yml
+    with:
+      recipe_name: GoogleChrome.pkg
+      munki_repo_path: /tmp/munki_repo
+      recipe_repos: recipes,recipes-for-autopkg/com.github.nmcspadden.recipes
+      upload_results: true
+      # Enable external preferences file
+      use_pref_file: true
+      pref_file_path: /tmp/autopkg_preferences.plist
+
+  # Do something with the results
+  process-results:
+    needs: [prepare, run-autopkg]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report on AutoPkg run
+        run: |
+          echo "AutoPkg run completed on ${{ needs.prepare.outputs.run_date }}"
+          echo "AutoPkg version: ${{ needs.run-autopkg.outputs.autopkg_version }}"
+          echo "Recipe repositories added: ${{ needs.run-autopkg.outputs.recipes_added }}"
