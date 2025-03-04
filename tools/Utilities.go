@@ -1,16 +1,78 @@
 package autopkg
 
 import (
+	"bytes"
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+	
+	"howett.net/plist"
 )
+
+// Log levels
+const (
+	LogDebug   = 10
+	LogInfo    = 20
+	LogWarning = 30
+	LogError   = 40
+	LogSuccess = 50
+)
+
+// Global variables - can be set via environment variables
+var (
+	DEBUG         bool
+	OVERRIDES_DIR string
+	RECIPE_TO_RUN string
+	TEAMS_WEBHOOK string
+)
+
+// Logger implements a simple logging system
+func Logger(message string, level int) {
+	var prefix string
+	switch level {
+	case LogDebug:
+		prefix = "[DEBUG] "
+		if !DEBUG {
+			return
+		}
+	case LogInfo:
+		prefix = "[INFO] "
+	case LogWarning:
+		prefix = "[WARNING] "
+	case LogError:
+		prefix = "[ERROR] "
+	case LogSuccess:
+		prefix = "[SUCCESS] "
+	default:
+		prefix = "[LOG] "
+	}
+	fmt.Println(prefix + message)
+}
+
+// LoadEnvironmentVariables loads environment variables
+func LoadEnvironmentVariables() {
+	// Check if DEBUG is enabled
+	debugEnv := os.Getenv("DEBUG")
+	if debugEnv != "" {
+		DEBUG, _ = strconv.ParseBool(debugEnv)
+	}
+
+	// Get overrides directory
+	OVERRIDES_DIR = os.Getenv("OVERRIDES_DIR")
+
+	// Get recipe to run
+	RECIPE_TO_RUN = os.Getenv("RECIPE")
+
+	// Get Teams webhook URL
+	TEAMS_WEBHOOK = os.Getenv("TEAMS_WEBHOOK")
+}
 
 // Recipe represents an AutoPkg recipe
 type Recipe struct {
@@ -57,40 +119,13 @@ func (r *Recipe) LoadPlist() error {
 		return fmt.Errorf("failed to read recipe file: %w", err)
 	}
 	
-	// Unmarshal XML plist data
-	var plist struct {
-		XMLName xml.Name `xml:"plist"`
-		Dict    struct {
-			Key   []string `xml:"key"`
-			Dict  []struct {
-				Key   []string `xml:"key"`
-				Value []string `xml:"string"`
-			} `xml:"dict"`
-		} `xml:"dict"`
-	}
-	
-	if err := xml.Unmarshal(data, &plist); err != nil {
-		return fmt.Errorf("failed to parse plist: %w", err)
-	}
-	
-	// Convert to map for easier access
+	// Use howett.net/plist to unmarshal the data
 	r.plist = make(map[string]interface{})
 	
-	// This is a simplified approach - a full plist parser would be more robust
-	for i, key := range plist.Dict.Key {
-		if key == "Input" && i < len(plist.Dict.Dict) {
-			inputDict := make(map[string]string)
-			for j, inputKey := range plist.Dict.Dict[i].Key {
-				if j < len(plist.Dict.Dict[i].Value) {
-					inputDict[inputKey] = plist.Dict.Dict[i].Value[j]
-				}
-			}
-			r.plist["Input"] = inputDict
-		} else if key == "Identifier" && i < len(plist.Dict.Dict) {
-			if len(plist.Dict.Dict[i].Value) > 0 {
-				r.plist["Identifier"] = plist.Dict.Dict[i].Value[0]
-			}
-		}
+	// Decode the plist data
+	_, err = plist.Unmarshal(data, &r.plist)
+	if err != nil {
+		return fmt.Errorf("failed to parse plist: %w", err)
 	}
 	
 	return nil
@@ -102,8 +137,8 @@ func (r *Recipe) Name() (string, error) {
 		return "", err
 	}
 	
-	if input, ok := r.plist["Input"].(map[string]string); ok {
-		if name, ok := input["NAME"]; ok {
+	if input, ok := r.plist["Input"].(map[string]interface{}); ok {
+		if name, ok := input["NAME"].(string); ok {
 			return name, nil
 		}
 	}
@@ -216,34 +251,10 @@ func ParseReport(reportPath string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to read report file: %w", err)
 	}
 	
-	// Unmarshal XML plist data to get structured report
-	// This is a simplified approach - a full plist parser would be more robust
-	var report struct {
-		XMLName xml.Name `xml:"plist"`
-		Dict    struct {
-			Key   []string `xml:"key"`
-			Array []struct {
-				Dict []struct {
-					Key   []string `xml:"key"`
-					Value []string `xml:"string"`
-				} `xml:"dict"`
-			} `xml:"array"`
-			Dict []struct {
-				Key   []string `xml:"key"`
-				Dict  []struct {
-					Key   []string `xml:"key"`
-					Array []struct {
-						Dict []struct {
-							Key   []string `xml:"key"`
-							Value []string `xml:"string"`
-						} `xml:"dict"`
-					} `xml:"array"`
-				} `xml:"dict"`
-			} `xml:"dict"`
-		} `xml:"dict"`
-	}
-	
-	if err := xml.Unmarshal(data, &report); err != nil {
+	// Parse plist using howett.net/plist
+	var reportData map[string]interface{}
+	_, err = plist.Unmarshal(data, &reportData)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse report plist: %w", err)
 	}
 	
@@ -255,8 +266,34 @@ func ParseReport(reportPath string) (map[string]interface{}, error) {
 		"promoted": []interface{}{},
 	}
 	
-	// Extract items based on keys
-	// This is simplified and would need enhancement for real use
+	// Extract failures
+	if failures, ok := reportData["failures"].([]interface{}); ok {
+		results["failed"] = failures
+	}
+	
+	// Extract items from summary_results
+	if summaryResults, ok := reportData["summary_results"].(map[string]interface{}); ok {
+		// Extract imported items
+		if intuneResults, ok := summaryResults["intuneappuploader_summary_result"].(map[string]interface{}); ok {
+			if dataRows, ok := intuneResults["data_rows"].([]interface{}); ok {
+				results["imported"] = dataRows
+			}
+		}
+		
+		// Extract removed items
+		if removedResults, ok := summaryResults["intuneappcleaner_summary_result"].(map[string]interface{}); ok {
+			if dataRows, ok := removedResults["data_rows"].([]interface{}); ok {
+				results["removed"] = dataRows
+			}
+		}
+		
+		// Extract promoted items
+		if promotedResults, ok := summaryResults["intuneapppromoter_summary_result"].(map[string]interface{}); ok {
+			if dataRows, ok := promotedResults["data_rows"].([]interface{}); ok {
+				results["promoted"] = dataRows
+			}
+		}
+	}
 	
 	return results, nil
 }
@@ -398,13 +435,32 @@ func (r *Recipe) Run(opts *RecipeOptions) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to start command: %w", err)
 	}
 	
-	// Process output in real-time
+	// Process stdout output in real-time
 	go func() {
-		io.Copy(os.Stdout, stdout)
+		buf := make([]byte, 1024)
+		for {
+			n, err := stdout.Read(buf)
+			if n > 0 {
+				os.Stdout.Write(buf[:n])
+			}
+			if err != nil {
+				break
+			}
+		}
 	}()
 	
+	// Process stderr output in real-time
 	go func() {
-		io.Copy(os.Stderr, stderr)
+		buf := make([]byte, 1024)
+		for {
+			n, err := stderr.Read(buf)
+			if n > 0 {
+				os.Stderr.Write(buf[:n])
+			}
+			if err != nil {
+				break
+			}
+		}
 	}()
 	
 	// Wait for command to complete
@@ -449,6 +505,20 @@ func (r *Recipe) Run(opts *RecipeOptions) (map[string]interface{}, error) {
 // ParseRecipes parses a recipe list file or individual recipe paths
 func ParseRecipes(recipesPath string, overridesDir string) ([]*Recipe, error) {
 	var recipes []*Recipe
+	
+	// Check if RECIPE_TO_RUN is set, process as comma-separated list
+	if RECIPE_TO_RUN != "" {
+		recipeNames := strings.Split(RECIPE_TO_RUN, ", ")
+		for _, name := range recipeNames {
+			name = strings.TrimSpace(name)
+			// Ensure recipe has .recipe extension
+			if !strings.HasSuffix(name, ".recipe") {
+				name += ".recipe"
+			}
+			recipes = append(recipes, NewRecipe(name, overridesDir))
+		}
+		return recipes, nil
+	}
 	
 	// Check if it's a JSON or plist file listing multiple recipes
 	ext := filepath.Ext(recipesPath)
@@ -593,6 +663,16 @@ func NotifyTeams(recipe *Recipe, webhookURL string) error {
 
 // ProcessRecipes handles multiple recipes with verification and notification support
 func ProcessRecipes(recipesPath string, overridesDir string, opts *RecipeOptions, teamsWebhook string) error {
+	// Load environment variables if not already set
+	if OVERRIDES_DIR == "" {
+		LoadEnvironmentVariables()
+	}
+	
+	// Use environment variable for overrides directory if not provided
+	if overridesDir == "" {
+		overridesDir = OVERRIDES_DIR
+	}
+	
 	// Parse recipes
 	recipes, err := ParseRecipes(recipesPath, overridesDir)
 	if err != nil {
@@ -630,15 +710,20 @@ func ProcessRecipes(recipesPath string, overridesDir string, opts *RecipeOptions
 		}
 		
 		// Send Teams notification if configured
-		if teamsWebhook != "" && !opts.Debug {
-			if err := NotifyTeams(recipe, teamsWebhook); err != nil {
+		webhookToUse := teamsWebhook
+		if webhookToUse == "" {
+			webhookToUse = TEAMS_WEBHOOK
+		}
+		
+		if webhookToUse != "" && !opts.Debug {
+			if err := NotifyTeams(recipe, webhookToUse); err != nil {
 				Logger(fmt.Sprintf("Error sending Teams notification: %v", err), LogWarning)
 			} else {
 				Logger("Teams notification sent successfully", LogInfo)
 			}
 		} else if opts.Debug {
 			Logger("Skipping Teams notification - debug is enabled", LogDebug)
-		} else if teamsWebhook == "" {
+		} else if webhookToUse == "" {
 			Logger("Skipping Teams notification - webhook URL is missing", LogWarning)
 		}
 		
