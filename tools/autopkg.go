@@ -101,6 +101,54 @@ func installCommandLineTools() error {
 	return nil
 }
 
+// CheckCommandLineTools verifies git is installed, and installs it if needed
+func CheckCommandLineTools() error {
+	// Check if git exists
+	gitCmd := exec.Command("git", "--version")
+	if err := gitCmd.Run(); err == nil {
+		Logger("Git is installed and functional")
+		return nil
+	}
+	
+	// Git isn't working, so install it
+	Logger("Git not found, installing...")
+	return installGit()
+}
+
+// installGit installs git using the most direct method available
+func installGit() error {
+	// First check if Homebrew is available
+	brewCmd := exec.Command("which", "brew")
+	if err := brewCmd.Run(); err == nil {
+		// Use Homebrew to install git
+		Logger("Installing git via Homebrew...")
+		brewInstall := exec.Command("brew", "install", "git")
+		brewInstall.Stdout = os.Stdout
+		brewInstall.Stderr = os.Stderr
+		if err := brewInstall.Run(); err != nil {
+			return fmt.Errorf("failed to install git via Homebrew: %w", err)
+		}
+	} else {
+		// Fall back to Xcode Command Line Tools if Homebrew isn't available
+		Logger("Installing git via Xcode Command Line Tools...")
+		cmd := exec.Command("xcode-select", "--install")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to install Xcode Command Line Tools: %w", err)
+		}
+	}
+	
+	// Verify installation worked
+	gitCmd := exec.Command("git", "--version")
+	if err := gitCmd.Run(); err != nil {
+		return fmt.Errorf("git still not available after installation attempt: %w", err)
+	}
+	
+	Logger("Git successfully installed")
+	return nil
+}
+
 // InstallAutoPkg downloads and installs the latest AutoPkg release
 func InstallAutoPkg(config *Config) (string, error) {
 	autopkgPath := "/usr/local/bin/autopkg"
