@@ -52,7 +52,8 @@ func LoadEnvironmentVariables() {
 
 	// Get overrides directory
 	OVERRIDES_DIR = os.Getenv("OVERRIDES_DIR")
-
+	// Get autopkg repo list
+	AUTOPKG_REPO_LIST_PATH = os.Getenv("AUTOPKG_REPO_LIST_PATH")
 	// Get recipe to run
 	RECIPE_TO_RUN = os.Getenv("RECIPE")
 
