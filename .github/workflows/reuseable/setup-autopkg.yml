@@ -71,7 +71,7 @@ on:
       intune_client_secret:
         description: 'Intune Client Secret'
         required: false
-        default: ''
+        default: 'false'
         type: string
       use_jamf_uploader:
         description: 'Use Jamf Uploader'

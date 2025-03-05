@@ -1,43 +1,42 @@
-name: '⚙️ Setup and Install AutoPkg & Suspicious Package'
+name: '⚙️ Setup AutoPkg and Suspicious Package'
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  setup:
-    runs-on: macos-latest
-    env:
-      DEBUG: "true"
-      FORCE_UPDATE: "false"
-      AUTOPKG_REPO_LIST_PATH: "${{ github.workspace }}/configuration/autopkg-repo-list.txt"
-      SUSPICIOUS_PACKAGE_URL: "https://mothersruin.com/software/downloads/SuspiciousPackage.dmg"
-      SP_DOWNLOAD_PATH: "${{ github.workspace }}/configuration/SuspiciousPackage.dmg"
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Add other necessary env variables or secrets here.
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v3
+  autopkg:
+    uses: deploymenttheory/macos-autopkg-factory/.github/workflows/reuseable/setup-autopkg.yml@main
+    with:
+      debug: "true"
+      use_beta: "false"
+      overrides_dir: "./overrides"
+      autopkg_repo_list_path: "${{ github.workspace }}/configuration/autopkg-repo-list.txt"
+      report_path: "/tmp/autopkg-report.plist"
+      disable_verification: "false"
+      force_update: "true"
+      fail_recipes: "true"
+      cleanup_list: "./config/cleanup.json"
+      promote_list: "./config/promote.json"
+      # use_intune_uploader: "false"
+      # intune_tenant_id: ""
+      # intune_client_id: ""
+      # intune_client_secret: ""
+      use_jamf_uploader: "true"
+      jamfpro_url: ${{ secrets.JAMFPRO_URL }}
+      jamfpro_client_id: ${{ secrets.JAMFPRO_CLIENT_ID }}
+      jamfpro_client_secret: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
+      api_username: ""
+      api_password: ""
+      jcds2_mode: "true"
+      teams_webhook: ${{ secrets.TEAMS_WEBHOOK }}
+      private_repo_url: ""
+      private_repo_path: ""
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '>=1.22.5'
-
-      - name: Install dependencies
-        run: go get -v ./...
-
-      - name: Build and run AutoPkg Setup Tool
-        run: |
-          cd tools/cmd/autopkg_setup
-          go build -v -o autopkg-setup
-          ./autopkg-setup
-
-      - name: Build and run Suspicious Package Setup Tool
-        run: |
-          cd tools/cmd/suspicious_package_setup
-          go build -v -o suspiciouspackage-setup
-          ./suspiciouspackage-setup
+  suspiciouspackage:
+    needs: autopkg
+    uses: deploymenttheory/macos-autopkg-factory/.github/workflows/reuseable/setup-suspicious-package.yml@main
+    with:
+      debug: "true"
+      force_update: "true"
+      suspicious_package_url: "https://mothersruin.com/software/downloads/SuspiciousPackage.dmg"
+      sp_download_path: "${{ github.workspace }}/configuration/SuspiciousPackage.dmg"
