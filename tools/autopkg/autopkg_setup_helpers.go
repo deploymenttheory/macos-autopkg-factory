@@ -139,8 +139,10 @@ func InstallAutoPkg(config *Config) (string, error) {
 	// Get release URL based on config
 	if config.UseBeta {
 		releaseURL, err = getBetaAutoPkgReleaseURL()
+		Logger("🧪 Installing latest Beta AutoPkg Release", LogInfo)
 	} else {
 		releaseURL, err = getLatestAutoPkgReleaseURL()
+		Logger("🚀 Installing latest Stable AutoPkg Release", LogInfo)
 	}
 
 	if err != nil {

@@ -30,14 +30,14 @@ func SetupGitHubActionsRunner() error {
 		return fmt.Errorf("🛠️ command line tools check failed: %w", err)
 	}
 
-	// Set up configuration using environment variables
+	// Set up common configuration using env vars
 	config := &Config{
 		ForceUpdate:         FORCE_UPDATE,
 		FailRecipes:         FAIL_RECIPES,
 		DisableVerification: DISABLE_VERIFICATION,
+		UseBeta:             USE_BETA,
 	}
-
-	// Configure uploader settings
+	// Configure contexual mdm uploader settings
 	if USE_JAMF_UPLOADER {
 		Logger("☁️ Configuring with JamfUploader integration", LogInfo)
 		config.UseJamfUploader = true
