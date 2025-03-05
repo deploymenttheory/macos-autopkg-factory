@@ -60,8 +60,21 @@ jobs:
         run: go get -v ./...
       
       - name: Build AutoPkg setup tool
-        run: go build -v -o autopkg-setup ./cmd/autopkg-setup
+        run: |
+          cd tools/cmd/autopkg_setup
+          go build -v -o autopkg-setup
       
       - name: Run SetupGitHubActionsRunner
-        run: ./autopkg-setup
+        run: ./tools/cmd/autopkg_setup/autopkg-setup
       
+      # - name: Run AutoPkg recipes
+      #   run: |
+      #     # Run the recipes specified in the RECIPE environment variable
+      #     /usr/local/bin/autopkg run $RECIPE -v
+      
+      # - name: Archive AutoPkg Report
+      #   if: always()
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: autopkg-report
+      #     path: ${{ env.REPORT_PATH }}
