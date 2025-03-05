@@ -52,8 +52,6 @@ type Config struct {
 	INTUNE_CLIENT_SECRET string
 	INTUNE_TENANT_ID     string
 
-	// IntuneUploader settings
-
 	// Slack settings
 	SlackWebhook  string
 	SlackUsername string
@@ -72,12 +70,12 @@ func CheckCommandLineTools() error {
 	// Check if git exists
 	gitCmd := exec.Command("git", "--version")
 	if err := gitCmd.Run(); err == nil {
-		Logger("Git is installed and functional", LogSuccess)
+		Logger("✅ Git is installed and functional", LogSuccess)
 		return nil
 	}
 
 	// Git isn't working, so install it
-	Logger("Git not found, installing...", LogInfo)
+	Logger("🔧 Git not found, installing...", LogInfo)
 	return installGit()
 }
 
@@ -87,7 +85,7 @@ func installGit() error {
 	brewCmd := exec.Command("which", "brew")
 	if err := brewCmd.Run(); err == nil {
 		// Use Homebrew to install git
-		Logger("Installing git via Homebrew...", LogInfo)
+		Logger("🔄 Installing git via Homebrew...", LogInfo)
 		brewInstall := exec.Command("brew", "install", "git")
 		brewInstall.Stdout = os.Stdout
 		brewInstall.Stderr = os.Stderr
@@ -96,7 +94,7 @@ func installGit() error {
 		}
 	} else {
 		// Fall back to Xcode Command Line Tools if Homebrew isn't available
-		Logger("Installing git via Xcode Command Line Tools...", LogInfo)
+		Logger("🔄 Installing git via Xcode Command Line Tools...", LogInfo)
 		cmd := exec.Command("xcode-select", "--install")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -111,7 +109,7 @@ func installGit() error {
 		return fmt.Errorf("git still not available after installation attempt: %w", err)
 	}
 
-	Logger("Git successfully installed", LogSuccess)
+	Logger("✅ Git successfully installed", LogSuccess)
 	return nil
 }
 
@@ -131,7 +129,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 		return version, nil
 	}
 
-	fmt.Println("Downloading latest AutoPkg release...")
+	Logger("⬇️ Downloading AutoPkg", LogInfo)
 
 	var releaseURL string
 	var err error
@@ -170,7 +168,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 	}
 
 	version := strings.TrimSpace(string(versionOutput))
-	Logger(fmt.Sprintf("AutoPkg %s Installed", version), LogSuccess)
+	Logger(fmt.Sprintf("✅ AutoPkg %s Installed", version), LogSuccess)
 
 	return version, nil
 }
@@ -372,7 +370,7 @@ func SetupPrivateRepo(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("Private AutoPkg Repo Configured", LogSuccess)
+	Logger("✅ Private AutoPkg Repo Configured", LogSuccess)
 	return nil
 }
 
@@ -439,7 +437,7 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("AutoPkg Repos Configured", LogSuccess)
+	Logger("✅ AutoPkg Repos Configured", LogSuccess)
 	return nil
 }
 
@@ -481,13 +479,13 @@ func ProcessRecipeLists(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("AutoPkg Repos for all parent recipes added", LogSuccess)
+	Logger("✅ AutoPkg Repos for all parent recipes added", LogSuccess)
 	return nil
 }
 
 // ListRecipes lists all available AutoPkg recipes
 func ListRecipes(prefsPath string) error {
-	fmt.Println("Available recipes:")
+	Logger("📝 Available recipes:", LogInfo)
 
 	args := []string{"list-recipes"}
 	if prefsPath != "" {
@@ -580,7 +578,7 @@ func getLatestAutoPkgReleaseURL() (string, error) {
 	// Find the .pkg asset
 	for _, asset := range release.Assets {
 		if strings.HasSuffix(asset.Name, ".pkg") {
-			Logger(fmt.Sprintf("Found release %s with package %s", release.TagName, asset.Name), LogInfo)
+			Logger(fmt.Sprintf("🔍 Found release %s with package %s", release.TagName, asset.Name), LogInfo)
 			return asset.BrowserDownloadURL, nil
 		}
 	}
@@ -643,7 +641,7 @@ func getBetaAutoPkgReleaseURL() (string, error) {
 			// Look for .pkg asset in this prerelease
 			for _, asset := range release.Assets {
 				if strings.HasSuffix(asset.Name, ".pkg") {
-					Logger(fmt.Sprintf("Found beta release: %s", release.TagName), LogInfo)
+					Logger(fmt.Sprintf("🔍 Found beta release: %s", release.TagName), LogInfo)
 					return asset.BrowserDownloadURL, nil
 				}
 			}
