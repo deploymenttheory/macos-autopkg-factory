@@ -389,6 +389,8 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 		repos = []string{"recipes"}
 	}
 
+	logger.Logger(fmt.Sprintf("🔍 Debug: Received autopkg repo list path: %s", config.AutopkgRepoListPath), logger.LogDebug)
+
 	// Load additional repos from repo list file if specified
 	if config.AutopkgRepoListPath != "" {
 		if helpers.FileExists(config.AutopkgRepoListPath) {
