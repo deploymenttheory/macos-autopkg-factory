@@ -387,8 +387,6 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 	}
 
 	// Load additional repos from repo list file if specified
-
-	Logger(fmt.Sprintf("WARNING: encountered empty autopkg repository path entry. AUTOPKG_REPO_LIST_PATH: %s", config.AutopkgRepoListPath), LogWarning)
 	if config.AutopkgRepoListPath != "" && fileExists(config.AutopkgRepoListPath) {
 		file, err := os.Open(config.AutopkgRepoListPath)
 		if err != nil {
@@ -414,14 +412,15 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 		if repo == "" {
 			continue
 		}
-		fmt.Printf("Adding recipe repository: %s\n", repo)
+		Logger(fmt.Sprintf("📦 Adding recipe repository: %s", repo), LogInfo)
 		cmd := exec.Command("autopkg", "repo-add", repo, "--prefs", prefsPath)
 
 		// Log error if repo-add fails, but continue with other repos
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("ERROR: could not add %s to %s\n", repo, prefsPath)
 		} else {
-			fmt.Printf("Added %s to %s\n", repo, prefsPath)
+			Logger(fmt.Sprintf("✅ Added %s to %s", repo, prefsPath), LogInfo)
+
 		}
 	}
 
