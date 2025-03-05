@@ -16,35 +16,29 @@ jobs:
     env:
       # Autopkg Debug settings
       DEBUG: "true"
-
       # Enable usage of latest autopkg beta version
       USE_BETA: "false"
-      
+      # GitHub token for API access
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Recipe configuration
       RECIPE: "Firefox.recipe, Chrome.recipe"
       OVERRIDES_DIR: "./overrides"
-      
       # Report configuration
       REPORT_PATH: "/tmp/autopkg-report.plist"
-      
-      # Verification settings
+      # Recipe Verification settings
       DISABLE_VERIFICATION: "true"
       FORCE_UPDATE: "true"
       FAIL_RECIPES: "false"
-      
       # Cleanup and promotion lists
       CLEANUP_LIST: "./config/cleanup.json"
       PROMOTE_LIST: "./config/promote.json"
-      
-      # Uploader selection
+      # MDM Uploader selection
       USE_INTUNE_UPLOADER: "true"
       USE_JAMF_UPLOADER: "false"
-      
       # Intune credentials
       INTUNE_TENANT_ID: ${{ secrets.INTUNE_TENANT_ID }}
       INTUNE_CLIENT_ID: ${{ secrets.INTUNE_CLIENT_ID }}
       INTUNE_CLIENT_SECRET: ${{ secrets.INTUNE_CLIENT_SECRET }}
-      
       # Jamf credentials (included but not used if USE_JAMF_UPLOADER is false)
       JAMFPRO_URL: ${{ secrets.JAMFPRO_URL }}
       JAMFPRO_CLIENT_ID: ${{ secrets.JAMFPRO_CLIENT_ID }}
@@ -55,13 +49,10 @@ jobs:
       SMB_USERNAME: ${{ secrets.SMB_USERNAME }}
       SMB_PASSWORD: ${{ secrets.SMB_PASSWORD }}
       JCDS2_MODE: "false"
-      
       # Repository configuration
       AUTOPKG_REPOS: "recipes,almenscorner/autopkg-recipes"
-      
       # Teams notification
       TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
-      
       # Private repo config
       PRIVATE_REPO_URL: ""
       PRIVATE_REPO_PATH: ""
@@ -73,7 +64,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
-          go-version: '1.21'
+          go-version: '>=1.22.5'
       
       - name: Install dependencies
         run: go get -v ./...

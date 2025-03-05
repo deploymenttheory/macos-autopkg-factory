@@ -2,6 +2,7 @@ package autopkg
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -522,30 +523,69 @@ func RunRecipe(recipeName, prefsPath string) error {
 
 // getLatestAutoPkgReleaseURL retrieves the URL of the latest AutoPkg release
 func getLatestAutoPkgReleaseURL() (string, error) {
-	resp, err := http.Get("https://api.github.com/repos/autopkg/autopkg/releases/latest")
+	// Create a new request
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/autopkg/autopkg/releases/latest", nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add GitHub token for authentication if available
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken != "" {
+		req.Header.Set("Authorization", "token "+githubToken)
+	}
+
+	// Add headers to identify our client
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "AutoPkgGitHubActions/1.0")
+
+	// Make the request
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to connect to GitHub API: %w", err)
 	}
 	defer resp.Body.Close()
 
+	// Check for rate limiting or other errors
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("GitHub API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Log raw response for debugging
+	if DEBUG {
+		body, _ := io.ReadAll(resp.Body)
+		Logger(fmt.Sprintf("GitHub API response: %s", string(body)), LogDebug)
+
+		// Create a new reader with the same data for subsequent decoding
+		resp.Body = io.NopCloser(bytes.NewBuffer(body))
+	}
+
+	// Parse the response
 	var release struct {
-		Assets []struct {
+		TagName string `json:"tag_name"`
+		Assets  []struct {
 			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse GitHub API response: %w", err)
 	}
 
+	// Find the .pkg asset
 	for _, asset := range release.Assets {
 		if strings.HasSuffix(asset.Name, ".pkg") {
+			Logger(fmt.Sprintf("Found release %s with package %s", release.TagName, asset.Name), LogInfo)
 			return asset.BrowserDownloadURL, nil
 		}
 	}
 
-	return "", fmt.Errorf("no pkg asset found in the latest release")
+	// If we get here, no package was found
+	return "", fmt.Errorf("no pkg asset found in the latest release (tag: %s, assets count: %d)",
+		release.TagName, len(release.Assets))
 }
 
 // getBetaAutoPkgReleaseURL retrieves the URL of the latest beta AutoPkg release
