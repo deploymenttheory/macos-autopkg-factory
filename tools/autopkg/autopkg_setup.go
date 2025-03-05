@@ -36,6 +36,7 @@ func SetupGitHubActionsRunner() error {
 		FailRecipes:         FAIL_RECIPES,
 		DisableVerification: DISABLE_VERIFICATION,
 		UseBeta:             USE_BETA,
+		AutopkgRepoListPath: AUTOPKG_REPO_LIST_PATH,
 	}
 	// Configure contexual mdm uploader settings
 	if USE_JAMF_UPLOADER {
@@ -72,28 +73,6 @@ func SetupGitHubActionsRunner() error {
 		return fmt.Errorf("⚙️ failed to set up preferences: %w", err)
 	}
 
-	// Set up recipe repos
-	if len(AUTOPKG_REPOS) > 0 {
-		config.RecipeRepos = AUTOPKG_REPOS
-	} else {
-		// Default repos based on uploader type
-		if USE_JAMF_UPLOADER {
-			config.RecipeRepos = append(config.RecipeRepos,
-				"recipes",
-				"grahampugh/jamf-upload")
-		} else if USE_INTUNE_UPLOADER {
-			config.RecipeRepos = append(config.RecipeRepos,
-				"recipes",
-				"grahampugh-recipes",
-				"almenscorner/autopkg-recipes")
-		} else {
-			// Basic setup
-			config.RecipeRepos = append(config.RecipeRepos,
-				"recipes",
-				"grahampugh-recipes")
-		}
-	}
-
 	// Add repos
 	if err := AddAutoPkgRepos(config, prefsPath); err != nil {
 		return fmt.Errorf("📚 failed to add repos: %w", err)
@@ -104,7 +83,7 @@ func SetupGitHubActionsRunner() error {
 		if err := ConfigureJamfUploader(config, prefsPath); err != nil {
 			return fmt.Errorf("☁️ failed to configure JamfUploader: %w", err)
 		}
-		Logger("☁️ JamfUploader configuration completed", LogSuccess)
+		Logger("📱 JamfUploader configuration completed", LogSuccess)
 	}
 
 	if USE_INTUNE_UPLOADER {

@@ -8,17 +8,18 @@ import (
 
 // Global Environment variables for GitHub Actions integration
 var (
-	DEBUG                bool
-	OVERRIDES_DIR        string
-	RECIPE_TO_RUN        string
-	TEAMS_WEBHOOK        string
-	CLEANUP_LIST         string
-	PROMOTE_LIST         string
-	REPORT_PATH          string
-	DISABLE_VERIFICATION bool
-	FORCE_UPDATE         bool
-	FAIL_RECIPES         bool
-	USE_BETA             bool
+	DEBUG                  bool
+	OVERRIDES_DIR          string
+	RECIPE_TO_RUN          string
+	TEAMS_WEBHOOK          string
+	CLEANUP_LIST           string
+	PROMOTE_LIST           string
+	REPORT_PATH            string
+	DISABLE_VERIFICATION   bool
+	FORCE_UPDATE           bool
+	FAIL_RECIPES           bool
+	USE_BETA               bool
+	AUTOPKG_REPO_LIST_PATH string
 
 	// Uploader variables
 	USE_JAMF_UPLOADER     bool
@@ -29,16 +30,16 @@ var (
 	INTUNE_TENANT_ID      string
 	INTUNE_CLIENT_ID      string
 	INTUNE_CLIENT_SECRET  string
-	AUTOPKG_REPOS         []string
-	RECIPE_LISTS          []string
-	PRIVATE_REPO_URL      string
-	PRIVATE_REPO_PATH     string
-	JCDS2_MODE            bool
-	API_USERNAME          string
-	API_PASSWORD          string
-	SMB_URL               string
-	SMB_USERNAME          string
-	SMB_PASSWORD          string
+	//AUTOPKG_REPOS         []string
+	RECIPE_LISTS      []string
+	PRIVATE_REPO_URL  string
+	PRIVATE_REPO_PATH string
+	JCDS2_MODE        bool
+	API_USERNAME      string
+	API_PASSWORD      string
+	SMB_URL           string
+	SMB_USERNAME      string
+	SMB_PASSWORD      string
 )
 
 // LoadEnvironmentVariables loads all environment variables used by the package
@@ -112,17 +113,6 @@ func LoadEnvironmentVariables() {
 	INTUNE_TENANT_ID = os.Getenv("INTUNE_TENANT_ID")
 	INTUNE_CLIENT_ID = os.Getenv("INTUNE_CLIENT_ID")
 	INTUNE_CLIENT_SECRET = os.Getenv("INTUNE_CLIENT_SECRET")
-
-	// Repo settings
-	reposStr := os.Getenv("AUTOPKG_REPOS")
-	if reposStr != "" {
-		for _, repo := range strings.Split(reposStr, ",") {
-			repo = strings.TrimSpace(repo)
-			if repo != "" {
-				AUTOPKG_REPOS = append(AUTOPKG_REPOS, repo)
-			}
-		}
-	}
 
 	// Recipe lists
 	listsStr := os.Getenv("RECIPE_LISTS")

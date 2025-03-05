@@ -27,9 +27,9 @@ type Config struct {
 	GitHubToken         string
 
 	// Recipe and repo settings
-	RecipeRepos  []string
-	RecipeLists  []string
-	RepoListPath string
+	RecipeRepos         []string
+	RecipeLists         []string
+	AutopkgRepoListPath string
 
 	// Private repo settings
 	PrivateRepoPath string
@@ -376,32 +376,19 @@ func SetupPrivateRepo(config *Config, prefsPath string) error {
 
 // AddAutoPkgRepos adds required and additional AutoPkg repositories
 func AddAutoPkgRepos(config *Config, prefsPath string) error {
+	// Start with the default repositories based on mdm uploader type
 	var repos []string
-
-	// Determine which JamfUploader repo to use
-	if config.UseJamfUploader {
-		// Check if grahampugh-recipes exists and delete it
-		repoOutput, err := exec.Command("autopkg", "list-repos", "--prefs", prefsPath).Output()
-		if err == nil && strings.Contains(string(repoOutput), "grahampugh-recipes") {
-			cmd := exec.Command("autopkg", "repo-delete", "grahampugh-recipes", "--prefs", prefsPath)
-			_ = cmd.Run()
-		}
-
-		repos = append(repos, "grahampugh/jamf-upload")
+	if USE_JAMF_UPLOADER {
+		repos = []string{"recipes", "grahampugh/jamf-upload"}
+	} else if USE_INTUNE_UPLOADER {
+		repos = []string{"recipes", "almenscorner/autopkg-recipes"}
 	} else {
-		// Check if grahampugh/jamf-upload exists and delete it
-		repoOutput, err := exec.Command("autopkg", "list-repos", "--prefs", prefsPath).Output()
-		if err == nil && strings.Contains(string(repoOutput), "grahampugh/jamf-upload") {
-			cmd := exec.Command("autopkg", "repo-delete", "grahampugh/jamf-upload", "--prefs", prefsPath)
-			_ = cmd.Run()
-		}
-
-		repos = append(repos, "grahampugh-recipes")
+		repos = []string{"recipes"}
 	}
 
-	// Add repos from repo list file if specified
-	if config.RepoListPath != "" && fileExists(config.RepoListPath) {
-		file, err := os.Open(config.RepoListPath)
+	// Load additional repos from repo list file if specified
+	if config.AutopkgRepoListPath != "" && fileExists(config.AutopkgRepoListPath) {
+		file, err := os.Open(config.AutopkgRepoListPath)
 		if err != nil {
 			return fmt.Errorf("failed to open repo list file: %w", err)
 		}
@@ -414,22 +401,21 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 				repos = append(repos, repo)
 			}
 		}
-
 		if err := scanner.Err(); err != nil {
 			return fmt.Errorf("failed to read repo list file: %w", err)
 		}
 	}
+	config.RecipeRepos = repos
 
-	// Add all specified repositories
+	// Add all specified repositories using the autopkg command
 	for _, repo := range repos {
 		if repo == "" {
 			continue
 		}
-
 		fmt.Printf("Adding recipe repository: %s\n", repo)
 		cmd := exec.Command("autopkg", "repo-add", repo, "--prefs", prefsPath)
 
-		// Just log an error but continue with other repos
+		// Log error if repo-add fails, but continue with other repos
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("ERROR: could not add %s to %s\n", repo, prefsPath)
 		} else {
