@@ -222,13 +222,13 @@ func SetupPreferencesFile(config *Config) (string, error) {
 		if err := os.WriteFile(tokenPath, []byte(config.GitHubToken), 0600); err != nil {
 			return "", fmt.Errorf("failed to write GitHub token: %w", err)
 		}
-		Logger(fmt.Sprintf("🔑 Wrote GITHUB_TOKEN to %s\n", tokenPath), LogInfo)
+		Logger(fmt.Sprintf("📝 Wrote GITHUB_TOKEN to %s\n", tokenPath), LogInfo)
 		// Set the token path in preferences
 		cmd := exec.Command("defaults", "write", config.PrefsFilePath, "GITHUB_TOKEN_PATH", tokenPath)
 		if err := cmd.Run(); err != nil {
 			return "", fmt.Errorf("failed to set GITHUB_TOKEN_PATH: %w", err)
 		}
-		Logger(fmt.Sprintf("🔑 Wrote GITHUB_TOKEN_PATH to %s\n", config.PrefsFilePath), LogInfo)
+		Logger(fmt.Sprintf("📝 Wrote GITHUB_TOKEN_PATH to %s\n", config.PrefsFilePath), LogInfo)
 	}
 
 	// Configure FAIL_RECIPES_WITHOUT_TRUST_INFO
@@ -241,7 +241,7 @@ func SetupPreferencesFile(config *Config) (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to set FAIL_RECIPES_WITHOUT_TRUST_INFO: %w", err)
 	}
-	fmt.Printf("Wrote FAIL_RECIPES_WITHOUT_TRUST_INFO %s to %s\n", failValue, config.PrefsFilePath)
+	Logger(fmt.Sprintf("📝 Wrote FAIL_RECIPES_WITHOUT_TRUST_INFO %s to %s", failValue, config.PrefsFilePath), LogInfo)
 
 	// Configure JCDS2 mode
 	if config.JCDS2Mode {
