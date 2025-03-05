@@ -107,6 +107,9 @@ on:
       smb_password:
         description: 'JamfPro SMB Password'
         required: false
+      teams_webhook:
+        description: 'The MS Teams webhook url used for notifications'
+        required: false
 jobs:
   autopkg:
     runs-on: macos-latest
