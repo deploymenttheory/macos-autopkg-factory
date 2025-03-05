@@ -23,7 +23,7 @@ jobs:
       # Recipe configuration
       RECIPE: "Firefox.recipe, Chrome.recipe"
       OVERRIDES_DIR: "./overrides"
-      AUTOPKG_REPO_LIST_PATH: "${{ github.workspace }}/macos-autopkg-factory/workload/autopkg-repo-list.txt"
+      AUTOPKG_REPO_LIST_PATH: "${{ github.workspace }}/macos-autopkg-factory/configuration/autopkg-repo-list.txt"
       # Report configuration
       REPORT_PATH: "/tmp/autopkg-report.plist"
       # Recipe Verification settings
