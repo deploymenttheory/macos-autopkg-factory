@@ -5,7 +5,7 @@ on:
 
 jobs:
   autopkg:
-    uses: deploymenttheory/macos-autopkg-factory/.github/workflows/reuseable/setup-autopkg.yml@main
+    uses: deploymenttheory/macos-autopkg-factory/.github/workflows/setup-autopkg.yml@main
     with:
       debug: "true"
       use_beta: "false"
@@ -34,7 +34,7 @@ jobs:
 
   suspiciouspackage:
     needs: autopkg
-    uses: deploymenttheory/macos-autopkg-factory/.github/workflows/reuseable/setup-suspicious-package.yml@main
+    uses: deploymenttheory/macos-autopkg-factory/.github/workflows/setup-suspicious-package.yml@main
     with:
       debug: "true"
       force_update: "true"
