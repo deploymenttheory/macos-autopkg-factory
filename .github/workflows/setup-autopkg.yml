@@ -53,12 +53,12 @@ on:
         type: string
       use_intune_uploader:
         description: 'Use Microsoft Intune Uploader'
-        required: false
-        default: 'true'
+        required: true
+        default: 'false'
         type: string
       use_jamf_uploader:
         description: 'Use Jamf Uploader'
-        required: false
+        required: true
         default: 'false'
         type: string
       jcds2_mode:
