@@ -21,7 +21,7 @@ on:
       autopkg_repo_list_path:
         description: 'Path to the autopkg recipe repo list file'
         required: false
-        default: '${{ github.workspace }}/configuration/autopkg-repo-list.txt'
+        default: './configuration/autopkg-repo-list.txt'
         type: string
       report_path:
         description: 'Path to store the AutoPkg report file'
