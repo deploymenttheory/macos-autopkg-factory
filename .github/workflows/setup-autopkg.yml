@@ -125,19 +125,19 @@ jobs:
       PROMOTE_LIST: ${{ inputs.promote_list }}
       USE_INTUNE_UPLOADER: ${{ inputs.use_intune_uploader }}
       USE_JAMF_UPLOADER: ${{ inputs.use_jamf_uploader }}
-      INTUNE_TENANT_ID: ${{ inputs.intune_tenant_id }}
-      INTUNE_CLIENT_ID: ${{ inputs.intune_client_id }}
-      INTUNE_CLIENT_SECRET: ${{ inputs.intune_client_secret }}
-      JAMFPRO_URL: ${{ inputs.jamfpro_url }}
-      JAMFPRO_CLIENT_ID: ${{ inputs.jamfpro_client_id }}
-      JAMFPRO_CLIENT_SECRET: ${{ inputs.jamfpro_client_secret }}
-      API_USERNAME: ${{ inputs.api_username }}
-      API_PASSWORD: ${{ inputs.api_password }}
+      INTUNE_TENANT_ID: ${{ secrets.intune_tenant_id }}
+      INTUNE_CLIENT_ID: ${{ secrets.intune_client_id }}
+      INTUNE_CLIENT_SECRET: ${{ secrets.intune_client_secret }}
+      JAMFPRO_URL: ${{ secrets.jamfpro_url }}
+      JAMFPRO_CLIENT_ID: ${{ secrets.jamfpro_client_id }}
+      JAMFPRO_CLIENT_SECRET: ${{ secrets.jamfpro_client_secret }}
+      API_USERNAME: ${{ secrets.api_username }}
+      API_PASSWORD: ${{ secrets.api_password }}
       SMB_URL: ${{ inputs.smb_url }}
-      SMB_USERNAME: ${{ inputs.smb_username }}
-      SMB_PASSWORD: ${{ inputs.smb_password }}
+      SMB_USERNAME: ${{ secrets.smb_username }}
+      SMB_PASSWORD: ${{ secrets.smb_password }}
       JCDS2_MODE: ${{ inputs.jcds2_mode }}
-      TEAMS_WEBHOOK: ${{ inputs.teams_webhook }}
+      TEAMS_WEBHOOK: ${{ secrets.teams_webhook }}
       PRIVATE_REPO_URL: ${{ inputs.private_repo_url }}
       PRIVATE_REPO_PATH: ${{ inputs.private_repo_path }}
     steps:
