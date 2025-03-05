@@ -38,6 +38,6 @@ jobs:
 
       - name: Build and run Suspicious Package Setup Tool
         run: |
-          cd tools/cmd/suspiciouspackage_setup
+          cd tools/cmd/suspicious_package_setup
           go build -v -o suspiciouspackage-setup
           ./suspiciouspackage-setup
