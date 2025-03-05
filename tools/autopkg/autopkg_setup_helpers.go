@@ -13,6 +13,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/deploymenttheory/macos-autopkg-factory/tools/helpers"
+	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
 // Config holds all the configuration options for AutoPkg setup operations
@@ -70,12 +73,12 @@ func CheckCommandLineTools() error {
 	// Check if git exists
 	gitCmd := exec.Command("git", "--version")
 	if err := gitCmd.Run(); err == nil {
-		Logger("✅ Git is installed and functional", LogSuccess)
+		logger.Logger("✅ Git is installed and functional", logger.LogSuccess)
 		return nil
 	}
 
 	// Git isn't working, so install it
-	Logger("🔧 Git not found, installing...", LogInfo)
+	logger.Logger("🔧 Git not found, installing...", logger.LogInfo)
 	return installGit()
 }
 
@@ -85,7 +88,7 @@ func installGit() error {
 	brewCmd := exec.Command("which", "brew")
 	if err := brewCmd.Run(); err == nil {
 		// Use Homebrew to install git
-		Logger("🔄 Installing git via Homebrew...", LogInfo)
+		logger.Logger("🔄 Installing git via Homebrew...", logger.LogInfo)
 		brewInstall := exec.Command("brew", "install", "git")
 		brewInstall.Stdout = os.Stdout
 		brewInstall.Stderr = os.Stderr
@@ -94,7 +97,7 @@ func installGit() error {
 		}
 	} else {
 		// Fall back to Xcode Command Line Tools if Homebrew isn't available
-		Logger("🔄 Installing git via Xcode Command Line Tools...", LogInfo)
+		logger.Logger("🔄 Installing git via Xcode Command Line Tools...", logger.LogInfo)
 		cmd := exec.Command("xcode-select", "--install")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -109,7 +112,7 @@ func installGit() error {
 		return fmt.Errorf("git still not available after installation attempt: %w", err)
 	}
 
-	Logger("✅ Git successfully installed", LogSuccess)
+	logger.Logger("✅ Git successfully installed", logger.LogSuccess)
 	return nil
 }
 
@@ -129,7 +132,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 		return version, nil
 	}
 
-	Logger("⬇️ Downloading AutoPkg", LogInfo)
+	logger.Logger("⬇️ Downloading AutoPkg", logger.LogInfo)
 
 	var releaseURL string
 	var err error
@@ -137,10 +140,10 @@ func InstallAutoPkg(config *Config) (string, error) {
 	// Get release URL based on config
 	if config.UseBeta {
 		releaseURL, err = getBetaAutoPkgReleaseURL()
-		Logger("🧪 Installing latest Beta AutoPkg Release", LogInfo)
+		logger.Logger("🧪 Installing latest Beta AutoPkg Release", logger.LogInfo)
 	} else {
 		releaseURL, err = getLatestAutoPkgReleaseURL()
-		Logger("🚀 Installing latest Stable AutoPkg Release", LogInfo)
+		logger.Logger("🚀 Installing latest Stable AutoPkg Release", logger.LogInfo)
 	}
 
 	if err != nil {
@@ -150,7 +153,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 
 	// Download the package
 	pkgPath := "/tmp/autopkg-latest.pkg"
-	if err := downloadFile(releaseURL, pkgPath); err != nil {
+	if err := helpers.DownloadFile(releaseURL, pkgPath); err != nil {
 		return "", fmt.Errorf("failed to download AutoPkg package: %w", err)
 	}
 
@@ -168,7 +171,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 	}
 
 	version := strings.TrimSpace(string(versionOutput))
-	Logger(fmt.Sprintf("✅ AutoPkg %s Installed", version), LogSuccess)
+	logger.Logger(fmt.Sprintf("✅ AutoPkg %s Installed", version), logger.LogSuccess)
 
 	return version, nil
 }
@@ -201,7 +204,7 @@ func SetupPreferencesFile(config *Config) (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to set GIT_PATH: %w", err)
 	}
-	Logger(fmt.Sprintf("📝 Wrote GIT_PATH %s to %s\n", gitPath, config.PrefsFilePath), LogInfo)
+	logger.Logger(fmt.Sprintf("📝 Wrote GIT_PATH %s to %s\n", gitPath, config.PrefsFilePath), logger.LogInfo)
 
 	// Set up GitHub token
 	if config.GitHubToken != "" {
@@ -222,13 +225,13 @@ func SetupPreferencesFile(config *Config) (string, error) {
 		if err := os.WriteFile(tokenPath, []byte(config.GitHubToken), 0600); err != nil {
 			return "", fmt.Errorf("failed to write GitHub token: %w", err)
 		}
-		Logger(fmt.Sprintf("📝 Wrote GITHUB_TOKEN to %s\n", tokenPath), LogInfo)
+		logger.Logger(fmt.Sprintf("📝 Wrote GITHUB_TOKEN to %s\n", tokenPath), logger.LogInfo)
 		// Set the token path in preferences
 		cmd := exec.Command("defaults", "write", config.PrefsFilePath, "GITHUB_TOKEN_PATH", tokenPath)
 		if err := cmd.Run(); err != nil {
 			return "", fmt.Errorf("failed to set GITHUB_TOKEN_PATH: %w", err)
 		}
-		Logger(fmt.Sprintf("📝 Wrote GITHUB_TOKEN_PATH to %s\n", config.PrefsFilePath), LogInfo)
+		logger.Logger(fmt.Sprintf("📝 Wrote GITHUB_TOKEN_PATH to %s\n", config.PrefsFilePath), logger.LogInfo)
 	}
 
 	// Configure FAIL_RECIPES_WITHOUT_TRUST_INFO
@@ -241,7 +244,7 @@ func SetupPreferencesFile(config *Config) (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to set FAIL_RECIPES_WITHOUT_TRUST_INFO: %w", err)
 	}
-	Logger(fmt.Sprintf("📝 Wrote FAIL_RECIPES_WITHOUT_TRUST_INFO %s to %s", failValue, config.PrefsFilePath), LogInfo)
+	logger.Logger(fmt.Sprintf("📝 Wrote FAIL_RECIPES_WITHOUT_TRUST_INFO %s to %s", failValue, config.PrefsFilePath), logger.LogInfo)
 
 	// Configure JCDS2 mode
 	if config.JCDS2Mode {
@@ -369,7 +372,7 @@ func SetupPrivateRepo(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("✅ Private AutoPkg Repo Configured", LogSuccess)
+	logger.Logger("✅ Private AutoPkg Repo Configured", logger.LogSuccess)
 	return nil
 }
 
@@ -386,7 +389,7 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 	}
 
 	// Load additional repos from repo list file if specified
-	if config.AutopkgRepoListPath != "" && fileExists(config.AutopkgRepoListPath) {
+	if config.AutopkgRepoListPath != "" && helpers.FileExists(config.AutopkgRepoListPath) {
 		file, err := os.Open(config.AutopkgRepoListPath)
 		if err != nil {
 			return fmt.Errorf("failed to open repo list file: %w", err)
@@ -411,19 +414,19 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 		if repo == "" {
 			continue
 		}
-		Logger(fmt.Sprintf("📦 Adding recipe repository: %s", repo), LogInfo)
+		logger.Logger(fmt.Sprintf("📦 Adding recipe repository: %s", repo), logger.LogInfo)
 		cmd := exec.Command("autopkg", "repo-add", repo, "--prefs", prefsPath)
 
 		// Log error if repo-add fails, but continue with other repos
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("ERROR: could not add %s to %s\n", repo, prefsPath)
 		} else {
-			Logger(fmt.Sprintf("✅ Added %s to %s", repo, prefsPath), LogInfo)
+			logger.Logger(fmt.Sprintf("✅ Added %s to %s", repo, prefsPath), logger.LogInfo)
 
 		}
 	}
 
-	Logger("✅ AutoPkg Repos Configured", LogSuccess)
+	logger.Logger("✅ AutoPkg Repos Configured", logger.LogSuccess)
 	return nil
 }
 
@@ -434,7 +437,7 @@ func ProcessRecipeLists(config *Config, prefsPath string) error {
 	}
 
 	for _, listPath := range config.RecipeLists {
-		if !fileExists(listPath) {
+		if !helpers.FileExists(listPath) {
 			fmt.Printf("Warning: Recipe list file %s does not exist\n", listPath)
 			continue
 		}
@@ -465,13 +468,13 @@ func ProcessRecipeLists(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("✅ AutoPkg Repos for all parent recipes added", LogSuccess)
+	logger.Logger("✅ AutoPkg Repos for all parent recipes added", logger.LogSuccess)
 	return nil
 }
 
 // ListRecipes lists all available AutoPkg recipes
 func ListRecipes(prefsPath string) error {
-	Logger("📝 Available recipes:", LogInfo)
+	logger.Logger("📝 Available recipes:", logger.LogInfo)
 
 	args := []string{"list-recipes"}
 	if prefsPath != "" {
@@ -542,7 +545,7 @@ func getLatestAutoPkgReleaseURL() (string, error) {
 	// Log raw response for debugging
 	if DEBUG {
 		body, _ := io.ReadAll(resp.Body)
-		Logger(fmt.Sprintf("GitHub API response: %s", string(body)), LogDebug)
+		logger.Logger(fmt.Sprintf("GitHub API response: %s", string(body)), logger.LogDebug)
 
 		// Create a new reader with the same data for subsequent decoding
 		resp.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -564,7 +567,7 @@ func getLatestAutoPkgReleaseURL() (string, error) {
 	// Find the .pkg asset
 	for _, asset := range release.Assets {
 		if strings.HasSuffix(asset.Name, ".pkg") {
-			Logger(fmt.Sprintf("🔍 Found release %s with package %s", release.TagName, asset.Name), LogInfo)
+			logger.Logger(fmt.Sprintf("🔍 Found release %s with package %s", release.TagName, asset.Name), logger.LogInfo)
 			return asset.BrowserDownloadURL, nil
 		}
 	}
@@ -627,7 +630,7 @@ func getBetaAutoPkgReleaseURL() (string, error) {
 			// Look for .pkg asset in this prerelease
 			for _, asset := range release.Assets {
 				if strings.HasSuffix(asset.Name, ".pkg") {
-					Logger(fmt.Sprintf("🔍 Found beta release: %s", release.TagName), LogInfo)
+					logger.Logger(fmt.Sprintf("🔍 Found beta release: %s", release.TagName), logger.LogInfo)
 					return asset.BrowserDownloadURL, nil
 				}
 			}

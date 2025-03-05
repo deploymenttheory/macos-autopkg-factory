@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os/user"
 	"path/filepath"
+
+	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
 // SetupGitHubActionsRunner configures AutoPkg for use in GitHub Actions
 func SetupGitHubActionsRunner() error {
 	// Set up logging
-	Logger("🚀 Setting up AutoPkg for GitHub Actions...", LogInfo)
+	logger.Logger("🚀 Setting up AutoPkg for GitHub Actions...", logger.LogInfo)
 
 	// Load all environment variables
 	LoadEnvironmentVariables()
@@ -17,7 +19,7 @@ func SetupGitHubActionsRunner() error {
 	// Force debug mode in Autopkg for testing
 	if !DEBUG {
 		DEBUG = true
-		Logger("🔍 Debug mode enabled for Autopkg", LogInfo)
+		logger.Logger("🔍 Debug mode enabled for Autopkg", logger.LogInfo)
 	}
 
 	// Check if running as root (which we shouldn't be)
@@ -40,7 +42,7 @@ func SetupGitHubActionsRunner() error {
 	}
 	// Configure contexual mdm uploader settings
 	if USE_JAMF_UPLOADER {
-		Logger("☁️ Configuring with JamfUploader integration", LogInfo)
+		logger.Logger("☁️ Configuring with JamfUploader integration", logger.LogInfo)
 		config.UseJamfUploader = true
 		config.JAMFPRO_URL = JAMFPRO_URL
 		config.API_USERNAME = API_USERNAME
@@ -54,7 +56,7 @@ func SetupGitHubActionsRunner() error {
 	}
 
 	if USE_INTUNE_UPLOADER {
-		Logger("☁️ Configuring with IntuneUploader integration", LogInfo)
+		logger.Logger("☁️ Configuring with IntuneUploader integration", logger.LogInfo)
 		config.INTUNE_TENANT_ID = INTUNE_TENANT_ID
 		config.INTUNE_CLIENT_ID = INTUNE_CLIENT_ID
 		config.INTUNE_CLIENT_SECRET = INTUNE_CLIENT_SECRET
@@ -65,7 +67,7 @@ func SetupGitHubActionsRunner() error {
 	if err != nil {
 		return fmt.Errorf("📦 failed to install AutoPkg: %w", err)
 	}
-	Logger(fmt.Sprintf("📦 AutoPkg %s ready", autopkgVersion), LogSuccess)
+	logger.Logger(fmt.Sprintf("📦 AutoPkg %s ready", autopkgVersion), logger.LogSuccess)
 
 	// Set up preferences
 	prefsPath, err := SetupPreferencesFile(config)
@@ -78,19 +80,19 @@ func SetupGitHubActionsRunner() error {
 		if err := ConfigureJamfUploader(config, prefsPath); err != nil {
 			return fmt.Errorf("☁️ failed to configure JamfUploader: %w", err)
 		}
-		Logger("📱 JamfUploader configuration completed", LogSuccess)
+		logger.Logger("📱 JamfUploader configuration completed", logger.LogSuccess)
 	}
 
 	if USE_INTUNE_UPLOADER {
 		if err := ConfigureIntuneUploader(config, prefsPath); err != nil {
 			return fmt.Errorf("📱 failed to configure IntuneUploader: %w", err)
 		}
-		Logger("📱 IntuneUploader configuration completed", LogSuccess)
+		logger.Logger("📱 IntuneUploader configuration completed", logger.LogSuccess)
 	}
 
 	// Setup Teams notifications if webhook is provided
 	if TEAMS_WEBHOOK != "" {
-		Logger("💬 Microsoft Teams notifications configured", LogSuccess)
+		logger.Logger("💬 Microsoft Teams notifications configured", logger.LogSuccess)
 	}
 
 	// Add repos
@@ -122,6 +124,6 @@ func SetupGitHubActionsRunner() error {
 		}
 	}
 
-	Logger("✅ AutoPkg setup for GitHub Actions completed successfully", LogSuccess)
+	logger.Logger("✅ AutoPkg setup for GitHub Actions completed successfully", logger.LogSuccess)
 	return nil
 }

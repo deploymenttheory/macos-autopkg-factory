@@ -1,4 +1,4 @@
-package autopkg
+package logger
 
 import "fmt"
 
@@ -17,9 +17,6 @@ func Logger(message string, level int) {
 	switch level {
 	case LogDebug:
 		prefix = "[DEBUG] "
-		if !DEBUG {
-			return
-		}
 	case LogInfo:
 		prefix = "[INFO] "
 	case LogWarning:

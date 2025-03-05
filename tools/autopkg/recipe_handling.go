@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"howett.net/plist"
+
+	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
 // Recipe represents an AutoPkg recipe
@@ -121,7 +123,7 @@ func (r *Recipe) VerifyTrustInfo(debug bool) (bool, error) {
 	}
 
 	name, _ := r.Name()
-	Logger(fmt.Sprintf("Verifying trust info for recipe: %s", name), LogInfo)
+	logger.Logger(fmt.Sprintf("Verifying trust info for recipe: %s", name), logger.LogInfo)
 
 	cmdArgs := []string{
 		"verify-trust-info",
@@ -132,7 +134,7 @@ func (r *Recipe) VerifyTrustInfo(debug bool) (bool, error) {
 	cmd := exec.Command("/usr/local/bin/autopkg", cmdArgs...)
 
 	if debug {
-		Logger(fmt.Sprintf("Running: autopkg %s", strings.Join(cmdArgs, " ")), LogDebug)
+		logger.Logger(fmt.Sprintf("Running: autopkg %s", strings.Join(cmdArgs, " ")), logger.LogDebug)
 	}
 
 	output, err := cmd.CombinedOutput()
@@ -141,13 +143,13 @@ func (r *Recipe) VerifyTrustInfo(debug bool) (bool, error) {
 		r.Results["message"] = string(output)
 		verified := false
 		r.Verified = &verified
-		Logger(fmt.Sprintf("Trust verification failed for %s: %v", name, err), LogError)
+		logger.Logger(fmt.Sprintf("Trust verification failed for %s: %v", name, err), logger.LogError)
 		return false, fmt.Errorf("trust verification failed: %w", err)
 	}
 
 	verified := true
 	r.Verified = &verified
-	Logger(fmt.Sprintf("Trust verification succeeded for %s", name), LogSuccess)
+	logger.Logger(fmt.Sprintf("Trust verification succeeded for %s", name), logger.LogSuccess)
 	return true, nil
 }
 
@@ -159,7 +161,7 @@ func (r *Recipe) UpdateTrustInfo(debug bool) error {
 	}
 
 	name, _ := r.Name()
-	Logger(fmt.Sprintf("Updating trust info for recipe: %s", name), LogInfo)
+	logger.Logger(fmt.Sprintf("Updating trust info for recipe: %s", name), logger.LogInfo)
 
 	cmdArgs := []string{
 		"update-trust-info",
@@ -169,15 +171,15 @@ func (r *Recipe) UpdateTrustInfo(debug bool) error {
 	cmd := exec.Command("/usr/local/bin/autopkg", cmdArgs...)
 
 	if debug {
-		Logger(fmt.Sprintf("Running: autopkg %s", strings.Join(cmdArgs, " ")), LogDebug)
+		logger.Logger(fmt.Sprintf("Running: autopkg %s", strings.Join(cmdArgs, " ")), logger.LogDebug)
 	}
 
 	if output, err := cmd.CombinedOutput(); err != nil {
-		Logger(fmt.Sprintf("Failed to update trust info for %s: %v", name, err), LogError)
+		logger.Logger(fmt.Sprintf("Failed to update trust info for %s: %v", name, err), logger.LogError)
 		return fmt.Errorf("failed to update trust info: %s, %w", output, err)
 	}
 
-	Logger(fmt.Sprintf("Successfully updated trust info for %s", name), LogSuccess)
+	logger.Logger(fmt.Sprintf("Successfully updated trust info for %s", name), logger.LogSuccess)
 	return nil
 }
 
@@ -309,12 +311,12 @@ func (r *Recipe) Run(opts *RecipeOptions) (map[string]interface{}, error) {
 		for _, app := range cleanupApps {
 			if appName, ok := app["name"].(string); ok && appName == name {
 				cmdArgs = append(cmdArgs, "--post", "com.github.almenscorner.intune-upload.processors/IntuneAppCleaner")
-				Logger(fmt.Sprintf("Adding cleanup processor for %s", name), LogInfo)
+				logger.Logger(fmt.Sprintf("Adding cleanup processor for %s", name), logger.LogInfo)
 
 				// Add keep count if specified
 				if keepCount, ok := app["keep_count"].(float64); ok {
 					cmdArgs = append(cmdArgs, "-k", fmt.Sprintf("keep_version_count=%d", int(keepCount)))
-					Logger(fmt.Sprintf("Setting keep count to %d for %s", int(keepCount), name), LogInfo)
+					logger.Logger(fmt.Sprintf("Setting keep count to %d for %s", int(keepCount), name), logger.LogInfo)
 				}
 				foundApp = true
 				break
@@ -322,7 +324,7 @@ func (r *Recipe) Run(opts *RecipeOptions) (map[string]interface{}, error) {
 		}
 
 		if !foundApp && opts.Debug {
-			Logger(fmt.Sprintf("Skipping cleanup for %s, not in cleanup list", name), LogWarning)
+			logger.Logger(fmt.Sprintf("Skipping cleanup for %s, not in cleanup list", name), logger.LogWarning)
 		}
 	}
 
@@ -338,14 +340,14 @@ func (r *Recipe) Run(opts *RecipeOptions) (map[string]interface{}, error) {
 		for _, app := range promoteApps {
 			if appName, ok := app["name"].(string); ok && appName == name {
 				cmdArgs = append(cmdArgs, "--post", "com.github.almenscorner.intune-upload.processors/IntuneAppPromoter")
-				Logger(fmt.Sprintf("Adding promotion processor for %s", name), LogInfo)
+				logger.Logger(fmt.Sprintf("Adding promotion processor for %s", name), logger.LogInfo)
 				foundApp = true
 				break
 			}
 		}
 
 		if !foundApp && opts.Debug {
-			Logger(fmt.Sprintf("Skipping promotion for %s, not in promote list", name), LogWarning)
+			logger.Logger(fmt.Sprintf("Skipping promotion for %s, not in promote list", name), logger.LogWarning)
 		}
 	}
 
@@ -353,7 +355,7 @@ func (r *Recipe) Run(opts *RecipeOptions) (map[string]interface{}, error) {
 	cmd := exec.Command("/usr/local/bin/autopkg", cmdArgs...)
 
 	if opts.Debug {
-		Logger(fmt.Sprintf("Running: autopkg %s", strings.Join(cmdArgs, " ")), LogDebug)
+		logger.Logger(fmt.Sprintf("Running: autopkg %s", strings.Join(cmdArgs, " ")), logger.LogDebug)
 	}
 
 	// Set up pipes to capture and display output in real-time
@@ -550,23 +552,23 @@ func ProcessRecipes(recipesPath string, overridesDir string, opts *RecipeOptions
 	// Process each recipe
 	for _, recipe := range recipes {
 		name, _ := recipe.Name()
-		Logger(fmt.Sprintf("Processing recipe: %s", name), LogInfo)
+		logger.Logger(fmt.Sprintf("Processing recipe: %s", name), logger.LogInfo)
 
 		if err := HandleRecipe(recipe, opts); err != nil {
-			Logger(fmt.Sprintf("Error handling recipe %s: %v", recipe.Path, err), LogError)
+			logger.Logger(fmt.Sprintf("Error handling recipe %s: %v", recipe.Path, err), logger.LogError)
 			failures = append(failures, recipe)
 		} else if recipe.Updated {
-			Logger(fmt.Sprintf("Recipe %s updated to version %s", name, recipe.UpdatedVersion()), LogSuccess)
+			logger.Logger(fmt.Sprintf("Recipe %s updated to version %s", name, recipe.UpdatedVersion()), logger.LogSuccess)
 			updates = append(updates, recipe)
 			successes = append(successes, recipe)
 		} else if recipe.Removed {
-			Logger(fmt.Sprintf("Recipe %s cleaned up old versions", name), LogSuccess)
+			logger.Logger(fmt.Sprintf("Recipe %s cleaned up old versions", name), logger.LogSuccess)
 			successes = append(successes, recipe)
 		} else if recipe.Promoted {
-			Logger(fmt.Sprintf("Recipe %s promoted to production", name), LogSuccess)
+			logger.Logger(fmt.Sprintf("Recipe %s promoted to production", name), logger.LogSuccess)
 			successes = append(successes, recipe)
 		} else {
-			Logger(fmt.Sprintf("Recipe %s processed with no changes", name), LogInfo)
+			logger.Logger(fmt.Sprintf("Recipe %s processed with no changes", name), logger.LogInfo)
 			successes = append(successes, recipe)
 		}
 
@@ -578,14 +580,14 @@ func ProcessRecipes(recipesPath string, overridesDir string, opts *RecipeOptions
 
 		if webhookToUse != "" && !opts.Debug {
 			if err := NotifyTeams(recipe, webhookToUse); err != nil {
-				Logger(fmt.Sprintf("Error sending Teams notification: %v", err), LogWarning)
+				logger.Logger(fmt.Sprintf("Error sending Teams notification: %v", err), logger.LogWarning)
 			} else {
-				Logger("Teams notification sent successfully", LogInfo)
+				logger.Logger("Teams notification sent successfully", logger.LogInfo)
 			}
 		} else if opts.Debug {
-			Logger("Skipping Teams notification - debug is enabled", LogDebug)
+			logger.Logger("Skipping Teams notification - debug is enabled", logger.LogDebug)
 		} else if webhookToUse == "" {
-			Logger("Skipping Teams notification - webhook URL is missing", LogWarning)
+			logger.Logger("Skipping Teams notification - webhook URL is missing", logger.LogWarning)
 		}
 
 		// Track verification failures for reporting
@@ -595,24 +597,24 @@ func ProcessRecipes(recipesPath string, overridesDir string, opts *RecipeOptions
 	}
 
 	// Report on final status
-	Logger(fmt.Sprintf("Recipe processing completed: %d total, %d successes, %d failures, %d updates",
-		len(recipes), len(successes), len(failures), len(updates)), LogInfo)
+	logger.Logger(fmt.Sprintf("Recipe processing completed: %d total, %d successes, %d failures, %d updates",
+		len(recipes), len(successes), len(failures), len(updates)), logger.LogInfo)
 
 	// Report on failures
 	if len(failures) > 0 {
-		Logger(fmt.Sprintf("Verification failed for %d recipes:", len(failures)), LogError)
+		logger.Logger(fmt.Sprintf("Verification failed for %d recipes:", len(failures)), logger.LogError)
 		for _, recipe := range failures {
 			name, _ := recipe.Name()
-			Logger(fmt.Sprintf("  - %s (%s)", name, recipe.Path), LogError)
+			logger.Logger(fmt.Sprintf("  - %s (%s)", name, recipe.Path), logger.LogError)
 		}
 	}
 
 	// Report on updates
 	if len(updates) > 0 {
-		Logger(fmt.Sprintf("Updated %d recipes:", len(updates)), LogSuccess)
+		logger.Logger(fmt.Sprintf("Updated %d recipes:", len(updates)), logger.LogSuccess)
 		for _, recipe := range updates {
 			name, _ := recipe.Name()
-			Logger(fmt.Sprintf("  - %s to version %s", name, recipe.UpdatedVersion()), LogSuccess)
+			logger.Logger(fmt.Sprintf("  - %s to version %s", name, recipe.UpdatedVersion()), logger.LogSuccess)
 		}
 	}
 

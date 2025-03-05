@@ -1,0 +1,193 @@
+name: '⚙️ setup and install autopkg'
+
+on:
+  workflow_call:
+    inputs:
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: 'true'
+        type: string
+      use_beta:
+        description: 'Use the latest AutoPkg beta version, false will use the latest stable version'
+        required: false
+        default: 'false'
+        type: string
+      overrides_dir:
+        description: 'Overrides directory'
+        required: false
+        default: './overrides'
+        type: string
+      autopkg_repo_list_path:
+        description: 'Path to the autopkg recipe repo list file'
+        required: false
+        default: '${{ github.workspace }}/configuration/autopkg-repo-list.txt'
+        type: string
+      report_path:
+        description: 'Path to store the AutoPkg report file'
+        required: false
+        default: '/tmp/autopkg-report.plist'
+        type: string
+      disable_verification:
+        description: 'Disable recipe verification'
+        required: false
+        default: 'false'
+        type: string
+      force_update:
+        description: 'Force update AutoPkg'
+        required: false
+        default: 'true'
+        type: string
+      fail_recipes:
+        description: 'Fail recipes if issues occur'
+        required: false
+        default: 'true'
+        type: string
+      cleanup_list:
+        description: 'Path to the cleanup list file'
+        required: false
+        default: './config/cleanup.json'
+        type: string
+      promote_list:
+        description: 'Path to the promote list file'
+        required: false
+        default: './config/promote.json'
+        type: string
+      use_intune_uploader:
+        description: 'Use Microsoft Intune Uploader'
+        required: false
+        default: 'true'
+        type: string
+      intune_tenant_id:
+        description: 'Intune Tenant ID'
+        required: false
+        default: ''
+        type: string
+      intune_client_id:
+        description: 'Intune Client ID'
+        required: false
+        default: ''
+        type: string
+      intune_client_secret:
+        description: 'Intune Client Secret'
+        required: false
+        default: ''
+        type: string
+      use_jamf_uploader:
+        description: 'Use Jamf Uploader'
+        required: false
+        default: 'false'
+        type: string
+      jamfpro_url:
+        description: 'JamfPro URL'
+        required: false
+        default: ''
+        type: string
+      jamfpro_client_id:
+        description: 'JamfPro Client ID'
+        required: false
+        default: ''
+        type: string
+      jamfpro_client_secret:
+        description: 'JamfPro Client Secret'
+        required: false
+        default: ''
+        type: string
+      api_username:
+        description: 'API Username'
+        required: false
+        default: ''
+        type: string
+      api_password:
+        description: 'API Password'
+        required: false
+        default: ''
+        type: string
+      smb_url:
+        description: 'SMB URL'
+        required: false
+        default: ''
+        type: string
+      smb_username:
+        description: 'SMB Username'
+        required: false
+        default: ''
+        type: string
+      smb_password:
+        description: 'SMB Password'
+        required: false
+        default: ''
+        type: string
+      jcds2_mode:
+        description: 'JCDS2 mode flag'
+        required: false
+        default: 'false'
+        type: string
+      teams_webhook:
+        description: 'Microsoft Teams webhook URL'
+        required: false
+        default: ''
+        type: string
+      private_repo_url:
+        description: 'Private repository URL'
+        required: false
+        default: ''
+        type: string
+      private_repo_path:
+        description: 'Private repository path'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  autopkg:
+    runs-on: macos-latest
+    env:
+      DEBUG: ${{ inputs.debug }}
+      USE_BETA: ${{ inputs.use_beta }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RECIPE: ${{ inputs.recipe }}
+      OVERRIDES_DIR: ${{ inputs.overrides_dir }}
+      AUTOPKG_REPO_LIST_PATH: ${{ inputs.autopkg_repo_list_path }}
+      REPORT_PATH: ${{ inputs.report_path }}
+      DISABLE_VERIFICATION: ${{ inputs.disable_verification }}
+      FORCE_UPDATE: ${{ inputs.force_update }}
+      FAIL_RECIPES: ${{ inputs.fail_recipes }}
+      CLEANUP_LIST: ${{ inputs.cleanup_list }}
+      PROMOTE_LIST: ${{ inputs.promote_list }}
+      USE_INTUNE_UPLOADER: ${{ inputs.use_intune_uploader }}
+      USE_JAMF_UPLOADER: ${{ inputs.use_jamf_uploader }}
+      INTUNE_TENANT_ID: ${{ inputs.intune_tenant_id }}
+      INTUNE_CLIENT_ID: ${{ inputs.intune_client_id }}
+      INTUNE_CLIENT_SECRET: ${{ inputs.intune_client_secret }}
+      JAMFPRO_URL: ${{ inputs.jamfpro_url }}
+      JAMFPRO_CLIENT_ID: ${{ inputs.jamfpro_client_id }}
+      JAMFPRO_CLIENT_SECRET: ${{ inputs.jamfpro_client_secret }}
+      API_USERNAME: ${{ inputs.api_username }}
+      API_PASSWORD: ${{ inputs.api_password }}
+      SMB_URL: ${{ inputs.smb_url }}
+      SMB_USERNAME: ${{ inputs.smb_username }}
+      SMB_PASSWORD: ${{ inputs.smb_password }}
+      JCDS2_MODE: ${{ inputs.jcds2_mode }}
+      TEAMS_WEBHOOK: ${{ inputs.teams_webhook }}
+      PRIVATE_REPO_URL: ${{ inputs.private_repo_url }}
+      PRIVATE_REPO_PATH: ${{ inputs.private_repo_path }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      
+      - name: Set up Go
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        with:
+          go-version: '>=1.22.5'
+      
+      - name: Install dependencies
+        run: go get -v ./...
+      
+      - name: Build AutoPkg setup tool
+        run: |
+          cd tools/cmd/autopkg_setup
+          go build -v -o autopkg-setup
+      
+      - name: Run SetupGitHubActionsRunner
+        run: ./tools/cmd/autopkg_setup/autopkg-setup

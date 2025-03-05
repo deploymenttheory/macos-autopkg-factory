@@ -1,4 +1,4 @@
-package autopkg
+package helpers
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 // Helper functions
 
 // downloadFile downloads a file from the given URL to the specified path
-func downloadFile(url, filepath string) error {
+func DownloadFile(url, filepath string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func downloadFile(url, filepath string) error {
 }
 
 // fileExists checks if a file exists
-func fileExists(filepath string) bool {
+func FileExists(filepath string) bool {
 	info, err := os.Stat(filepath)
 	if os.IsNotExist(err) {
 		return false
@@ -51,18 +51,8 @@ func readJSONFile(filepath string) (map[string]interface{}, error) {
 	return result, nil
 }
 
-// writeJSONFile writes a map to a JSON file
-func writeJSONFile(filepath string, data map[string]interface{}) error {
-	jsonData, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath, jsonData, 0644)
-}
-
 // updateJSONFile updates a specific key in a JSON file
-func updateJSONFile(filepath string, key string, value interface{}) error {
+func UpdateJSONFile(filepath string, key string, value interface{}) error {
 	// Read the current JSON
 	data, err := readJSONFile(filepath)
 	if err != nil {
@@ -78,5 +68,15 @@ func updateJSONFile(filepath string, key string, value interface{}) error {
 	data[key] = value
 
 	// Write the updated JSON back to the file
-	return writeJSONFile(filepath, data)
+	return WriteJSONFile(filepath, data)
+}
+
+// writeJSONFile writes a map to a JSON file
+func WriteJSONFile(filepath string, data map[string]interface{}) error {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath, jsonData, 0644)
 }
