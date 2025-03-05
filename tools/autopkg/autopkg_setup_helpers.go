@@ -201,7 +201,7 @@ func SetupPreferencesFile(config *Config) (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to set GIT_PATH: %w", err)
 	}
-	fmt.Printf("Wrote GIT_PATH %s to %s\n", gitPath, config.PrefsFilePath)
+	Logger(fmt.Sprintf("📝 Added GIT_PATH %s to %s", gitPath, config.PrefsFilePath), LogInfo)
 
 	// Set up GitHub token
 	if config.GitHubToken != "" {
@@ -222,14 +222,14 @@ func SetupPreferencesFile(config *Config) (string, error) {
 		if err := os.WriteFile(tokenPath, []byte(config.GitHubToken), 0600); err != nil {
 			return "", fmt.Errorf("failed to write GitHub token: %w", err)
 		}
-		fmt.Printf("Wrote GITHUB_TOKEN to %s\n", tokenPath)
+		Logger(fmt.Sprintf("📝 Added GITHUB_TOKEN to %s", tokenPath), LogInfo)
 
 		// Set the token path in preferences
 		cmd := exec.Command("defaults", "write", config.PrefsFilePath, "GITHUB_TOKEN_PATH", tokenPath)
 		if err := cmd.Run(); err != nil {
 			return "", fmt.Errorf("failed to set GITHUB_TOKEN_PATH: %w", err)
 		}
-		fmt.Printf("Wrote GITHUB_TOKEN_PATH to %s\n", config.PrefsFilePath)
+		Logger(fmt.Sprintf("📝 Added GITHUB_TOKEN_PATH to %s", config.PrefsFilePath), LogInfo)
 	}
 
 	// Configure FAIL_RECIPES_WITHOUT_TRUST_INFO
