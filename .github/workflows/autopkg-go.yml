@@ -17,7 +17,7 @@ jobs:
       # Autopkg + pipelin Debug mode
       DEBUG: "true"
       # Enable usage of latest autopkg beta version
-      USE_BETA: "true"
+      USE_BETA: "false"
       # GitHub token for API access
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Recipe configuration

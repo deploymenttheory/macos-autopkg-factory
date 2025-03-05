@@ -155,79 +155,16 @@ func InstallAutoPkg(config *Config) (string, error) {
 	}
 
 	// Install the package
-	Logger("📦 Installing AutoPkg package...", LogInfo)
 	cmd := exec.Command("sudo", "installer", "-pkg", pkgPath, "-target", "/")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to install AutoPkg package: %s, %w", output, err)
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to install AutoPkg package: %w", err)
 	}
 
-	// Verify installation - check multiple possible paths
-	possiblePaths := []string{
-		"/usr/local/bin/autopkg",
-		"/usr/local/autopkg/autopkg",
-		"/opt/autopkg/autopkg",
-		"/opt/homebrew/bin/autopkg",
-	}
-
-	var installedPath string
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			installedPath = path
-			Logger(fmt.Sprintf("🔍 Found AutoPkg binary at %s", path), LogInfo)
-			break
-		}
-	}
-
-	if installedPath == "" {
-		// Try to find it with the 'which' command
-		whichCmd := exec.Command("which", "autopkg")
-		whichOutput, err := whichCmd.Output()
-		if err == nil {
-			installedPath = strings.TrimSpace(string(whichOutput))
-			Logger(fmt.Sprintf("🔍 Found AutoPkg binary using 'which' at %s", installedPath), LogInfo)
-		} else {
-			// Try to find any file with 'autopkg' in common directories
-			findCmd := exec.Command("find", "/usr/local", "/opt", "-name", "autopkg", "-type", "f", "-o", "-type", "l")
-			findOutput, err := findCmd.Output()
-			if err == nil && len(findOutput) > 0 {
-				paths := strings.Split(strings.TrimSpace(string(findOutput)), "\n")
-				if len(paths) > 0 {
-					installedPath = paths[0]
-					Logger(fmt.Sprintf("🔍 Found AutoPkg binary using 'find' at %s", installedPath), LogInfo)
-				}
-			}
-		}
-	}
-
-	if installedPath == "" {
-		return "", fmt.Errorf("AutoPkg installation seems to have failed: binary not found in common locations. Install output: %s", output)
-	}
-
-	// Create symlink to /usr/local/bin if needed
-	if installedPath != autopkgPath {
-		Logger(fmt.Sprintf("🔗 Creating symlink from %s to %s", installedPath, autopkgPath), LogInfo)
-
-		// Ensure the directory exists
-		err := os.MkdirAll(filepath.Dir(autopkgPath), 0755)
-		if err != nil {
-			return "", fmt.Errorf("failed to create directory for symlink: %w", err)
-		}
-
-		// Remove existing symlink or file if it exists
-		os.Remove(autopkgPath)
-
-		// Create the symlink
-		if err := os.Symlink(installedPath, autopkgPath); err != nil {
-			return "", fmt.Errorf("failed to create symlink: %w", err)
-		}
-	}
-
-	// Verify we can now run the command
+	// Verify installation and capture version
 	versionCmd := exec.Command(autopkgPath, "version")
 	versionOutput, err := versionCmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to get AutoPkg version after installation: %w", err)
+		return "", fmt.Errorf("failed to get AutoPkg version: %w", err)
 	}
 
 	version := strings.TrimSpace(string(versionOutput))
