@@ -252,7 +252,8 @@ func SetupPreferencesFile(config *Config) (string, error) {
 		if err := cmd.Run(); err != nil {
 			return "", fmt.Errorf("failed to set jcds2_mode: %w", err)
 		}
-		fmt.Printf("Wrote jcds2_mode true to %s\n", config.PrefsFilePath)
+		logger.Logger(fmt.Sprintf("📝 Wrote jcds2_mode %s to %s\n", failValue, config.PrefsFilePath), logger.LogInfo)
+
 	} else {
 		// Check if jcds2_mode exists and delete it if it does
 		checkCmd := exec.Command("defaults", "read", config.PrefsFilePath, "jcds2_mode")
@@ -389,22 +390,26 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 	}
 
 	// Load additional repos from repo list file if specified
-	if config.AutopkgRepoListPath != "" && helpers.FileExists(config.AutopkgRepoListPath) {
-		file, err := os.Open(config.AutopkgRepoListPath)
-		if err != nil {
-			return fmt.Errorf("failed to open repo list file: %w", err)
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			repo := strings.TrimSpace(scanner.Text())
-			if repo != "" {
-				repos = append(repos, repo)
+	if config.AutopkgRepoListPath != "" {
+		if helpers.FileExists(config.AutopkgRepoListPath) {
+			file, err := os.Open(config.AutopkgRepoListPath)
+			if err != nil {
+				return fmt.Errorf("failed to open repo list file: %w", err)
 			}
-		}
-		if err := scanner.Err(); err != nil {
-			return fmt.Errorf("failed to read repo list file: %w", err)
+			defer file.Close()
+
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				repo := strings.TrimSpace(scanner.Text())
+				if repo != "" {
+					repos = append(repos, repo)
+				}
+			}
+			if err := scanner.Err(); err != nil {
+				return fmt.Errorf("failed to read repo list file: %w", err)
+			}
+		} else {
+			logger.Logger(fmt.Sprintf("⚠️ Warning: AutoPkg repo list file not found at path: %s", config.AutopkgRepoListPath), logger.LogWarning)
 		}
 	}
 	config.RecipeRepos = repos
