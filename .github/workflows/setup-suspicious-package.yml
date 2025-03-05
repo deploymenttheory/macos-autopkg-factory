@@ -1,4 +1,4 @@
-name: '⚙️ setup and install suspicious package'
+name: '⚙️ reuseable setup and install of suspicious package'
 
 on:
   workflow_call:

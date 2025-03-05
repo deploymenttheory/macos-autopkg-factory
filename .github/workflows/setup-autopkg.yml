@@ -1,3 +1,5 @@
+name: '⚙️ reuseable setup and install of autopkg'
+
 on:
   workflow_call:
     inputs:
