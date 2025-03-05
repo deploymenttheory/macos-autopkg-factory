@@ -25,7 +25,6 @@ jobs:
       api_username: ""
       api_password: ""
       jcds2_mode: "true"
-      teams_webhook: ${{ secrets.TEAMS_WEBHOOK }}
       private_repo_url: ""
       private_repo_path: ""
     secrets:
