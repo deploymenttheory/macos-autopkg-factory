@@ -517,6 +517,55 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 	return nil
 }
 
+// ConfigureIntuneUploader configures the Microsoft Intune integration settings
+func ConfigureIntuneUploader(config *Config, prefsPath string) error {
+	// Set CLIENT_ID if provided in config or environment
+	clientID := config.CLIENT_ID
+	if clientID == "" {
+		clientID = os.Getenv("CLIENT_ID")
+	}
+	if clientID != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "CLIENT_ID", clientID)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set CLIENT_ID: %w", err)
+		}
+		Logger(fmt.Sprintf("Set CLIENT_ID in %s", prefsPath))
+	}
+	
+	// Set CLIENT_SECRET if provided in config or environment
+	clientSecret := config.CLIENT_SECRET
+	if clientSecret == "" {
+		clientSecret = os.Getenv("CLIENT_SECRET")
+	}
+	if clientSecret != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "CLIENT_SECRET", clientSecret)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set CLIENT_SECRET: %w", err)
+		}
+		Logger(fmt.Sprintf("Set CLIENT_SECRET in %s", prefsPath))
+	}
+	
+	// Set TENANT_ID if provided in config or environment
+	tenantID := config.TENANT_ID
+	if tenantID == "" {
+		tenantID = os.Getenv("TENANT_ID")
+	}
+	if tenantID != "" {
+		cmd := exec.Command("defaults", "write", prefsPath, "TENANT_ID", tenantID)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set TENANT_ID: %w", err)
+		}
+		Logger(fmt.Sprintf("Set TENANT_ID in %s", prefsPath))
+	}
+	
+	// Check if we set at least some of the Intune configuration
+	if clientID != "" || clientSecret != "" || tenantID != "" {
+		Logger("Intune integration configured.")
+	}
+	
+	return nil
+}
+
 // ConfigureJamfUploader sets up JamfUploader settings
 func ConfigureJamfUploader(config *Config, prefsPath string) error {
 	if config.JSSUrl == "" {
