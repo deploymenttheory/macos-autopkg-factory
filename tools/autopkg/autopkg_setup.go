@@ -40,7 +40,7 @@ func SetupGitHubActionsRunner() error {
 	}
 	// Configure contexual mdm uploader settings
 	if USE_JAMF_UPLOADER {
-		Logger("☁️ Configuring with JamfUploader integration", LogInfo)
+		Logger("📱 Configuring with JamfUploader integration", LogInfo)
 		config.UseJamfUploader = true
 		config.JAMFPRO_URL = JAMFPRO_URL
 		config.API_USERNAME = API_USERNAME

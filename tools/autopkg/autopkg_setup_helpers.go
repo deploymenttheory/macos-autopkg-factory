@@ -410,6 +410,7 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 	// Add all specified repositories using the autopkg command
 	for _, repo := range repos {
 		if repo == "" {
+			Logger(fmt.Sprintf("WARNING: encountered empty autopkg repository path entry. AUTOPKG_REPO_LIST_PATH: %s", config.AutopkgRepoListPath), LogWarning)
 			continue
 		}
 		fmt.Printf("Adding recipe repository: %s\n", repo)
