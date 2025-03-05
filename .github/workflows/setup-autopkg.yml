@@ -86,6 +86,9 @@ on:
       intune_client_secret:
         description: 'Intune Client Secret'
         required: false
+      jamfpro_url:
+        description: 'JamfPro url'
+        required: false
       jamfpro_client_id:
         description: 'JamfPro Client ID'
         required: false
