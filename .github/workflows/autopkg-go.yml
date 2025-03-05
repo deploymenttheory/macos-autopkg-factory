@@ -21,31 +21,47 @@ jobs:
       RECIPE: "Firefox.recipe, Chrome.recipe"
       OVERRIDES_DIR: "./overrides"
       
+      # Report configuration
+      REPORT_PATH: "/tmp/autopkg-report.plist"
+      
       # Verification settings
       DISABLE_VERIFICATION: "true"
       FORCE_UPDATE: "true"
       FAIL_RECIPES: "false"
       
-      # Report configuration
-      REPORT_PATH: "/tmp/autopkg-report.plist"
+      # Cleanup and promotion lists
+      CLEANUP_LIST: "./config/cleanup.json"
+      PROMOTE_LIST: "./config/promote.json"
       
       # Uploader selection
       USE_INTUNE_UPLOADER: "true"
+      USE_JAMF_UPLOADER: "false"
       
       # Intune credentials
       INTUNE_TENANT_ID: ${{ secrets.INTUNE_TENANT_ID }}
       INTUNE_CLIENT_ID: ${{ secrets.INTUNE_CLIENT_ID }}
       INTUNE_CLIENT_SECRET: ${{ secrets.INTUNE_CLIENT_SECRET }}
       
+      # Jamf credentials (included but not used if USE_JAMF_UPLOADER is false)
+      JAMFPRO_URL: ${{ secrets.JAMFPRO_URL }}
+      JAMFPRO_CLIENT_ID: ${{ secrets.JAMFPRO_CLIENT_ID }}
+      JAMFPRO_CLIENT_SECRET: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
+      API_USERNAME: ${{ secrets.API_USERNAME }}
+      API_PASSWORD: ${{ secrets.API_PASSWORD }}
+      SMB_URL: ${{ secrets.SMB_URL }}
+      SMB_USERNAME: ${{ secrets.SMB_USERNAME }}
+      SMB_PASSWORD: ${{ secrets.SMB_PASSWORD }}
+      JCDS2_MODE: "false"
+      
       # Repository configuration
       AUTOPKG_REPOS: "recipes,almenscorner/autopkg-recipes"
       
-      # Cleanup and promotion
-      CLEANUP_LIST: "./config/cleanup.json"
-      PROMOTE_LIST: "./config/promote.json"
-      
       # Teams notification
       TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
+      
+      # Private repo config
+      PRIVATE_REPO_URL: ""
+      PRIVATE_REPO_PATH: ""
       
     steps:
       - name: Check out repository

@@ -11,14 +11,6 @@ const (
 	LogSuccess = 50
 )
 
-// Global variables - can be set via environment variables
-var (
-	DEBUG         bool
-	OVERRIDES_DIR string
-	RECIPE_TO_RUN string
-	TEAMS_WEBHOOK string
-)
-
 // Logger implements a simple logging system
 func Logger(message string, level int) {
 	var prefix string
