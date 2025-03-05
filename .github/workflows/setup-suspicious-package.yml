@@ -51,4 +51,4 @@ jobs:
           go build -v -o suspiciouspackage-setup
 
       - name: Run SetupGitHubActionsRunner for Suspicious Package
-        run: ./tools/cmd/suspiciouspackage_setup/suspiciouspackage-setup
+        run: ./tools/cmd/suspicious_package_setup/suspiciouspackage-setup
