@@ -57,7 +57,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 	// Set CLIENT_ID if provided in config or environment
 	clientID := config.JAMFPRO_CLIENT_ID
 	if clientID == "" {
-		clientID = os.Getenv("CLIENT_ID")
+		clientID = os.Getenv("JAMFPRO_CLIENT_ID")
 	}
 	if clientID != "" {
 		cmd := exec.Command("defaults", "write", prefsPath, "CLIENT_ID", clientID)
@@ -70,7 +70,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 	// Set CLIENT_SECRET if provided in config or environment
 	clientSecret := config.JAMFPRO_CLIENT_SECRET
 	if clientSecret == "" {
-		clientSecret = os.Getenv("CLIENT_SECRET")
+		clientSecret = os.Getenv("JAMFPRO_CLIENT_SECRET")
 	}
 	if clientSecret != "" {
 		cmd := exec.Command("defaults", "write", prefsPath, "CLIENT_SECRET", clientSecret)
