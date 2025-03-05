@@ -10,7 +10,7 @@ jobs:
       debug: "true"
       use_beta: "false"
       overrides_dir: "./overrides"
-      autopkg_repo_list_path: "${{ github.workspace }}/configuration/autopkg-repo-list.txt"
+      autopkg_repo_list_path: '${{ github.workspace }}/configuration/autopkg-repo-list.txt'
       report_path: "/tmp/autopkg-report.plist"
       disable_verification: "false"
       force_update: "true"
