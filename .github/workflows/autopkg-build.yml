@@ -22,15 +22,17 @@ jobs:
       # intune_client_id: ""
       # intune_client_secret: ""
       use_jamf_uploader: "true"
-      jamfpro_url: ${{ secrets.JAMFPRO_URL }}
-      jamfpro_client_id: ${{ secrets.JAMFPRO_CLIENT_ID }}
-      jamfpro_client_secret: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
       api_username: ""
       api_password: ""
       jcds2_mode: "true"
       teams_webhook: ${{ secrets.TEAMS_WEBHOOK }}
       private_repo_url: ""
       private_repo_path: ""
+    secrets:
+      JAMFPRO_URL: ${{ secrets.JAMFPRO_URL }}
+      JAMFPRO_CLIENT_ID: ${{ secrets.JAMFPRO_CLIENT_ID }}
+      JAMFPRO_CLIENT_SECRET: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
+      TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
 
   suspiciouspackage:
     needs: autopkg

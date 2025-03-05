@@ -1,5 +1,3 @@
-name: '⚙️ setup and install autopkg'
-
 on:
   workflow_call:
     inputs:
@@ -58,75 +56,15 @@ on:
         required: false
         default: 'true'
         type: string
-      intune_tenant_id:
-        description: 'Intune Tenant ID'
-        required: false
-        default: ''
-        type: string
-      intune_client_id:
-        description: 'Intune Client ID'
-        required: false
-        default: ''
-        type: string
-      intune_client_secret:
-        description: 'Intune Client Secret'
-        required: false
-        default: 'false'
-        type: string
       use_jamf_uploader:
         description: 'Use Jamf Uploader'
         required: false
         default: 'false'
         type: string
-      jamfpro_url:
-        description: 'JamfPro URL'
-        required: false
-        default: ''
-        type: string
-      jamfpro_client_id:
-        description: 'JamfPro Client ID'
-        required: false
-        default: ''
-        type: string
-      jamfpro_client_secret:
-        description: 'JamfPro Client Secret'
-        required: false
-        default: ''
-        type: string
-      api_username:
-        description: 'API Username'
-        required: false
-        default: ''
-        type: string
-      api_password:
-        description: 'API Password'
-        required: false
-        default: ''
-        type: string
-      smb_url:
-        description: 'SMB URL'
-        required: false
-        default: ''
-        type: string
-      smb_username:
-        description: 'SMB Username'
-        required: false
-        default: ''
-        type: string
-      smb_password:
-        description: 'SMB Password'
-        required: false
-        default: ''
-        type: string
       jcds2_mode:
         description: 'JCDS2 mode flag'
         required: false
         default: 'false'
-        type: string
-      teams_webhook:
-        description: 'Microsoft Teams webhook URL'
-        required: false
-        default: ''
         type: string
       private_repo_url:
         description: 'Private repository URL'
@@ -138,7 +76,34 @@ on:
         required: false
         default: ''
         type: string
-
+    secrets:
+      intune_tenant_id:
+        description: 'Intune Tenant ID'
+        required: false
+      intune_client_id:
+        description: 'Intune Client ID'
+        required: false
+      intune_client_secret:
+        description: 'Intune Client Secret'
+        required: false
+      jamfpro_client_id:
+        description: 'JamfPro Client ID'
+        required: false
+      jamfpro_client_secret:
+        description: 'JamfPro Client Secret'
+        required: false
+      api_username:
+        description: 'JamfPro API Username'
+        required: false
+      api_password:
+        description: 'JamfPro API Password'
+        required: false
+      smb_username:
+        description: 'JamfPro SMB Username'
+        required: false
+      smb_password:
+        description: 'JamfPro SMB Password'
+        required: false
 jobs:
   autopkg:
     runs-on: macos-latest
