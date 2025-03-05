@@ -539,11 +539,11 @@ func ProcessRecipes(recipesPath string, overridesDir string, opts *RecipeOptions
 	// Parse recipes
 	recipes, err := ParseRecipes(recipesPath, overridesDir)
 	if err != nil {
-		Logger(fmt.Sprintf("Failed to parse recipes: %v", err), LogError)
+		logger.Logger(fmt.Sprintf("Failed to parse recipes: %v", err), logger.LogError)
 		return fmt.Errorf("failed to parse recipes: %w", err)
 	}
 
-	Logger(fmt.Sprintf("Processing %d recipes", len(recipes)), LogInfo)
+	logger.Logger(fmt.Sprintf("Processing %d recipes", len(recipes)), logger.LogInfo)
 
 	var failures []*Recipe
 	var successes []*Recipe
@@ -579,7 +579,7 @@ func ProcessRecipes(recipesPath string, overridesDir string, opts *RecipeOptions
 		}
 
 		if webhookToUse != "" && !opts.Debug {
-			if err := NotifyTeams(recipe, webhookToUse); err != nil {
+			if err := NotifyMSTeams(recipe, webhookToUse); err != nil {
 				logger.Logger(fmt.Sprintf("Error sending Teams notification: %v", err), logger.LogWarning)
 			} else {
 				logger.Logger("Teams notification sent successfully", logger.LogInfo)

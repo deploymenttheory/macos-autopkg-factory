@@ -1,0 +1,54 @@
+name: '⚙️ setup and install suspicious package'
+
+on:
+  workflow_call:
+    inputs:
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: 'true'
+        type: string
+      force_update:
+        description: 'Force update Suspicious Package'
+        required: false
+        default: 'true'
+        type: string
+      suspicious_package_url:
+        description: 'URL to download Suspicious Package DMG'
+        required: false
+        default: 'https://mothersruin.com/software/downloads/SuspiciousPackage.dmg'
+        type: string
+      sp_download_path:
+        description: 'Path to download the Suspicious Package DMG'
+        required: false
+        default: '/tmp/SuspiciousPackage.dmg'
+        type: string
+
+jobs:
+  suspiciouspackage:
+    runs-on: macos-latest
+    env:
+      DEBUG: ${{ inputs.debug }}
+      FORCE_UPDATE: ${{ inputs.force_update }}
+      SUSPICIOUS_PACKAGE_URL: ${{ inputs.suspicious_package_url }}
+      SP_DOWNLOAD_PATH: ${{ inputs.sp_download_path }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.22.5'
+
+      - name: Install dependencies
+        run: go get -v ./...
+
+      - name: Build Suspicious Package setup tool
+        run: |
+          cd tools/cmd/suspiciouspackage_setup
+          go build -v -o suspiciouspackage-setup
+
+      - name: Run SetupGitHubActionsRunner for Suspicious Package
+        run: ./tools/cmd/suspiciouspackage_setup/suspiciouspackage-setup

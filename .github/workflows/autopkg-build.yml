@@ -1,0 +1,43 @@
+name: '⚙️ Setup and Install AutoPkg & Suspicious Package'
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: macos-latest
+    env:
+      DEBUG: "true"
+      FORCE_UPDATE: "false"
+      AUTOPKG_REPO_LIST_PATH: "${{ github.workspace }}/configuration/autopkg-repo-list.txt"
+      SUSPICIOUS_PACKAGE_URL: "https://mothersruin.com/software/downloads/SuspiciousPackage.dmg"
+      SP_DOWNLOAD_PATH: "${{ github.workspace }}/configuration/SuspiciousPackage.dmg"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Add other necessary env variables or secrets here.
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.22.5'
+
+      - name: Install dependencies
+        run: go get -v ./...
+
+      - name: Build and run AutoPkg Setup Tool
+        run: |
+          cd tools/cmd/autopkg_setup
+          go build -v -o autopkg-setup
+          ./autopkg-setup
+
+      - name: Build and run Suspicious Package Setup Tool
+        run: |
+          cd tools/cmd/suspiciouspackage_setup
+          go build -v -o suspiciouspackage-setup
+          ./suspiciouspackage-setup
