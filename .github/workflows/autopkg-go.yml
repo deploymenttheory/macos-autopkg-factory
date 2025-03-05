@@ -14,10 +14,10 @@ jobs:
     runs-on: macos-latest
     
     env:
-      # Autopkg Debug settings
+      # Autopkg + pipelin Debug mode
       DEBUG: "true"
       # Enable usage of latest autopkg beta version
-      USE_BETA: "false"
+      USE_BETA: "true"
       # GitHub token for API access
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Recipe configuration
