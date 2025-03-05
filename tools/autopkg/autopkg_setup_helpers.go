@@ -131,7 +131,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 		return version, nil
 	}
 
-	fmt.Println("Downloading latest AutoPkg release...")
+	Logger("⬇️ Downloading AutoPkg", LogInfo)
 
 	var releaseURL string
 	var err error
@@ -487,7 +487,7 @@ func ProcessRecipeLists(config *Config, prefsPath string) error {
 
 // ListRecipes lists all available AutoPkg recipes
 func ListRecipes(prefsPath string) error {
-	fmt.Println("Available recipes:")
+	Logger("📝 Available recipes:", LogInfo)
 
 	args := []string{"list-recipes"}
 	if prefsPath != "" {
