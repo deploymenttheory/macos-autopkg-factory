@@ -40,7 +40,7 @@ func SetupGitHubActionsRunner() error {
 	}
 	// Configure contexual mdm uploader settings
 	if USE_JAMF_UPLOADER {
-		Logger("📱 Configuring with JamfUploader integration", LogInfo)
+		Logger("☁️ Configuring with JamfUploader integration", LogInfo)
 		config.UseJamfUploader = true
 		config.JAMFPRO_URL = JAMFPRO_URL
 		config.API_USERNAME = API_USERNAME
@@ -54,7 +54,7 @@ func SetupGitHubActionsRunner() error {
 	}
 
 	if USE_INTUNE_UPLOADER {
-		Logger("📱 Configuring with IntuneUploader integration", LogInfo)
+		Logger("☁️ Configuring with IntuneUploader integration", LogInfo)
 		config.INTUNE_TENANT_ID = INTUNE_TENANT_ID
 		config.INTUNE_CLIENT_ID = INTUNE_CLIENT_ID
 		config.INTUNE_CLIENT_SECRET = INTUNE_CLIENT_SECRET
