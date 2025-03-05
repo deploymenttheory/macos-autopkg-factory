@@ -73,11 +73,6 @@ func SetupGitHubActionsRunner() error {
 		return fmt.Errorf("⚙️ failed to set up preferences: %w", err)
 	}
 
-	// Add repos
-	if err := AddAutoPkgRepos(config, prefsPath); err != nil {
-		return fmt.Errorf("📚 failed to add repos: %w", err)
-	}
-
 	// Configure specific uploaders based on what's enabled
 	if USE_JAMF_UPLOADER {
 		if err := ConfigureJamfUploader(config, prefsPath); err != nil {
@@ -96,6 +91,11 @@ func SetupGitHubActionsRunner() error {
 	// Setup Teams notifications if webhook is provided
 	if TEAMS_WEBHOOK != "" {
 		Logger("💬 Microsoft Teams notifications configured", LogSuccess)
+	}
+
+	// Add repos
+	if err := AddAutoPkgRepos(config, prefsPath); err != nil {
+		return fmt.Errorf("📚 failed to add repos: %w", err)
 	}
 
 	// Process any recipe lists if provided
