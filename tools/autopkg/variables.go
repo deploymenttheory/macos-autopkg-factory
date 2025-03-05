@@ -18,6 +18,7 @@ var (
 	DISABLE_VERIFICATION bool
 	FORCE_UPDATE         bool
 	FAIL_RECIPES         bool
+	USE_BETA             bool
 
 	// Uploader variables
 	USE_JAMF_UPLOADER     bool
@@ -73,6 +74,12 @@ func LoadEnvironmentVariables() {
 	REPORT_PATH = os.Getenv("REPORT_PATH")
 	if REPORT_PATH == "" {
 		REPORT_PATH = "/tmp/autopkg.plist"
+	}
+
+	// Check if beta version should be used
+	useBetaStr := os.Getenv("USE_BETA")
+	if useBetaStr != "" {
+		USE_BETA, _ = strconv.ParseBool(useBetaStr)
 	}
 
 	// GitHub Actions specific variables

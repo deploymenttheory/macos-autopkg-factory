@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Config holds all the configuration options for AutoPkg setup operations
@@ -480,33 +482,6 @@ func ProcessRecipeLists(config *Config, prefsPath string) error {
 	return nil
 }
 
-// getBetaAutoPkgReleaseURL retrieves the URL of the beta AutoPkg release
-func getBetaAutoPkgReleaseURL() (string, error) {
-	resp, err := http.Get("https://api.github.com/repos/autopkg/autopkg/releases/tags/v3.0.0RC1")
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	var release struct {
-		Assets []struct {
-			BrowserDownloadURL string `json:"browser_download_url"`
-		} `json:"assets"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return "", err
-	}
-
-	for _, asset := range release.Assets {
-		if strings.HasSuffix(asset.BrowserDownloadURL, ".pkg") {
-			return asset.BrowserDownloadURL, nil
-		}
-	}
-
-	return "", fmt.Errorf("no pkg asset found in the beta release")
-}
-
 // ListRecipes lists all available AutoPkg recipes
 func ListRecipes(prefsPath string) error {
 	fmt.Println("Available recipes:")
@@ -555,6 +530,7 @@ func getLatestAutoPkgReleaseURL() (string, error) {
 
 	var release struct {
 		Assets []struct {
+			Name               string `json:"name"`
 			BrowserDownloadURL string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
@@ -564,10 +540,73 @@ func getLatestAutoPkgReleaseURL() (string, error) {
 	}
 
 	for _, asset := range release.Assets {
-		if strings.HasSuffix(asset.BrowserDownloadURL, ".pkg") {
+		if strings.HasSuffix(asset.Name, ".pkg") {
 			return asset.BrowserDownloadURL, nil
 		}
 	}
 
 	return "", fmt.Errorf("no pkg asset found in the latest release")
+}
+
+// getBetaAutoPkgReleaseURL retrieves the URL of the latest beta AutoPkg release
+func getBetaAutoPkgReleaseURL() (string, error) {
+	// Create a new request to get all releases including pre-releases
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/autopkg/autopkg/releases", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add GitHub token for authentication if available
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken != "" {
+		req.Header.Set("Authorization", "token "+githubToken)
+	}
+
+	// Add headers to identify our client
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "AutoPkgGitHubActions/1.0")
+
+	// Make the request
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to connect to GitHub API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for rate limiting or other errors
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("GitHub API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse the response
+	var releases []struct {
+		TagName    string `json:"tag_name"`
+		Prerelease bool   `json:"prerelease"`
+		Assets     []struct {
+			Name               string `json:"name"`
+			BrowserDownloadURL string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
+		return "", fmt.Errorf("failed to parse GitHub API response: %w", err)
+	}
+
+	// Find the latest beta/prerelease
+	for _, release := range releases {
+		// Check if this is a prerelease
+		if release.Prerelease {
+			// Look for .pkg asset in this prerelease
+			for _, asset := range release.Assets {
+				if strings.HasSuffix(asset.Name, ".pkg") {
+					Logger(fmt.Sprintf("Found beta release: %s", release.TagName), LogInfo)
+					return asset.BrowserDownloadURL, nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no beta release with pkg asset found")
 }

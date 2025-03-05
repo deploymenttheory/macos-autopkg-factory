@@ -9,25 +9,25 @@ import (
 // SetupGitHubActionsRunner configures AutoPkg for use in GitHub Actions
 func SetupGitHubActionsRunner() error {
 	// Set up logging
-	Logger("Setting up AutoPkg for GitHub Actions...", LogInfo)
+	Logger("🚀 Setting up AutoPkg for GitHub Actions...", LogInfo)
 
 	// Load all environment variables
 	LoadEnvironmentVariables()
 
-	// Force debug mode in GitHub Actions for better logging
+	// Force debug mode in Autopkg for testing
 	if !DEBUG {
 		DEBUG = true
-		Logger("Debug mode enabled for GitHub Actions", LogInfo)
+		Logger("🔍 Debug mode enabled for Autopkg", LogInfo)
 	}
 
 	// Check if running as root (which we shouldn't be)
 	if err := RootCheck(); err != nil {
-		return fmt.Errorf("root check failed: %w", err)
+		return fmt.Errorf("🚫 root check failed: %w", err)
 	}
 
 	// Ensure command line tools are installed
 	if err := CheckCommandLineTools(); err != nil {
-		return fmt.Errorf("command line tools check failed: %w", err)
+		return fmt.Errorf("🛠️ command line tools check failed: %w", err)
 	}
 
 	// Set up configuration using environment variables
@@ -39,7 +39,7 @@ func SetupGitHubActionsRunner() error {
 
 	// Configure uploader settings
 	if USE_JAMF_UPLOADER {
-		Logger("Configuring with JamfUploader integration", LogInfo)
+		Logger("☁️ Configuring with JamfUploader integration", LogInfo)
 		config.UseJamfUploader = true
 		config.JAMFPRO_URL = JAMFPRO_URL
 		config.API_USERNAME = API_USERNAME
@@ -53,7 +53,7 @@ func SetupGitHubActionsRunner() error {
 	}
 
 	if USE_INTUNE_UPLOADER {
-		Logger("Configuring with IntuneUploader integration", LogInfo)
+		Logger("📱 Configuring with IntuneUploader integration", LogInfo)
 		config.INTUNE_TENANT_ID = INTUNE_TENANT_ID
 		config.INTUNE_CLIENT_ID = INTUNE_CLIENT_ID
 		config.INTUNE_CLIENT_SECRET = INTUNE_CLIENT_SECRET
@@ -62,14 +62,14 @@ func SetupGitHubActionsRunner() error {
 	// Install or update AutoPkg
 	autopkgVersion, err := InstallAutoPkg(config)
 	if err != nil {
-		return fmt.Errorf("failed to install AutoPkg: %w", err)
+		return fmt.Errorf("📦 failed to install AutoPkg: %w", err)
 	}
-	Logger(fmt.Sprintf("AutoPkg %s ready", autopkgVersion), LogSuccess)
+	Logger(fmt.Sprintf("📦 AutoPkg %s ready", autopkgVersion), LogSuccess)
 
 	// Set up preferences
 	prefsPath, err := SetupPreferencesFile(config)
 	if err != nil {
-		return fmt.Errorf("failed to set up preferences: %w", err)
+		return fmt.Errorf("⚙️ failed to set up preferences: %w", err)
 	}
 
 	// Set up recipe repos
@@ -96,27 +96,27 @@ func SetupGitHubActionsRunner() error {
 
 	// Add repos
 	if err := AddAutoPkgRepos(config, prefsPath); err != nil {
-		return fmt.Errorf("failed to add repos: %w", err)
+		return fmt.Errorf("📚 failed to add repos: %w", err)
 	}
 
 	// Configure specific uploaders based on what's enabled
 	if USE_JAMF_UPLOADER {
 		if err := ConfigureJamfUploader(config, prefsPath); err != nil {
-			return fmt.Errorf("failed to configure JamfUploader: %w", err)
+			return fmt.Errorf("☁️ failed to configure JamfUploader: %w", err)
 		}
-		Logger("JamfUploader configuration completed", LogSuccess)
+		Logger("☁️ JamfUploader configuration completed", LogSuccess)
 	}
 
 	if USE_INTUNE_UPLOADER {
 		if err := ConfigureIntuneUploader(config, prefsPath); err != nil {
-			return fmt.Errorf("failed to configure IntuneUploader: %w", err)
+			return fmt.Errorf("📱 failed to configure IntuneUploader: %w", err)
 		}
-		Logger("IntuneUploader configuration completed", LogSuccess)
+		Logger("📱 IntuneUploader configuration completed", LogSuccess)
 	}
 
 	// Setup Teams notifications if webhook is provided
 	if TEAMS_WEBHOOK != "" {
-		Logger("Microsoft Teams notifications configured", LogSuccess)
+		Logger("💬 Microsoft Teams notifications configured", LogSuccess)
 	}
 
 	// Process any recipe lists if provided
@@ -124,7 +124,7 @@ func SetupGitHubActionsRunner() error {
 		config.RecipeLists = RECIPE_LISTS
 
 		if err := ProcessRecipeLists(config, prefsPath); err != nil {
-			return fmt.Errorf("failed to process recipe lists: %w", err)
+			return fmt.Errorf("📋 failed to process recipe lists: %w", err)
 		}
 	}
 
@@ -139,10 +139,10 @@ func SetupGitHubActionsRunner() error {
 		}
 
 		if err := SetupPrivateRepo(config, prefsPath); err != nil {
-			return fmt.Errorf("failed to set up private repo: %w", err)
+			return fmt.Errorf("🔒 failed to set up private repo: %w", err)
 		}
 	}
 
-	Logger("AutoPkg setup for GitHub Actions completed successfully", LogSuccess)
+	Logger("✅ AutoPkg setup for GitHub Actions completed successfully", LogSuccess)
 	return nil
 }
