@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/deploymenttheory/macos-autopkg-factory/autopkg"
+	"github.com/deploymenttheory/macos-autopkg-factory/tools/autopkg"
 )
 
 func main() {

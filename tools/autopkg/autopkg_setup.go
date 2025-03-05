@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -68,12 +67,12 @@ func CheckCommandLineTools() error {
 	// Check if git exists
 	gitCmd := exec.Command("git", "--version")
 	if err := gitCmd.Run(); err == nil {
-		Logger("Git is installed and functional")
+		Logger("Git is installed and functional", LogSuccess)
 		return nil
 	}
 
 	// Git isn't working, so install it
-	Logger("Git not found, installing...")
+	Logger("Git not found, installing...", LogInfo)
 	return installGit()
 }
 
@@ -83,7 +82,7 @@ func installGit() error {
 	brewCmd := exec.Command("which", "brew")
 	if err := brewCmd.Run(); err == nil {
 		// Use Homebrew to install git
-		Logger("Installing git via Homebrew...")
+		Logger("Installing git via Homebrew...", LogInfo)
 		brewInstall := exec.Command("brew", "install", "git")
 		brewInstall.Stdout = os.Stdout
 		brewInstall.Stderr = os.Stderr
@@ -92,7 +91,7 @@ func installGit() error {
 		}
 	} else {
 		// Fall back to Xcode Command Line Tools if Homebrew isn't available
-		Logger("Installing git via Xcode Command Line Tools...")
+		Logger("Installing git via Xcode Command Line Tools...", LogInfo)
 		cmd := exec.Command("xcode-select", "--install")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -107,7 +106,7 @@ func installGit() error {
 		return fmt.Errorf("git still not available after installation attempt: %w", err)
 	}
 
-	Logger("Git successfully installed")
+	Logger("Git successfully installed", LogSuccess)
 	return nil
 }
 
@@ -164,7 +163,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 	}
 
 	version := strings.TrimSpace(string(versionOutput))
-	Logger(fmt.Sprintf("AutoPkg %s Installed", version))
+	Logger(fmt.Sprintf("AutoPkg %s Installed", version), LogSuccess)
 
 	return version, nil
 }
@@ -366,7 +365,7 @@ func SetupPrivateRepo(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("Private AutoPkg Repo Configured")
+	Logger("Private AutoPkg Repo Configured", LogSuccess)
 	return nil
 }
 
@@ -473,7 +472,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("JamfUploader configured.")
+	Logger("JamfUploader configured.", LogSuccess)
 	return nil
 }
 
@@ -489,7 +488,7 @@ func ConfigureIntuneUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set CLIENT_ID: %w", err)
 		}
-		Logger(fmt.Sprintf("Set CLIENT_ID in %s", prefsPath))
+		Logger(fmt.Sprintf("Set CLIENT_ID in %s", prefsPath), LogSuccess)
 	}
 
 	// Set CLIENT_SECRET if provided in config or environment
@@ -502,7 +501,7 @@ func ConfigureIntuneUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set CLIENT_SECRET: %w", err)
 		}
-		Logger(fmt.Sprintf("Set CLIENT_SECRET in %s", prefsPath))
+		Logger(fmt.Sprintf("Set CLIENT_SECRET in %s", prefsPath), LogSuccess)
 	}
 
 	// Set TENANT_ID if provided in config or environment
@@ -515,12 +514,12 @@ func ConfigureIntuneUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set TENANT_ID: %w", err)
 		}
-		Logger(fmt.Sprintf("Set TENANT_ID in %s", prefsPath))
+		Logger(fmt.Sprintf("Set TENANT_ID in %s", prefsPath), LogSuccess)
 	}
 
 	// Check if we set at least some of the Intune configuration
 	if clientID != "" || clientSecret != "" || tenantID != "" {
-		Logger("Intune integration configured.")
+		Logger("IntuneUploader configured.", LogSuccess)
 	}
 
 	return nil
@@ -589,7 +588,7 @@ func AddAutoPkgRepos(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("AutoPkg Repos Configured")
+	Logger("AutoPkg Repos Configured", LogSuccess)
 	return nil
 }
 
@@ -631,64 +630,8 @@ func ProcessRecipeLists(config *Config, prefsPath string) error {
 		}
 	}
 
-	Logger("AutoPkg Repos for all parent recipes added")
+	Logger("AutoPkg Repos for all parent recipes added", LogSuccess)
 	return nil
-}
-
-// Helper functions
-
-// fileExists checks if a file exists
-func fileExists(filepath string) bool {
-	info, err := os.Stat(filepath)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-// readJSONFile reads a JSON file into a map
-func readJSONFile(filepath string) (map[string]interface{}, error) {
-	data, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-// writeJSONFile writes a map to a JSON file
-func writeJSONFile(filepath string, data map[string]interface{}) error {
-	jsonData, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath, jsonData, 0644)
-}
-
-// updateJSONFile updates a specific key in a JSON file
-func updateJSONFile(filepath string, key string, value interface{}) error {
-	// Read the current JSON
-	data, err := readJSONFile(filepath)
-	if err != nil {
-		// If the file doesn't exist or can't be parsed, create a new map
-		if os.IsNotExist(err) || err.Error() == "unexpected end of JSON input" {
-			data = make(map[string]interface{})
-		} else {
-			return err
-		}
-	}
-
-	// Update the key
-	data[key] = value
-
-	// Write the updated JSON back to the file
-	return writeJSONFile(filepath, data)
 }
 
 // getBetaAutoPkgReleaseURL retrieves the URL of the beta AutoPkg release
@@ -781,24 +724,6 @@ func getLatestAutoPkgReleaseURL() (string, error) {
 	}
 
 	return "", fmt.Errorf("no pkg asset found in the latest release")
-}
-
-// downloadFile downloads a file from the given URL to the specified path
-func downloadFile(url, filepath string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	return err
 }
 
 // createPlistPrefs creates a new plist preferences file

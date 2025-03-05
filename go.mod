@@ -1,4 +1,4 @@
-module deploymenttheory/macos-autopkg-factory
+module deploymenttheory/macos-autopkg-factory/tools/autopkg
 
 go 1.22.5
 

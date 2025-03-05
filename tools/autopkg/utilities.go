@@ -16,7 +16,7 @@ import (
 	"howett.net/plist"
 )
 
-// LoadEnvironmentVariables loads environment variables
+// LoadEnvironmentVariables loads all environment variables used by the package
 func LoadEnvironmentVariables() {
 	// Check if DEBUG is enabled
 	debugEnv := os.Getenv("DEBUG")
@@ -32,6 +32,24 @@ func LoadEnvironmentVariables() {
 
 	// Get Teams webhook URL
 	TEAMS_WEBHOOK = os.Getenv("TEAMS_WEBHOOK")
+
+	// Get cleanup list path
+	CLEANUP_LIST = os.Getenv("CLEANUP_LIST")
+
+	// Get promote list path
+	PROMOTE_LIST = os.Getenv("PROMOTE_LIST")
+
+	// Get verification disable flag
+	disableVerificationEnv := os.Getenv("DISABLE_VERIFICATION")
+	if disableVerificationEnv != "" {
+		DISABLE_VERIFICATION, _ = strconv.ParseBool(disableVerificationEnv)
+	}
+
+	// Get report path
+	REPORT_PATH = os.Getenv("REPORT_PATH")
+	if REPORT_PATH == "" {
+		REPORT_PATH = "/tmp/autopkg.plist"
+	}
 }
 
 // Recipe represents an AutoPkg recipe
