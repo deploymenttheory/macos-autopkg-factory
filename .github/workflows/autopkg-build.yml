@@ -22,8 +22,6 @@ jobs:
       # intune_client_id: ""
       # intune_client_secret: ""
       use_jamf_uploader: "true"
-      api_username: ""
-      api_password: ""
       jcds2_mode: "true"
       private_repo_url: ""
       private_repo_path: ""
