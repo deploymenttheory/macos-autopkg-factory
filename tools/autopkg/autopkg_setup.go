@@ -54,7 +54,7 @@ func SetupGitHubActionsRunner() error {
 	}
 
 	if USE_INTUNE_UPLOADER {
-		Logger("📱 Configuring with IntuneUploader integration", LogInfo)
+		Logger("☁️ Configuring with IntuneUploader integration", LogInfo)
 		config.INTUNE_TENANT_ID = INTUNE_TENANT_ID
 		config.INTUNE_CLIENT_ID = INTUNE_CLIENT_ID
 		config.INTUNE_CLIENT_SECRET = INTUNE_CLIENT_SECRET
