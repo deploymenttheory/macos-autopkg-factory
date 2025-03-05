@@ -26,7 +26,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to set JSS_URL: %w", err)
 	}
-	logger.Logger(fmt.Sprintf("📝 Set Jamf Pro JSS_URL in %s", prefsPath), logger.LogSuccess)
+	logger.Logger(fmt.Sprintf("📝 Set Jamf Pro JSS_URL in %s", prefsPath), logger.LogInfo)
 
 	// Set API_USERNAME if provided in config or environment
 	apiUsername := config.API_USERNAME
@@ -38,7 +38,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set API_USERNAME: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro API_USERNAME in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro API_USERNAME in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set API_PASSWORD if provided in config or environment
@@ -51,7 +51,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set API_PASSWORD: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro API_PASSWORD in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro API_PASSWORD in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set CLIENT_ID if provided in config or environment
@@ -64,7 +64,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set CLIENT_ID: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro CLIENT_ID in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro CLIENT_ID in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set CLIENT_SECRET if provided in config or environment
@@ -77,7 +77,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set CLIENT_SECRET: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro CLIENT_SECRET in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro CLIENT_SECRET in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set SMB_URL if provided in config or environment
@@ -90,7 +90,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set SMB_URL: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro SMB_URL in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro SMB_URL in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set SMB_USERNAME if provided in config or environment
@@ -103,7 +103,7 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set SMB_USERNAME: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro SMB_USERNAME in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro SMB_USERNAME in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set SMB_PASSWORD if provided in config or environment
@@ -116,10 +116,10 @@ func ConfigureJamfUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set SMB_PASSWORD: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro SMB_PASSWORD in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Jamf Pro SMB_PASSWORD in %s", prefsPath), logger.LogInfo)
 	}
 
-	logger.Logger("✅ JamfUploader configured with supplied values.", logger.LogSuccess)
+	logger.Logger("✅ JamfUploader configured with supplied values.", logger.LogInfo)
 	return nil
 }
 
@@ -135,7 +135,7 @@ func ConfigureIntuneUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set CLIENT_ID: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Intune CLIENT_ID in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Intune CLIENT_ID in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set CLIENT_SECRET if provided in config or environment
@@ -148,7 +148,7 @@ func ConfigureIntuneUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set CLIENT_SECRET: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Intune CLIENT_SECRET in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Intune CLIENT_SECRET in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Set TENANT_ID if provided in config or environment
@@ -161,12 +161,12 @@ func ConfigureIntuneUploader(config *Config, prefsPath string) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to set TENANT_ID: %w", err)
 		}
-		logger.Logger(fmt.Sprintf("📝 Set Intune TENANT_ID in %s", prefsPath), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("📝 Set Intune TENANT_ID in %s", prefsPath), logger.LogInfo)
 	}
 
 	// Check if we set at least some of the Intune configuration
 	if clientID != "" || clientSecret != "" || tenantID != "" {
-		logger.Logger("✅ IntuneUploader configured with supplied values.", logger.LogSuccess)
+		logger.Logger("✅ IntuneUploader configured with supplied values.", logger.LogInfo)
 	}
 
 	return nil
