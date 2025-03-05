@@ -35,12 +35,14 @@ type Config struct {
 	PrivateRepoURL  string
 	
 	// JamfUploader settings
-	JSSUrl          string
-	JSSUser         string
-	JSSPass         string
-	SMBUrl          string
-	SMBUser         string
-	SMBPass         string
+	JSS_URL         string
+	API_USERNAME    string
+	API_PASSWORD    string
+	CLIENT_ID       string
+	CLIENT_SECRET   string
+	SMB_URL         string
+	SMB_USERNAME    string
+	SMB_PASSWORD    string
 	UseJamfUploader bool
 	JCDS2Mode       bool
 	
