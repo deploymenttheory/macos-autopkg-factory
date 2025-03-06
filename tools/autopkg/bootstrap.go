@@ -1,10 +1,14 @@
 package autopkg
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 
+	"github.com/deploymenttheory/macos-autopkg-factory/tools/helpers"
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
@@ -27,8 +31,8 @@ func SetupGitHubActionsRunner() error {
 		return fmt.Errorf("🚫 root check failed: %w", err)
 	}
 
-	// Ensure command line tools are installed
-	if err := CheckCommandLineTools(); err != nil {
+	// Ensure git is installed
+	if err := CheckGit(); err != nil {
 		return fmt.Errorf("🛠️ command line tools check failed: %w", err)
 	}
 
@@ -40,7 +44,8 @@ func SetupGitHubActionsRunner() error {
 		UseBeta:             USE_BETA,
 		AutopkgRepoListPath: AUTOPKG_REPO_LIST_PATH,
 	}
-	// Configure contexual mdm uploader settings
+
+	// Configure contextual MDM uploader settings
 	if USE_JAMF_UPLOADER {
 		logger.Logger("☁️ Configuring with JamfUploader integration", logger.LogInfo)
 		config.UseJamfUploader = true
@@ -75,38 +80,80 @@ func SetupGitHubActionsRunner() error {
 		return fmt.Errorf("⚙️ failed to set up preferences: %w", err)
 	}
 
-	// Configure specific uploaders based on what's enabled
-	if USE_JAMF_UPLOADER {
-		if err := ConfigureJamfUploader(config, prefsPath); err != nil {
-			return fmt.Errorf("☁️ failed to configure JamfUploader: %w", err)
-		}
-		logger.Logger("📱 JamfUploader configuration completed", logger.LogSuccess)
-	}
-
-	if USE_INTUNE_UPLOADER {
-		if err := ConfigureIntuneUploader(config, prefsPath); err != nil {
-			return fmt.Errorf("📱 failed to configure IntuneUploader: %w", err)
-		}
-		logger.Logger("📱 IntuneUploader configuration completed", logger.LogSuccess)
-	}
-
 	// Setup Teams notifications if webhook is provided
 	if TEAMS_WEBHOOK != "" {
 		logger.Logger("💬 Microsoft Teams notifications configured", logger.LogSuccess)
 	}
 
-	// Add repos
-	if err := AddAutoPkgRepos(config, prefsPath); err != nil {
+	// Add default repos and repos from config
+	var repos []string
+	if USE_JAMF_UPLOADER {
+		repos = []string{"recipes", "grahampugh/jamf-upload"}
+	} else if USE_INTUNE_UPLOADER {
+		repos = []string{"recipes", "almenscorner/autopkg-recipes"}
+	} else {
+		repos = []string{"recipes"}
+	}
+
+	// Load additional repos from repo list file if specified
+	if config.AutopkgRepoListPath != "" && helpers.FileExists(config.AutopkgRepoListPath) {
+		file, err := os.Open(config.AutopkgRepoListPath)
+		if err == nil {
+			defer file.Close()
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				repo := strings.TrimSpace(scanner.Text())
+				if repo != "" {
+					repos = append(repos, repo)
+				}
+			}
+		} else {
+			logger.Logger(fmt.Sprintf("⚠️ Warning: Could not read repo list file: %v", err), logger.LogWarning)
+		}
+	}
+
+	// Add repositories using AddRepo function
+	if err := AddRepo(repos, prefsPath); err != nil {
 		return fmt.Errorf("📚 failed to add repos: %w", err)
 	}
 
 	// Process any recipe lists if provided
 	if len(RECIPE_LISTS) > 0 {
-		config.RecipeLists = RECIPE_LISTS
+		for _, listPath := range RECIPE_LISTS {
+			if !helpers.FileExists(listPath) {
+				logger.Logger(fmt.Sprintf("⚠️ Recipe list file %s does not exist", listPath), logger.LogWarning)
+				continue
+			}
 
-		if err := ProcessRecipeLists(config, prefsPath); err != nil {
-			return fmt.Errorf("📋 failed to process recipe lists: %w", err)
+			file, err := os.Open(listPath)
+			if err != nil {
+				return fmt.Errorf("📋 failed to open recipe list file: %w", err)
+			}
+
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				recipe := strings.TrimSpace(scanner.Text())
+				if recipe == "" {
+					continue
+				}
+
+				// Get recipe info with pull option to ensure parent repos are added
+				infoOptions := &InfoOptions{
+					PrefsPath: prefsPath,
+					Pull:      true,
+				}
+
+				if err := GetRecipeInfo(recipe, infoOptions); err != nil {
+					logger.Logger(fmt.Sprintf("⚠️ Failed to process recipe %s: %v", recipe, err), logger.LogWarning)
+				}
+			}
+
+			file.Close()
+			if err := scanner.Err(); err != nil {
+				return fmt.Errorf("📋 failed to read recipe list file: %w", err)
+			}
 		}
+		logger.Logger("✅ Recipe lists processed successfully", logger.LogSuccess)
 	}
 
 	// Set up private repo if provided
