@@ -12,6 +12,93 @@ import (
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
+// runNodeScript executes the JavaScript helper function using Node
+func runNodeScript(scriptName string, args ...string) ([]byte, error) {
+	// Get the module's root directory
+	_, currentFile, _, _ := runtime.Caller(0)
+	moduleRoot := filepath.Dir(filepath.Dir(currentFile)) // Go up two directories from this file
+
+	// Path to the JavaScript helper within the module structure
+	scriptPath := filepath.Join(moduleRoot, "suspicious_package", "scripts", "suspiciousPackageHelpers.js")
+
+	// Check if script exists
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("JavaScript helper script not found at %s", scriptPath)
+	}
+
+	// Log the script path for debugging
+	//fmt.Printf("Using script at: %s\n", scriptPath)
+
+	// First check if Node.js is installed
+	_, err := exec.LookPath("node")
+	if err != nil {
+		return nil, fmt.Errorf("Node.js not found on system: %w", err)
+	}
+
+	nodeScript := fmt.Sprintf(`
+			try {
+					const helpers = require('%s');
+					if (typeof helpers.%s !== 'function') {
+							console.error('Function "%s" not found in helpers module. Available functions: ' + Object.keys(helpers).join(', '));
+							process.exit(1);
+					}
+					(async () => {
+							try {
+									console.error("Starting execution of %s");
+									const result = await helpers.%s(%s);
+									console.log(JSON.stringify(result || []));
+							} catch (err) {
+									console.error('Error executing helper function: ' + err.message);
+									console.error(err.stack);
+									process.exit(1);
+							}
+					})();
+			} catch (err) {
+					console.error('Error loading helpers module: ' + err.message);
+					console.error(err.stack);
+					process.exit(1);
+			}
+	`, scriptPath, scriptName, scriptName, scriptName, scriptName, formatArgs(args))
+
+	// Create command with captured stderr
+	nodeCmd := exec.Command("node", "-e", nodeScript)
+
+	// Capture both stdout and stderr
+	var stdout, stderr bytes.Buffer
+	nodeCmd.Stdout = &stdout
+	nodeCmd.Stderr = &stderr
+
+	// Run the command
+	err = nodeCmd.Run()
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, stderr.String())
+	}
+
+	// If stdout is empty, return an empty array to avoid JSON parsing errors
+	if stdout.Len() == 0 {
+		return []byte("[]"), nil
+	}
+
+	return stdout.Bytes(), nil
+}
+
+// formatArgs formats arguments for JavaScript function call
+func formatArgs(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+
+	formattedArgs := ""
+	for i, arg := range args {
+		if i > 0 {
+			formattedArgs += ", "
+		}
+		formattedArgs += fmt.Sprintf("'%s'", arg)
+	}
+
+	return formattedArgs
+}
+
 // FindLaunchdJobs finds all launchd job configuration files in the package
 func FindLaunchdJobs(packagePath string) ([]LaunchdJob, error) {
 	logger.Logger(fmt.Sprintf("🔍 Finding launchd jobs in package: %s", packagePath), logger.LogInfo)
@@ -221,93 +308,6 @@ func FindSandboxedApps(packagePath string) ([]SandboxedApp, error) {
 	return apps, nil
 }
 
-// runNodeScript executes the JavaScript helper function using Node
-func runNodeScript(scriptName string, args ...string) ([]byte, error) {
-	// Get the module's root directory
-	_, currentFile, _, _ := runtime.Caller(0)
-	moduleRoot := filepath.Dir(filepath.Dir(currentFile)) // Go up two directories from this file
-
-	// Path to the JavaScript helper within the module structure
-	scriptPath := filepath.Join(moduleRoot, "suspicious_package", "scripts", "suspiciousPackageHelpers.js")
-
-	// Check if script exists
-	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("JavaScript helper script not found at %s", scriptPath)
-	}
-
-	// Log the script path for debugging
-	//fmt.Printf("Using script at: %s\n", scriptPath)
-
-	// First check if Node.js is installed
-	_, err := exec.LookPath("node")
-	if err != nil {
-		return nil, fmt.Errorf("Node.js not found on system: %w", err)
-	}
-
-	nodeScript := fmt.Sprintf(`
-			try {
-					const helpers = require('%s');
-					if (typeof helpers.%s !== 'function') {
-							console.error('Function "%s" not found in helpers module. Available functions: ' + Object.keys(helpers).join(', '));
-							process.exit(1);
-					}
-					(async () => {
-							try {
-									console.error("Starting execution of %s");
-									const result = await helpers.%s(%s);
-									console.log(JSON.stringify(result || []));
-							} catch (err) {
-									console.error('Error executing helper function: ' + err.message);
-									console.error(err.stack);
-									process.exit(1);
-							}
-					})();
-			} catch (err) {
-					console.error('Error loading helpers module: ' + err.message);
-					console.error(err.stack);
-					process.exit(1);
-			}
-	`, scriptPath, scriptName, scriptName, scriptName, scriptName, formatArgs(args))
-
-	// Create command with captured stderr
-	nodeCmd := exec.Command("node", "-e", nodeScript)
-
-	// Capture both stdout and stderr
-	var stdout, stderr bytes.Buffer
-	nodeCmd.Stdout = &stdout
-	nodeCmd.Stderr = &stderr
-
-	// Run the command
-	err = nodeCmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", err, stderr.String())
-	}
-
-	// If stdout is empty, return an empty array to avoid JSON parsing errors
-	if stdout.Len() == 0 {
-		return []byte("[]"), nil
-	}
-
-	return stdout.Bytes(), nil
-}
-
-// formatArgs formats arguments for JavaScript function call
-func formatArgs(args []string) string {
-	if len(args) == 0 {
-		return ""
-	}
-
-	formattedArgs := ""
-	for i, arg := range args {
-		if i > 0 {
-			formattedArgs += ", "
-		}
-		formattedArgs += fmt.Sprintf("'%s'", arg)
-	}
-
-	return formattedArgs
-}
-
 // AnalyzePackage analyzes basic information about a package
 func AnalyzePackage(packagePath string) (*PackageInfo, error) {
 	logger.Logger(fmt.Sprintf("🔍 Analyzing package: %s", packagePath), logger.LogInfo)
@@ -396,17 +396,4 @@ func FindComponentsWithEntitlement(packagePath string, entitlementKey string) ([
 
 	logger.Logger(fmt.Sprintf("🔐 Found %d components with entitlement '%s'", len(components), entitlementKey), logger.LogSuccess)
 	return components, nil
-}
-
-// ExportDiffableManifest exports a diffable manifest from a package
-func ExportDiffableManifest(packagePath string, outputPath string) error {
-	logger.Logger(fmt.Sprintf("📤 Exporting diffable manifest from package: %s", packagePath), logger.LogInfo)
-
-	_, err := runNodeScript("exportDiffableManifest", packagePath, outputPath)
-	if err != nil {
-		return fmt.Errorf("failed to export diffable manifest: %w", err)
-	}
-
-	logger.Logger(fmt.Sprintf("✅ Exported diffable manifest to: %s", outputPath), logger.LogSuccess)
-	return nil
 }

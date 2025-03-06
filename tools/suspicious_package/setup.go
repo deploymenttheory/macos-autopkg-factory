@@ -2,10 +2,8 @@ package suspiciouspackage
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/pkg"
@@ -35,6 +33,7 @@ type ScanOptions struct {
 	OutputDir      string
 	CheckTerm      string
 	CheckOSVersion string
+	JSONOutput     string
 }
 
 // PackageSecurityScanner scans a macOS package for security issues
@@ -270,29 +269,14 @@ func PackageSecurityScanner(options ScanOptions) error {
 		logger.Logger(fmt.Sprintf("❌ Failed to get OS requirements: %v", err), logger.LogError)
 	}
 
-	// 12. Export diffable manifest if requested
-	if options.OutputDir != "" {
-		// Make sure the output directory exists
-		if _, err := os.Stat(options.OutputDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(options.OutputDir, 0755); err != nil {
-				fmt.Printf("Failed to create output directory: %v\n", err)
-			}
-		}
-
-		// Create a subdirectory with package name and timestamp
-		pkgName := filepath.Base(options.PackagePath)
-		pkgName = strings.TrimSuffix(pkgName, filepath.Ext(pkgName))
-		timestamp := time.Now().Format("20060102-150405")
-		manifestDir := filepath.Join(options.OutputDir, fmt.Sprintf("%s-%s", pkgName, timestamp))
-
-		if err := ExportDiffableManifest(options.PackagePath, manifestDir); err != nil {
-			fmt.Printf("Failed to export diffable manifest: %v\n", err)
-		} else {
-			logger.Logger(fmt.Sprintf("📄 Exported diffable manifest to: %s", manifestDir), logger.LogSuccess)
+	// 13. Export results to JSON if requested
+	if options.JSONOutput != "" {
+		if err := ExportResultsToJSON(&scanResult, options.JSONOutput); err != nil {
+			logger.Logger(fmt.Sprintf("❌ Failed to export results to JSON: %v", err), logger.LogError)
 		}
 	}
 
-	// 13. Output summary
+	// 14. Output summary
 	logger.Logger("📊 Security Scan Summary:", logger.LogInfo)
 	logger.Logger(fmt.Sprintf("  • Package: %s", filepath.Base(options.PackagePath)), logger.LogInfo)
 	logger.Logger(fmt.Sprintf("  • Signature: %s, Notarized: %t", scanResult.SignatureStatus, scanResult.Notarized), logger.LogInfo)

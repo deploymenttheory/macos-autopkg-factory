@@ -16,6 +16,7 @@ func main() {
 	outputDir := flag.String("output", "", "Directory to export results (optional)")
 	checkTerm := flag.String("check-scripts", "", "Term to search for in installer scripts (optional)")
 	checkOSVersion := flag.String("check-os", "", "Check compatibility with this macOS version (e.g. '14.0') (optional)")
+	jsonOutput := flag.String("json", "", "Path to export JSON results (optional)")
 	flag.Parse()
 
 	if *packagePath == "" {
@@ -35,6 +36,7 @@ func main() {
 		OutputDir:      *outputDir,
 		CheckTerm:      *checkTerm,
 		CheckOSVersion: *checkOSVersion,
+		JSONOutput:     *jsonOutput,
 	}
 
 	if err := sp.PackageSecurityScanner(scanOptions); err != nil {

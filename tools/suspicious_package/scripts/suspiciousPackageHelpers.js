@@ -238,24 +238,6 @@ async function findComponentsWithEntitlement(packagePath, entitlementKey) {
 }
 
 /**
- * Exports a diffable manifest from a package
- * @param {string} packagePath - Full path to the package file
- * @param {string} outputPath - Path where to save the manifest
- * @returns {Promise<string>} - Result of the export operation
- */
-async function exportDiffableManifest(packagePath, outputPath) {
-  const script = `
-    tell application "Suspicious Package"
-      open POSIX file "${packagePath}"
-      export diffable manifest of installer package of first document to "${outputPath}" with other subfolders preserved
-      return "Manifest exported to ${outputPath}"
-    end tell
-  `;
-  
-  return runAppleScript(script);
-}
-
-/**
  * Checks whether executables in a package support a specific architecture
  * @param {string} packagePath - Full path to the package file
  * @param {string} architecture - Architecture to check for ("arm64", "arm64e", "x86_64", etc.)
@@ -751,7 +733,6 @@ module.exports = {
   getInstallerScripts,
   findPackageIssues,
   findComponentsWithEntitlement,
-  exportDiffableManifest,
   checkArchitectureSupport,
   findLaunchdJobs,
   findInstallerScriptsRunAsRoot,
