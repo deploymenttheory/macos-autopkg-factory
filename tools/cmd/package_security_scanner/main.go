@@ -13,14 +13,13 @@ import (
 func main() {
 	// Parse command line arguments
 	packagePath := flag.String("package", "", "Path to the package file to analyze")
-	outputDir := flag.String("output", "", "Directory to export results (optional)")
 	checkTerm := flag.String("check-scripts", "", "Term to search for in installer scripts (optional)")
 	checkOSVersion := flag.String("check-os", "", "Check compatibility with this macOS version (e.g. '14.0') (optional)")
 	jsonOutput := flag.String("json", "", "Path to export JSON results (optional)")
 	flag.Parse()
 
 	if *packagePath == "" {
-		fmt.Println("Usage: package-scanner -package /path/to/package.pkg [-output /path/to/export] [-check-scripts term] [-check-os version]")
+		fmt.Println("Usage: package-scanner -package /path/to/package.pkg [-output /path/to/export] [-check-scripts term] [-check-os version] [-json /path/to/results.json]")
 		os.Exit(1)
 	}
 
@@ -33,7 +32,6 @@ func main() {
 	// Set up options for scanner
 	scanOptions := sp.ScanOptions{
 		PackagePath:    *packagePath,
-		OutputDir:      *outputDir,
 		CheckTerm:      *checkTerm,
 		CheckOSVersion: *checkOSVersion,
 		JSONOutput:     *jsonOutput,
