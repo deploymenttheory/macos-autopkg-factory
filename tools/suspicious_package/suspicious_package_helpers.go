@@ -7,118 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
-	"time"
+	"strings"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
-
-// PackageInfo represents basic information about a package
-type PackageInfo struct {
-	Name            string `json:"name"`
-	SignatureStatus string `json:"signatureStatus"`
-	Notarized       bool   `json:"notarized"`
-}
-
-// InstalledItem represents an item installed by a package
-type InstalledItem struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	Kind        string `json:"kind"`
-	BundleID    string `json:"bundleID,omitempty"`
-	Permissions string `json:"permissions,omitempty"`
-}
-
-// InstallerScript represents a script in the package
-type InstallerScript struct {
-	Name     string `json:"name"`
-	RunsWhen string `json:"runsWhen"`
-	Binary   bool   `json:"binary"`
-	Text     string `json:"text,omitempty"`
-}
-
-// PackageIssue represents an issue found in a package
-type PackageIssue struct {
-	Details  string `json:"details"`
-	Priority string `json:"priority"`
-	Path     string `json:"path,omitempty"`
-}
-
-// ComponentWithEntitlement represents a component with a specific entitlement
-type ComponentWithEntitlement struct {
-	Name  string `json:"name"`
-	Path  string `json:"path"`
-	Value string `json:"value"`
-}
-
-// ArchitectureSupport represents information about architecture support
-type ArchitectureSupport struct {
-	Name     string `json:"name"`
-	Path     string `json:"path"`
-	Supports bool   `json:"supports"`
-}
-
-// LaunchdJob represents information about a launchd job configuration file
-type LaunchdJob struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	Owner       string `json:"owner"`
-	OwnerID     int    `json:"ownerID"`
-	Permissions string `json:"permissions"`
-}
-
-// PrivilegedScript represents an installer script running with root privileges
-type PrivilegedScript struct {
-	Name      string `json:"name"`
-	ShortName string `json:"shortName"`
-	RunsWhen  string `json:"when"`
-	Binary    bool   `json:"binary"`
-}
-
-// OSRequirement represents OS version requirements for an executable component
-type OSRequirement struct {
-	Name     string `json:"name"`
-	Path     string `json:"path"`
-	Platform string `json:"platform"`
-	Version  string `json:"version"`
-	Major    int    `json:"major"`
-}
-
-// NonStandardPermission represents a file with unusual permissions
-type NonStandardPermission struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	Permissions string `json:"symPerm"`
-	Owner       string `json:"owner"`
-	Group       string `json:"group"`
-}
-
-// ComponentInfo represents information about a component package
-type ComponentInfo struct {
-	ID               string    `json:"id"`
-	Version          string    `json:"version"`
-	Installed        bool      `json:"installed"`
-	InstalledVersion string    `json:"installedVersion,omitempty"`
-	InstalledDate    time.Time `json:"installedDate,omitempty"`
-	InstallingApp    string    `json:"installingApp,omitempty"`
-}
-
-// UTIItem represents an item that conforms to a specific UTI
-type UTIItem struct {
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	UTIName string `json:"utiName"`
-	Kind    string `json:"kind"`
-}
-
-// SandboxedApp represents a sandboxed application with its network entitlements
-type SandboxedApp struct {
-	Name          string `json:"name"`
-	Path          string `json:"path"`
-	BundleID      string `json:"bundleID"`
-	ClientNetwork bool   `json:"clientNetwork"`
-	ServerNetwork bool   `json:"serverNetwork"`
-}
 
 // FindLaunchdJobs finds all launchd job configuration files in the package
 func FindLaunchdJobs(packagePath string) ([]LaunchdJob, error) {
@@ -138,21 +32,34 @@ func FindLaunchdJobs(packagePath string) ([]LaunchdJob, error) {
 	return jobs, nil
 }
 
-// FindPrivilegedScripts finds installer scripts with root privileges
-func FindPrivilegedScripts(packagePath string) ([]PrivilegedScript, error) {
+// FindInstallerScriptsRunAsRoot finds installer scripts with root privileges
+func FindInstallerScriptsRunAsRoot(packagePath string) ([]PrivilegedInstallerScript, error) {
 	logger.Logger(fmt.Sprintf("🔍 Finding privileged scripts in package: %s", packagePath), logger.LogInfo)
 
-	output, err := runNodeScript("findPrivilegedScripts", packagePath)
+	output, err := runNodeScript("findInstallerScriptsRunAsRoot", packagePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find privileged scripts: %w", err)
 	}
 
-	var scripts []PrivilegedScript
+	var scripts []PrivilegedInstallerScript
 	if err := json.Unmarshal(output, &scripts); err != nil {
 		return nil, fmt.Errorf("failed to parse privileged scripts: %w", err)
 	}
 
-	logger.Logger(fmt.Sprintf("🔐 Found %d privileged scripts in package", len(scripts)), logger.LogSuccess)
+	if len(scripts) == 0 {
+		logger.Logger("✅ No privileged scripts found in package", logger.LogSuccess)
+		return scripts, nil
+	}
+
+	logger.Logger(fmt.Sprintf("🔐 Found %d privileged scripts running as rootin package", len(scripts)), logger.LogSuccess)
+
+	// Log script details at INFO level, skipping script content
+	for _, script := range scripts {
+		logger.Logger(fmt.Sprintf("📜 Script Name: %s (Short: %s)", script.Name, script.ShortName), logger.LogInfo)
+		logger.Logger(fmt.Sprintf("   ⏳ Script runs: %s", script.When), logger.LogInfo)
+	}
+
+	// Remove the faulty warning log
 	return scripts, nil
 }
 
@@ -174,11 +81,11 @@ func FindCriticalIssues(packagePath string) ([]PackageIssue, error) {
 	return issues, nil
 }
 
-// GetOSRequirements gets the OS version requirements for executables in a package
-func GetOSRequirements(packagePath string) ([]OSRequirement, error) {
+// GetMacOSMinimumVersionRequirements gets the OS version requirements for executables in a package
+func GetMacOSMinimumVersionRequirements(packagePath string) ([]OSRequirement, error) {
 	logger.Logger(fmt.Sprintf("🔍 Getting OS requirements from package: %s", packagePath), logger.LogInfo)
 
-	output, err := runNodeScript("getOSRequirements", packagePath)
+	output, err := runNodeScript("getMacOSMinimumVersionRequirements", packagePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OS requirements: %w", err)
 	}
@@ -188,7 +95,18 @@ func GetOSRequirements(packagePath string) ([]OSRequirement, error) {
 		return nil, fmt.Errorf("failed to parse OS requirements: %w", err)
 	}
 
-	logger.Logger(fmt.Sprintf("💻 Found OS requirements for %d components in package", len(requirements)), logger.LogSuccess)
+	if len(requirements) == 0 {
+		logger.Logger("✅ No specific macOS minimum version requirements found in package", logger.LogSuccess)
+		return requirements, nil
+	}
+
+	logger.Logger(fmt.Sprintf("💻 Found macOS minimum version requirements for %d components in package", len(requirements)), logger.LogSuccess)
+
+	// Log each requirement at INFO level
+	for _, req := range requirements {
+		logger.Logger(fmt.Sprintf("  • %s requires macOS %s", req.Name, req.Version), logger.LogInfo)
+	}
+
 	return requirements, nil
 }
 
@@ -306,58 +224,6 @@ func FindSandboxedApps(packagePath string) ([]SandboxedApp, error) {
 }
 
 // runNodeScript executes the JavaScript helper function using Node
-// func runNodeScript(scriptName string, args ...string) ([]byte, error) {
-// 	// Get the module's root directory
-// 	_, currentFile, _, _ := runtime.Caller(0)
-// 	moduleRoot := filepath.Dir(filepath.Dir(currentFile)) // Go up two directories from this file
-
-// 	// Path to the JavaScript helper within the module structure
-// 	scriptPath := filepath.Join(moduleRoot, "suspicious_package", "scripts", "suspiciousPackageHelpers.js")
-
-// 	// Check if script exists
-// 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-// 		return nil, fmt.Errorf("JavaScript helper script not found at %s", scriptPath)
-// 	}
-
-// 	// Log the script path for debugging
-// 	fmt.Printf("Using script at: %s\n", scriptPath)
-
-// 	// Prepare the command to run the Node.js script
-// 	nodeCmd := exec.Command("node", "-e", fmt.Sprintf(`
-// 			const helpers = require('%s');
-// 			(async () => {
-// 					try {
-// 							const result = await helpers.%s(%s);
-// 							console.log(JSON.stringify(result));
-// 					} catch (err) {
-// 							console.error(err.message);
-// 							process.exit(1);
-// 					}
-// 			})();
-// 	`, scriptPath, scriptName, formatArgs(args)))
-
-// 	// Run the command and return the output
-// 	return nodeCmd.Output()
-// }
-
-// // formatArgs formats arguments for JavaScript function call
-// func formatArgs(args []string) string {
-// 	if len(args) == 0 {
-// 		return ""
-// 	}
-
-// 	formattedArgs := ""
-// 	for i, arg := range args {
-// 		if i > 0 {
-// 			formattedArgs += ", "
-// 		}
-// 		formattedArgs += fmt.Sprintf("'%s'", arg)
-// 	}
-
-// 	return formattedArgs
-// }
-
-// runNodeScript executes the JavaScript helper function using Node
 func runNodeScript(scriptName string, args ...string) ([]byte, error) {
 	// Get the module's root directory
 	_, currentFile, _, _ := runtime.Caller(0)
@@ -372,7 +238,7 @@ func runNodeScript(scriptName string, args ...string) ([]byte, error) {
 	}
 
 	// Log the script path for debugging
-	fmt.Printf("Using script at: %s\n", scriptPath)
+	//fmt.Printf("Using script at: %s\n", scriptPath)
 
 	// First check if Node.js is installed
 	_, err := exec.LookPath("node")
@@ -380,18 +246,18 @@ func runNodeScript(scriptName string, args ...string) ([]byte, error) {
 		return nil, fmt.Errorf("Node.js not found on system: %w", err)
 	}
 
-	// Modify the script to output more error details
 	nodeScript := fmt.Sprintf(`
 			try {
 					const helpers = require('%s');
 					if (typeof helpers.%s !== 'function') {
-							console.error('Function "%s" not found in helpers module');
+							console.error('Function "%s" not found in helpers module. Available functions: ' + Object.keys(helpers).join(', '));
 							process.exit(1);
 					}
 					(async () => {
 							try {
+									console.error("Starting execution of %s");
 									const result = await helpers.%s(%s);
-									console.log(JSON.stringify(result));
+									console.log(JSON.stringify(result || []));
 							} catch (err) {
 									console.error('Error executing helper function: ' + err.message);
 									console.error(err.stack);
@@ -400,9 +266,10 @@ func runNodeScript(scriptName string, args ...string) ([]byte, error) {
 					})();
 			} catch (err) {
 					console.error('Error loading helpers module: ' + err.message);
+					console.error(err.stack);
 					process.exit(1);
 			}
-	`, scriptPath, scriptName, scriptName, scriptName, formatArgs(args))
+	`, scriptPath, scriptName, scriptName, scriptName, scriptName, formatArgs(args))
 
 	// Create command with captured stderr
 	nodeCmd := exec.Command("node", "-e", nodeScript)
@@ -416,6 +283,11 @@ func runNodeScript(scriptName string, args ...string) ([]byte, error) {
 	err = nodeCmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", err, stderr.String())
+	}
+
+	// If stdout is empty, return an empty array to avoid JSON parsing errors
+	if stdout.Len() == 0 {
+		return []byte("[]"), nil
 	}
 
 	return stdout.Bytes(), nil
@@ -528,24 +400,6 @@ func FindComponentsWithEntitlement(packagePath string, entitlementKey string) ([
 	return components, nil
 }
 
-// CheckAppleSiliconSupport checks if executables support Apple Silicon
-func CheckAppleSiliconSupport(packagePath string) ([]ArchitectureSupport, error) {
-	logger.Logger(fmt.Sprintf("🔍 Checking Apple Silicon support in package: %s", packagePath), logger.LogInfo)
-
-	output, err := runNodeScript("checkArchitectureSupport", packagePath, "arm64e")
-	if err != nil {
-		return nil, fmt.Errorf("failed to check Apple Silicon support: %w", err)
-	}
-
-	var support []ArchitectureSupport
-	if err := json.Unmarshal(output, &support); err != nil {
-		return nil, fmt.Errorf("failed to parse architecture support info: %w", err)
-	}
-
-	logger.Logger(fmt.Sprintf("💻 Completed Apple Silicon support check for %d components", len(support)), logger.LogSuccess)
-	return support, nil
-}
-
 // ExportDiffableManifest exports a diffable manifest from a package
 func ExportDiffableManifest(packagePath string, outputPath string) error {
 	logger.Logger(fmt.Sprintf("📤 Exporting diffable manifest from package: %s", packagePath), logger.LogInfo)
@@ -557,4 +411,157 @@ func ExportDiffableManifest(packagePath string, outputPath string) error {
 
 	logger.Logger(fmt.Sprintf("✅ Exported diffable manifest to: %s", outputPath), logger.LogSuccess)
 	return nil
+}
+
+// GetPackageSigningCertificate retrieves the signing certificate information for a package
+func GetPackageSigningCertificate(packagePath string) (*PackageSigningCertificate, error) {
+	logger.Logger(fmt.Sprintf("🔍 Checking package signature for: %s", packagePath), logger.LogInfo)
+
+	cmd := exec.Command("pkgutil", "--check-signature", packagePath)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	if err := cmd.Run(); err != nil {
+		logger.Logger(fmt.Sprintf("❌ Failed to check package signature: %v", err), logger.LogError)
+		return nil, fmt.Errorf("failed to check package signature: %w", err)
+	}
+
+	output := out.String()
+	lines := strings.Split(output, "\n")
+
+	certDetails := &PackageSigningCertificate{
+		SignatureStatus:  "Unknown",
+		Notarized:        false,
+		CertificateInfo:  "Unknown",
+		CertificateChain: []string{},
+		ExpiryDates:      []string{},
+	}
+
+	// Regex patterns
+	signaturePattern := regexp.MustCompile(`Status:\s*(.+)`)
+	notarizedPattern := regexp.MustCompile(`Notarization:\s*(.+)`)
+	developerIDPattern := regexp.MustCompile(`Developer ID Installer:\s*(.+) \(([\w\d]+)\)`)
+	expiryPattern := regexp.MustCompile(`Expires:\s*(.+)`)
+	authorityPattern := regexp.MustCompile(`^\s*\d+\.\s*(.+)`)
+
+	var lastCertIndex int
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Extract Signature Status
+		if signaturePattern.MatchString(line) {
+			matches := signaturePattern.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				certDetails.SignatureStatus = matches[1]
+				logger.Logger(fmt.Sprintf("🔐 Signature Status: %s", certDetails.SignatureStatus), logger.LogSuccess)
+			}
+		}
+
+		// Extract Notarization Status
+		if notarizedPattern.MatchString(line) {
+			matches := notarizedPattern.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				certDetails.Notarized = strings.Contains(matches[1], "trusted by the Apple notary service")
+				logger.Logger(fmt.Sprintf("🔐 Notarized: %t", certDetails.Notarized), logger.LogSuccess)
+			}
+		}
+
+		// Extract Developer ID Info
+		if developerIDPattern.MatchString(line) {
+			matches := developerIDPattern.FindStringSubmatch(line)
+			if len(matches) == 3 {
+				certDetails.CertificateInfo = matches[1] // Organization Name
+				logger.Logger(fmt.Sprintf("🔐 Signed by: %s", certDetails.CertificateInfo), logger.LogInfo)
+			}
+		}
+
+		// Extract Full Certificate Chain
+		if authorityPattern.MatchString(line) {
+			matches := authorityPattern.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				certDetails.CertificateChain = append(certDetails.CertificateChain, matches[1])
+				lastCertIndex = len(certDetails.CertificateChain) - 1
+			}
+		}
+
+		// Extract Certificate Expiry Date and associate it with the last certificate
+		if expiryPattern.MatchString(line) {
+			matches := expiryPattern.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				expiry := matches[1]
+				if lastCertIndex >= 0 && lastCertIndex < len(certDetails.CertificateChain) {
+					certDetails.ExpiryDates = append(certDetails.ExpiryDates, expiry)
+				}
+			}
+		}
+	}
+
+	// Log Certificate Chain with Expiry Dates using arrows
+	if len(certDetails.CertificateChain) > 0 {
+		logger.Logger("🔐 Certificate Chain:", logger.LogInfo)
+		for i, cert := range certDetails.CertificateChain {
+			expiry := "Unknown"
+			if i < len(certDetails.ExpiryDates) {
+				expiry = certDetails.ExpiryDates[i]
+			}
+
+			if i == 0 {
+				// First certificate in the chain
+				logger.Logger(fmt.Sprintf("  • %s (Expires: %s)", cert, expiry), logger.LogInfo)
+			} else {
+				// Show relationship using arrows
+				logger.Logger(fmt.Sprintf("    → %s (Expires: %s)", cert, expiry), logger.LogInfo)
+			}
+		}
+	} else {
+		logger.Logger("⚠️ No certificate chain found - package may be unsigned", logger.LogWarning)
+	}
+
+	return certDetails, nil
+}
+
+// GetPackageSupportedMacOSArchitecture extracts the supported macOS architectures from a package
+func GetPackageSupportedMacOSArchitecture(packagePath string) ([]string, error) {
+	logger.Logger(fmt.Sprintf("🔍 Checking supported macOS architectures for: %s", packagePath), logger.LogInfo)
+
+	// Create a unique temporary directory
+	tempDir, err := os.MkdirTemp("", "expanded_pkg_*") // Generates a unique temp folder
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir) // Cleanup after function exits
+
+	// Expand the package
+	cmd := exec.Command("pkgutil", "--expand", packagePath, tempDir)
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to expand package: %w", err)
+	}
+
+	// Locate Distribution file (Only exists in Distribution packages)
+	distFile := filepath.Join(tempDir, "Distribution")
+	if _, err := os.Stat(distFile); os.IsNotExist(err) {
+		logger.Logger("⚠️ No Distribution file found – assuming component package", logger.LogWarning)
+		return nil, fmt.Errorf("no Distribution file found, unable to determine architecture support")
+	}
+
+	// Read the Distribution XML file
+	data, err := os.ReadFile(distFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Distribution file: %w", err)
+	}
+
+	// Extract supported architectures from the <options> tag
+	archRegex := regexp.MustCompile(`hostArchitectures="([^"]+)"`)
+	matches := archRegex.FindStringSubmatch(string(data))
+
+	if len(matches) < 2 {
+		logger.Logger("⚠️ No explicit hostArchitectures found, package may default to x86_64", logger.LogWarning)
+		return []string{"x86_64"}, nil // Default assumption
+	}
+
+	// Return the parsed architectures
+	architectures := strings.Split(matches[1], ",")
+	logger.Logger(fmt.Sprintf("✅ Package supports: %s", strings.Join(architectures, ", ")), logger.LogSuccess)
+	return architectures, nil
 }

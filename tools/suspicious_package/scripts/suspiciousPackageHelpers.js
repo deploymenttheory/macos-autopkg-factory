@@ -10,11 +10,20 @@ async function runAppleScript(script) {
   const { exec } = require('child_process');
   
   return new Promise((resolve, reject) => {
+    // For debugging
+    console.error("Running AppleScript:\n", script.substring(0, 300) + (script.length > 300 ? "..." : ""));
+    
     exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, stdout, stderr) => {
       if (error) {
+        console.error("AppleScript error:", error.message);
+        console.error("stderr:", stderr);
         reject(new Error(`AppleScript execution error: ${error.message}`));
         return;
       }
+      if (stderr) {
+        console.error("AppleScript stderr:", stderr);
+      }
+      console.error("AppleScript stdout:", stdout.substr(0, 100) + (stdout.length > 100 ? "..." : ""));
       resolve(stdout.trim());
     });
   });
@@ -54,9 +63,13 @@ async function getInstalledItems(packagePath) {
   
   const result = await runAppleScript(script);
   // Parse the AppleScript result into a JavaScript array
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -80,9 +93,13 @@ async function getInstalledApps(packagePath) {
   
   const result = await runAppleScript(script);
   // Parse the AppleScript result
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -97,14 +114,31 @@ async function checkPackageSignature(packagePath) {
       set pkg to first document
       set sigStatus to signature status of installer package of pkg
       set isNotarized to notarized of installer package of pkg
-      return {status:sigStatus, notarized:isNotarized}
+      
+      -- Return values individually to avoid complex string concatenation
+      return sigStatus & "," & isNotarized
     end tell
   `;
   
-  const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '{' : '}';
-  }));
+  try {
+    const result = await runAppleScript(script);
+    if (result && result.trim()) {
+      const parts = result.split(',');
+      return {
+        name: packagePath.split('/').pop(),
+        signatureStatus: parts[0],
+        notarized: parts[1] === "true"
+      };
+    }
+  } catch (e) {
+    console.error("Failed to get signature info:", e);
+  }
+  
+  return { 
+    name: packagePath.split('/').pop(), 
+    signatureStatus: "unknown", 
+    notarized: false 
+  };
 }
 
 /**
@@ -129,9 +163,13 @@ async function getInstallerScripts(packagePath) {
   `;
   
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -157,9 +195,13 @@ async function findPackageIssues(packagePath) {
   `;
   
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -186,9 +228,13 @@ async function findComponentsWithEntitlement(packagePath, entitlementKey) {
   `;
   
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -222,7 +268,15 @@ async function checkArchitectureSupport(packagePath, architecture) {
       set allCode to (find code under installed items of first document)
       set resultList to {}
       repeat with codeItem in allCode
-        set doesSupport to codeItem supports processor "${architecture}"
+        -- Get supported architectures directly
+        set archList to supported architectures of codeItem
+        set doesSupport to false
+        
+        -- Check if the architecture is in the supported architectures list
+        if archList contains "${architecture}" then
+          set doesSupport to true
+        end if
+        
         set itemInfo to {name:name of codeItem, path:posix path of codeItem, supports:doesSupport}
         set resultList to resultList & {itemInfo}
       end repeat
@@ -230,26 +284,19 @@ async function checkArchitectureSupport(packagePath, architecture) {
     end tell
   `;
   
-  const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  try {
+    const result = await runAppleScript(script);
+    if (result && result.trim()) {
+      return JSON.parse(result.replace(/[{}]/g, function(match) {
+        return match === '{' ? '[' : ']';
+      }).replace(/:/g, ','));
+    }
+  } catch (e) {
+    console.error("Failed to check architecture support:", e);
+  }
+  
+  return []; // Return empty array instead of parsing empty string
 }
-
-// Export all functions
-module.exports = {
-  openPackage,
-  getInstalledItems,
-  getInstalledApps,
-  checkPackageSignature,
-  getInstallerScripts,
-  findPackageIssues,
-  findComponentsWithEntitlement,
-  exportDiffableManifest,
-  checkArchitectureSupport
-};
-
-// Additional helper functions for the JavaScript module
 
 /**
  * Finds all launchd job configuration files in a package
@@ -261,45 +308,88 @@ async function findLaunchdJobs(packagePath) {
     tell application "Suspicious Package"
       open POSIX file "${packagePath}"
       set launchdJobs to (find content under installed items of first document whose kind is "Launchd job configuration")
-      set resultList to {}
+
+      -- Handle empty case
+      if (count of launchdJobs) = 0 then
+        return "[]"
+      end if
+
+      -- Convert AppleScript list to JSON format
+      set resultList to ""
       repeat with aJob in launchdJobs
-        set jobInfo to {name:name of aJob, path:posix path of aJob, owner:owner of aJob, ownerID:owner ID of aJob, permissions:symbolic permissions of aJob}
-        set resultList to resultList & {jobInfo}
+        set jobInfo to "{\\"name\\": \\"" & name of aJob & "\\", \\"path\\": \\"" & posix path of aJob & "\\", \\"owner\\": \\"" & owner of aJob & "\\", \\"ownerID\\": \\"" & owner ID of aJob & "\\", \\"permissions\\": \\"" & symbolic permissions of aJob & "\\"}"
+        set resultList to resultList & jobInfo & ","
       end repeat
-      return resultList
+
+      return "[" & text 1 thru -2 of resultList & "]"
     end tell
   `;
-  
+
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+
+  if (result && result.trim()) {
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error("❌ Failed to parse AppleScript output:", result);
+      throw new Error("Invalid JSON returned from AppleScript");
+    }
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
- * Finds installer scripts with root privileges
+ * Finds the number of installer scripts that run as root and their names
  * @param {string} packagePath - Full path to the package file
- * @returns {Promise<Array>} - Array of privileged scripts with their details
+ * @returns {Promise<Array>} - Array of script metadata (name, short name, runs when)
  */
-async function findPrivilegedScripts(packagePath) {
+async function findInstallerScriptsRunAsRoot(packagePath) {
   const script = `
     tell application "Suspicious Package"
       open POSIX file "${packagePath}"
       set rootScripts to installer scripts of first document whose runs as user is "root"
-      set resultList to {}
+
+      -- Handle empty list case
+      if (count of rootScripts) = 0 then
+        return "[]"
+      end if
+
+      -- Convert script names to JSON format
+      set resultList to "["
       repeat with aScript in rootScripts
-        set scriptInfo to {name:name of aScript, shortName:short name of aScript, when:runs when of aScript, binary:binary of aScript}
-        set resultList to resultList & {scriptInfo}
+        set scriptName to name of aScript
+        set shortName to short name of aScript
+        set whenRun to runs when of aScript
+
+        set resultList to resultList & "{\\"name\\": \\"" & scriptName & "\\", \\"shortName\\": \\"" & shortName & "\\", \\"when\\": \\"" & whenRun & "\\"},"
       end repeat
+
+      -- Remove trailing comma and close JSON array
+      set resultList to text 1 thru -2 of resultList & "]"
       return resultList
     end tell
   `;
-  
+
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+
+  if (result && result.trim()) {
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error("❌ Failed to parse AppleScript output:", result);
+      throw new Error("Invalid JSON returned from AppleScript");
+    }
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
+
+
+
+
+
+
 
 /**
  * Gets the most critical issues from a package
@@ -325,70 +415,69 @@ async function findCriticalIssues(packagePath) {
   `;
   
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
- * Gets the OS version requirements for all executable components in a package
+ * Gets the minimum OS version requirements for all executable components in a package
  * @param {string} packagePath - Full path to the package file
  * @returns {Promise<Array>} - Array of executables with their OS version requirements
  */
-async function getOSRequirements(packagePath) {
+async function getMacOSMinimumVersionRequirements(packagePath) {
   const script = `
     tell application "Suspicious Package"
       open POSIX file "${packagePath}"
       set codeItems to (find code under installed items of first document)
-      set resultList to {}
+      
+      -- Prepare result as JSON array
+      set resultList to "["
+      
       repeat with anItem in codeItems
         set minOS to OS minimum version of anItem
         if minOS is not missing value then
-          set itemInfo to {name:name of anItem, path:posix path of anItem}
-          set itemInfo to itemInfo & {platform:platform of minOS, version:product version of minOS, major:major version number of minOS}
-          set resultList to resultList & {itemInfo}
-        end if
-      end repeat
-      return resultList
-    end tell
-  `;
-  
-  const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
-}
+          set itemName to name of anItem
+          set itemPath to POSIX path of anItem
+          set osPlatform to platform of minOS
+          set osVersion to product version of minOS
+          set osMajor to major version number of minOS
 
-/**
- * Checks if executables in a package support a specific macOS version
- * @param {string} packagePath - Full path to the package file
- * @param {string} osVersion - OS version to check (e.g. "14.0" for Sonoma)
- * @returns {Promise<Array>} - List of executables that may not be compatible
- */
-async function checkOSCompatibility(packagePath, osVersion) {
-  const script = `
-    tell application "Suspicious Package"
-      open POSIX file "${packagePath}"
-      set codeItems to (find code under installed items of first document)
-      set resultList to {}
-      repeat with anItem in codeItems
-        set minOS to OS minimum version of anItem
-        if minOS is not missing value then
-          set isCompatible to check OS version minOS is before or at "${osVersion}"
-          if not isCompatible then
-            set itemInfo to {name:name of anItem, path:posix path of anItem, required:product version of minOS}
-            set resultList to resultList & {itemInfo}
-          end if
+          -- Construct JSON object
+          set jsonEntry to "{\\"name\\": \\"" & itemName & "\\", \\"path\\": \\"" & itemPath & "\\", \\"platform\\": \\"" & osPlatform & "\\", \\"version\\": \\"" & osVersion & "\\", \\"major\\": " & osMajor & "}"
+
+          -- Append to result list
+          set resultList to resultList & jsonEntry & ","
         end if
       end repeat
+
+      -- Close JSON array, handling empty case
+      if resultList is "[" then
+        set resultList to "[]"
+      else
+        set resultList to text 1 thru -2 of resultList & "]"
+      end if
+
       return resultList
     end tell
   `;
-  
+
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  
+  if (result && result.trim()) {
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error("❌ Failed to parse AppleScript output:", result);
+      throw new Error("Invalid JSON returned from AppleScript");
+    }
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -401,21 +490,37 @@ async function findNonStandardPermissions(packagePath) {
     tell application "Suspicious Package"
       open POSIX file "${packagePath}"
       -- Find items with unusual permissions (non-standard or overly permissive)
-      set permItems to (find content under installed items of first document where everyone's privileges is not "read only" or owner is not "root")
-      set resultList to {}
+      set permItems to (find content under installed items of first document where everyones privileges is not read only or owner is not "root")
+      
+      -- Convert AppleScript list to JSON format
+      set resultList to ""
       repeat with anItem in permItems
-        set itemInfo to {name:name of anItem, path:posix path of anItem, symPerm:symbolic permissions of anItem, owner:owner of anItem, group:group of anItem}
-        set resultList to resultList & {itemInfo}
+        set itemInfo to "{\\"name\\": \\"" & name of anItem & "\\", \\"path\\": \\"" & posix path of anItem & "\\", \\"symPerm\\": \\"" & symbolic permissions of anItem & "\\", \\"owner\\": \\"" & owner of anItem & "\\", \\"group\\": \\"" & group of anItem & "\\"}"
+        set resultList to resultList & itemInfo & ","
       end repeat
-      return resultList
+      
+      if length of resultList > 0 then
+        return "[" & text 1 thru -2 of resultList & "]"
+      else
+        return "[]"
+      end if
     end tell
   `;
-  
+
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+
+  if (result && result.trim()) {
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error("❌ Failed to parse AppleScript output:", result);
+      throw new Error("Invalid JSON returned from AppleScript");
+    }
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
+
 
 /**
  * Searches for specific strings in installer scripts (useful for security auditing)
@@ -438,9 +543,13 @@ async function searchInstallerScripts(packagePath, searchTerm) {
   `;
   
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -465,10 +574,24 @@ async function getComponentPackages(packagePath) {
     end tell
   `;
   
-  const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  // For debugging
+  console.error("Running getComponentPackages script");
+  
+  try {
+    const result = await runAppleScript(script);
+    console.error("Raw AppleScript result:", result);
+    
+    if (result && result.trim()) {
+      return JSON.parse(result.replace(/[{}]/g, function(match) {
+        return match === '{' ? '[' : ']';
+      }).replace(/:/g, ','));
+    } else {
+      return []; // Return empty array instead of parsing empty string
+    }
+  } catch (error) {
+    console.error("Error in getComponentPackages:", error);
+    return [];
+  }
 }
 
 /**
@@ -510,9 +633,13 @@ async function findItemsByUTI(packagePath, utiPattern) {
   `;
   
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
 /**
@@ -558,18 +685,31 @@ async function findSandboxedApps(packagePath) {
   `;
   
   const result = await runAppleScript(script);
-  return JSON.parse(result.replace(/[{}]/g, function(match) {
-    return match === '{' ? '[' : ']';
-  }).replace(/:/g, ','));
+  if (result && result.trim()) {
+    return JSON.parse(result.replace(/[{}]/g, function(match) {
+      return match === '{' ? '[' : ']';
+    }).replace(/:/g, ','));
+  } else {
+    return []; // Return empty array instead of parsing empty string
+  }
 }
 
-// Export additional functions
+// Export all functions in a single module.exports
 module.exports = {
+  // Original functions
+  openPackage,
+  getInstalledItems,
+  getInstalledApps,
+  checkPackageSignature,
+  getInstallerScripts,
+  findPackageIssues,
+  findComponentsWithEntitlement,
+  exportDiffableManifest,
+  checkArchitectureSupport,
   findLaunchdJobs,
-  findPrivilegedScripts,
+  findInstallerScriptsRunAsRoot,
   findCriticalIssues,
-  getOSRequirements,
-  checkOSCompatibility,
+  getMacOSMinimumVersionRequirements,
   findNonStandardPermissions,
   searchInstallerScripts,
   getComponentPackages,

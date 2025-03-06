@@ -17,6 +17,9 @@ type SecurityScanResult struct {
 	PackagePath         string
 	SignatureStatus     string
 	Notarized           bool
+	CertificateInfo     string
+	CertificateIssuer   string
+	CertificateExpiry   string
 	CriticalIssues      int
 	WarningIssues       int
 	PrivilegedScripts   int
@@ -64,19 +67,44 @@ func main() {
 
 	// Initialize scan results
 	scanResult := SecurityScanResult{
-		PackagePath: *packagePath,
+		PackagePath:         *packagePath,
+		SignatureStatus:     "Unknown",
+		Notarized:           false,
+		CertificateInfo:     "Unknown",
+		CertificateIssuer:   "Unknown",
+		CertificateExpiry:   "Unknown",
+		CriticalIssues:      0,
+		WarningIssues:       0,
+		PrivilegedScripts:   0,
+		LaunchdJobs:         0,
+		NonStdPermissions:   0,
+		ComponentCount:      0,
+		SandboxedApps:       0,
+		AppleSiliconSupport: 0,
 	}
 
 	// 1. Check package signature and notarization
-	pkgInfo, err := sp.AnalyzePackage(*packagePath)
+	certInfo, err := sp.GetPackageSigningCertificate(*packagePath)
 	if err != nil {
-		fmt.Printf("Failed to analyze package signature: %v\n", err)
+		logger.Logger(fmt.Sprintf("❌ Failed to analyze package signature: %v", err), logger.LogError)
 	} else {
-		scanResult.SignatureStatus = pkgInfo.SignatureStatus
-		scanResult.Notarized = pkgInfo.Notarized
+		scanResult.SignatureStatus = certInfo.SignatureStatus
+		scanResult.Notarized = certInfo.Notarized
+		scanResult.CertificateInfo = certInfo.CertificateInfo
 
-		logger.Logger(fmt.Sprintf("🔐 Package signature status: %s, Notarized: %t",
-			pkgInfo.SignatureStatus, pkgInfo.Notarized), logger.LogInfo)
+		// Use the first certificate in the chain as the issuer (if available)
+		if len(certInfo.CertificateChain) > 0 {
+			scanResult.CertificateIssuer = certInfo.CertificateChain[0]
+		} else {
+			scanResult.CertificateIssuer = "Unknown"
+		}
+
+		// Use the first expiry date if available
+		if len(certInfo.ExpiryDates) > 0 {
+			scanResult.CertificateExpiry = certInfo.ExpiryDates[0]
+		} else {
+			scanResult.CertificateExpiry = "Unknown"
+		}
 	}
 
 	// 2. Check for critical issues
@@ -95,18 +123,11 @@ func main() {
 		}
 	}
 
-	// 3. Find privileged scripts
-	scripts, err := sp.FindPrivilegedScripts(*packagePath)
+	// 3. Find scripts run as root
+	scripts, err := sp.FindInstallerScriptsRunAsRoot(*packagePath)
 	if err != nil {
-		fmt.Printf("Failed to check for privileged scripts: %v\n", err)
-	} else {
-		scanResult.PrivilegedScripts = len(scripts)
-		if len(scripts) > 0 {
-			logger.Logger(fmt.Sprintf("🔐 Found %d scripts running as root:", len(scripts)), logger.LogWarning)
-			for _, script := range scripts {
-				logger.Logger(fmt.Sprintf("  • %s (%s)", script.ShortName, script.RunsWhen), logger.LogInfo)
-			}
-		}
+		fmt.Println("Error:", err)
+		logger.Logger(fmt.Sprintf("❌ CRITICAL: %d", scripts), logger.LogError)
 	}
 
 	// 4. Search for specific terms in installer scripts if requested
@@ -214,43 +235,26 @@ func main() {
 		}
 	}
 
-	// 9. Check Apple Silicon support
-	supportInfo, err := sp.CheckAppleSiliconSupport(*packagePath)
+	// 9. Check Apple Silicon support using package architecture metadata
+	supportedArchitectures, err := sp.GetPackageSupportedMacOSArchitecture(*packagePath)
 	if err != nil {
-		fmt.Printf("Failed to check Apple Silicon support: %v\n", err)
+		logger.Logger(fmt.Sprintf("❌ Failed to get package architectures: %v", err), logger.LogError)
 	} else {
-		supportedCount := 0
-		unsupportedComponents := []string{}
+		logger.Logger(fmt.Sprintf("💻 Package supports: %s", strings.Join(supportedArchitectures, ", ")), logger.LogSuccess)
 
-		for _, comp := range supportInfo {
-			if comp.Supports {
-				supportedCount++
-			} else {
-				unsupportedComponents = append(unsupportedComponents, comp.Name)
+		// Determine if Apple Silicon (arm64) is supported
+		supportsAppleSilicon := false
+		for _, arch := range supportedArchitectures {
+			if arch == "arm64" {
+				supportsAppleSilicon = true
+				break
 			}
 		}
 
-		scanResult.AppleSiliconSupport = supportedCount
-
-		if len(unsupportedComponents) > 0 {
-			logger.Logger(fmt.Sprintf("⚠️ Found %d of %d executables that may not support Apple Silicon:",
-				len(unsupportedComponents), len(supportInfo)), logger.LogWarning)
-
-			// Only show the first 5 to avoid too much output
-			maxShow := 5
-			if len(unsupportedComponents) < maxShow {
-				maxShow = len(unsupportedComponents)
-			}
-
-			for i := 0; i < maxShow; i++ {
-				logger.Logger(fmt.Sprintf("  • %s", unsupportedComponents[i]), logger.LogInfo)
-			}
-
-			if len(unsupportedComponents) > maxShow {
-				logger.Logger(fmt.Sprintf("  • ... and %d more", len(unsupportedComponents)-maxShow), logger.LogInfo)
-			}
-		} else if len(supportInfo) > 0 {
-			logger.Logger(fmt.Sprintf("✅ All %d executables support Apple Silicon", len(supportInfo)), logger.LogSuccess)
+		if supportsAppleSilicon {
+			logger.Logger("✅ Package explicitly supports Apple Silicon (arm64)", logger.LogSuccess)
+		} else {
+			logger.Logger("⚠️ Package does not explicitly declare Apple Silicon support", logger.LogWarning)
 		}
 	}
 
@@ -269,6 +273,12 @@ func main() {
 		} else {
 			logger.Logger(fmt.Sprintf("✅ All components are compatible with macOS %s", *checkOSVersion), logger.LogSuccess)
 		}
+	}
+
+	// 10. Get OS requirements for the package
+	_, err = sp.GetMacOSMinimumVersionRequirements(*packagePath)
+	if err != nil {
+		logger.Logger(fmt.Sprintf("❌ Failed to get OS requirements: %v", err), logger.LogError)
 	}
 
 	// 11. Export diffable manifest if requested
@@ -309,9 +319,10 @@ func main() {
 		logger.Logger("❌ Package contains CRITICAL issues and should be carefully reviewed", logger.LogError)
 	} else if scanResult.WarningIssues > 0 || scanResult.PrivilegedScripts > 0 || scanResult.NonStdPermissions > 5 {
 		logger.Logger("⚠️ Package contains potential security concerns that should be reviewed", logger.LogWarning)
-	} else if scanResult.SignatureStatus != "Apple Inc" && scanResult.SignatureStatus != "Developer ID" {
+	} else if !strings.Contains(scanResult.SignatureStatus, "signed by a developer certificate issued by Apple") {
 		logger.Logger("⚠️ Package is not signed with an Apple-issued certificate", logger.LogWarning)
 	} else {
 		logger.Logger("✅ No critical security issues found in package", logger.LogSuccess)
 	}
+
 }

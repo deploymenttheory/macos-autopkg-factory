@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/helpers"
@@ -24,9 +25,15 @@ func InstallSuspiciousPackage(config *Config) (string, error) {
 
 	// Only install if not present or forced update requested
 	if _, err := os.Stat(appPath); err == nil && !config.ForceUpdate {
-		// Optionally, you could try to extract version info from the app's Info.plist
-		logger.Logger("Suspicious Package is already installed.", logger.LogInfo)
-		return "installed", nil
+		// Try to get the version
+		version := "installed"
+		cmdVersion := exec.Command("defaults", "read", appPath+"/Contents/Info", "CFBundleShortVersionString")
+		if versionBytes, err := cmdVersion.Output(); err == nil {
+			version = strings.TrimSpace(string(versionBytes))
+		}
+
+		logger.Logger(fmt.Sprintf("Suspicious Package %s is already installed.", version), logger.LogInfo)
+		return version, nil
 	}
 
 	logger.Logger("⬇️ Downloading Suspicious Package", logger.LogInfo)
@@ -70,9 +77,31 @@ func InstallSuspiciousPackage(config *Config) (string, error) {
 		return "", fmt.Errorf("failed to unmount DMG: %w", err)
 	}
 
-	// Optionally, wait a short while for the system to register the new app
-	time.Sleep(2 * time.Second)
+	// Get the installed version
+	version := "installed"
+	cmdVersion := exec.Command("defaults", "read", appPath+"/Contents/Info", "CFBundleShortVersionString")
+	if versionBytes, err := cmdVersion.Output(); err == nil {
+		version = strings.TrimSpace(string(versionBytes))
+	}
 
-	logger.Logger("✅ Suspicious Package installed", logger.LogSuccess)
-	return "installed", nil
+	// Open and then close the application to ensure it's registered with the system
+	cmdOpen := exec.Command("open", "-a", "Suspicious Package")
+	if err := cmdOpen.Run(); err != nil {
+		logger.Logger(fmt.Sprintf("Warning: Failed to open Suspicious Package: %v", err), logger.LogWarning)
+	}
+
+	// Wait a moment for the app to register
+	time.Sleep(3 * time.Second)
+
+	// Close the app
+	cmdClose := exec.Command("osascript", "-e", `tell application "Suspicious Package" to quit`)
+	if err := cmdClose.Run(); err != nil {
+		logger.Logger(fmt.Sprintf("Warning: Failed to close Suspicious Package: %v", err), logger.LogWarning)
+	}
+
+	// Wait a moment for the app to fully close
+	time.Sleep(1 * time.Second)
+
+	logger.Logger(fmt.Sprintf("✅ Suspicious Package %s installed", version), logger.LogSuccess)
+	return version, nil
 }
