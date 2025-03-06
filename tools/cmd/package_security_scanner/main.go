@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
+	pkg "github.com/deploymenttheory/macos-autopkg-factory/tools/pkg"
 	sp "github.com/deploymenttheory/macos-autopkg-factory/tools/suspicious_package"
 )
 
@@ -84,7 +85,7 @@ func main() {
 	}
 
 	// 1. Check package signature and notarization
-	certInfo, err := sp.GetPackageSigningCertificate(*packagePath)
+	certInfo, err := pkg.GetPackageSigningCertificate(*packagePath)
 	if err != nil {
 		logger.Logger(fmt.Sprintf("❌ Failed to analyze package signature: %v", err), logger.LogError)
 	} else {
@@ -236,7 +237,7 @@ func main() {
 	}
 
 	// 9. Check Apple Silicon support using package architecture metadata
-	supportedArchitectures, err := sp.GetPackageSupportedMacOSArchitecture(*packagePath)
+	supportedArchitectures, err := pkg.GetPackageSupportedMacOSArchitecture(*packagePath)
 	if err != nil {
 		logger.Logger(fmt.Sprintf("❌ Failed to get package architectures: %v", err), logger.LogError)
 	} else {

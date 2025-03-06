@@ -317,7 +317,13 @@ async function findLaunchdJobs(packagePath) {
       -- Convert AppleScript list to JSON format
       set resultList to ""
       repeat with aJob in launchdJobs
-        set jobInfo to "{\\"name\\": \\"" & name of aJob & "\\", \\"path\\": \\"" & posix path of aJob & "\\", \\"owner\\": \\"" & owner of aJob & "\\", \\"ownerID\\": \\"" & owner ID of aJob & "\\", \\"permissions\\": \\"" & symbolic permissions of aJob & "\\"}"
+        -- Parse ownerID to ensure it's a number
+        set ownerId to owner ID of aJob
+        if ownerId is missing value or ownerId is "" then
+          set ownerId to 0
+        end if
+        
+        set jobInfo to "{\\"name\\": \\"" & name of aJob & "\\", \\"path\\": \\"" & posix path of aJob & "\\", \\"owner\\": \\"" & owner of aJob & "\\", \\"ownerID\\": " & ownerId & ", \\"permissions\\": \\"" & symbolic permissions of aJob & "\\"}"
         set resultList to resultList & jobInfo & ","
       end repeat
 
@@ -401,24 +407,44 @@ async function findCriticalIssues(packagePath) {
     tell application "Suspicious Package"
       open POSIX file "${packagePath}"
       set criticalIssues to (every issue of first document where priority is critical or priority is warning)
-      set resultList to {}
+      
+      -- Handle empty list case
+      if (count of criticalIssues) = 0 then
+        return "[]"
+      end if
+      
+      -- Convert to JSON format directly
+      set resultList to "["
       repeat with anIssue in criticalIssues
-        set issueInfo to {details:details of anIssue, priority:priority of anIssue}
+        set issueDetails to details of anIssue
+        set issuePriority to priority of anIssue
+        
+        set jsonObj to "{\\"details\\": \\"" & issueDetails & "\\", \\"priority\\": \\"" & issuePriority & "\\""
+        
+        -- Add path if it exists
         set relPath to related POSIX path of anIssue
         if relPath is not missing value then
-          set issueInfo to issueInfo & {path:relPath}
+          set jsonObj to jsonObj & ", \\"path\\": \\"" & relPath & "\\""
         end if
-        set resultList to resultList & {issueInfo}
+        
+        set resultList to resultList & jsonObj & "},"
       end repeat
+      
+      -- Remove trailing comma and close JSON array
+      set resultList to text 1 thru -2 of resultList & "]"
       return resultList
     end tell
   `;
   
   const result = await runAppleScript(script);
+  
   if (result && result.trim()) {
-    return JSON.parse(result.replace(/[{}]/g, function(match) {
-      return match === '{' ? '[' : ']';
-    }).replace(/:/g, ','));
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error("❌ Failed to parse AppleScript output:", result);
+      throw new Error("Invalid JSON returned from AppleScript");
+    }
   } else {
     return []; // Return empty array instead of parsing empty string
   }
@@ -652,43 +678,64 @@ async function findSandboxedApps(packagePath) {
     tell application "Suspicious Package"
       open POSIX file "${packagePath}"
       set appList to (find apps under installed items of first document)
-      set resultList to {}
+      
+      -- Handle empty case
+      if (count of appList) = 0 then
+        return "[]"
+      end if
+      
+      -- Convert to JSON format directly
+      set resultList to "["
       
       repeat with anApp in appList
         set sandboxEntitlement to entitlement "com.apple.security.app-sandbox" of anApp
         if sandboxEntitlement is not missing value and (sandboxEntitlement requests with allowing) then
           -- This app is sandboxed
-          set appInfo to {name:name of anApp, path:posix path of anApp, bundleID:bundle identifier of anApp}
+          set appName to name of anApp
+          set appPath to posix path of anApp
+          set appBundleID to bundle identifier of anApp
           
-          -- Get network entitlements
+          -- Check network entitlements
+          set hasClientNetwork to false
+          set hasServerNetwork to false
+          
           set networkClient to entitlement "com.apple.security.network.client" of anApp
-          set networkServer to entitlement "com.apple.security.network.server" of anApp
-          
           if networkClient is not missing value and (networkClient requests with allowing) then
-            set appInfo to appInfo & {clientNetwork:true}
-          else
-            set appInfo to appInfo & {clientNetwork:false}
+            set hasClientNetwork to true
           end if
           
+          set networkServer to entitlement "com.apple.security.network.server" of anApp
           if networkServer is not missing value and (networkServer requests with allowing) then
-            set appInfo to appInfo & {serverNetwork:true}
-          else
-            set appInfo to appInfo & {serverNetwork:false}
+            set hasServerNetwork to true
           end if
           
-          set resultList to resultList & {appInfo}
+          -- Create JSON object for this app
+          set jsonObj to "{\\"name\\": \\"" & appName & "\\", \\"path\\": \\"" & appPath & "\\", \\"bundleID\\": \\"" & appBundleID & "\\", \\"clientNetwork\\": " & hasClientNetwork & ", \\"serverNetwork\\": " & hasServerNetwork & "}"
+          
+          set resultList to resultList & jsonObj & ","
         end if
       end repeat
+      
+      -- Handle empty results or remove trailing comma
+      if resultList is "[" then
+        return "[]"
+      else
+        set resultList to text 1 thru -2 of resultList & "]"
+      end if
       
       return resultList
     end tell
   `;
   
   const result = await runAppleScript(script);
+  
   if (result && result.trim()) {
-    return JSON.parse(result.replace(/[{}]/g, function(match) {
-      return match === '{' ? '[' : ']';
-    }).replace(/:/g, ','));
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error("❌ Failed to parse AppleScript output:", result);
+      throw new Error("Invalid JSON returned from AppleScript");
+    }
   } else {
     return []; // Return empty array instead of parsing empty string
   }
