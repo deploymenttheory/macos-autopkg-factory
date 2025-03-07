@@ -16,46 +16,11 @@ import (
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
-// Config holds all the configuration options for AutoPkg setup operations
-type Config struct {
+// InstallConfig represents the configuration options for AutoPkg install operations
+type InstallConfig struct {
 	// Basic AutoPkg settings
-	ForceUpdate         bool
-	UseBeta             bool
-	FailRecipes         bool
-	DisableVerification bool
-	PrefsFilePath       string
-	ReplacePrefs        bool
-	GitHubToken         string
-
-	// Recipe and repo settings
-	RecipeRepos         []string
-	RecipeLists         []string
-	AutopkgRepoListPath string
-
-	// Private repo settings
-	PrivateRepoPath string
-	PrivateRepoURL  string
-
-	// JamfUploader settings
-	JAMFPRO_URL           string
-	API_USERNAME          string
-	API_PASSWORD          string
-	JAMFPRO_CLIENT_ID     string
-	JAMFPRO_CLIENT_SECRET string
-	SMB_URL               string
-	SMB_USERNAME          string
-	SMB_PASSWORD          string
-	UseJamfUploader       bool
-	JCDS2Mode             bool
-
-	// JamfUploader / IntuneUploader settings
-	INTUNE_CLIENT_ID     string
-	INTUNE_CLIENT_SECRET string
-	INTUNE_TENANT_ID     string
-
-	// Slack settings
-	SlackWebhook  string
-	SlackUsername string
+	ForceUpdate bool
+	UseBeta     bool
 }
 
 // RootCheck ensures the script is not running as root
@@ -115,11 +80,11 @@ func installGit() error {
 }
 
 // InstallAutoPkg downloads and installs the latest AutoPkg release
-func InstallAutoPkg(config *Config) (string, error) {
+func InstallAutoPkg(installConfig *InstallConfig) (string, error) {
 	autopkgPath := "/usr/local/bin/autopkg"
 
 	// Only install if not present or forced update requested
-	if _, err := os.Stat(autopkgPath); !os.IsNotExist(err) && !config.ForceUpdate {
+	if _, err := os.Stat(autopkgPath); !os.IsNotExist(err) && !installConfig.ForceUpdate {
 		// Get current version
 		versionCmd := exec.Command(autopkgPath, "version")
 		versionOutput, err := versionCmd.Output()
@@ -136,7 +101,7 @@ func InstallAutoPkg(config *Config) (string, error) {
 	var err error
 
 	// Get release URL based on config
-	if config.UseBeta {
+	if installConfig.UseBeta {
 		releaseURL, err = getBetaAutoPkgReleaseURL()
 		logger.Logger("🧪 Installing latest Beta AutoPkg Release", logger.LogInfo)
 	} else {
@@ -304,70 +269,70 @@ func getLatestAutoPkgReleaseURL() (string, error) {
 		release.TagName, len(release.Assets))
 }
 
-// SetupPrivateRepo adds a private AutoPkg repo
-func SetupPrivateRepo(config *Config, prefsPath string) error {
-	if config.PrivateRepoPath == "" || config.PrivateRepoURL == "" {
-		return nil
-	}
+// // SetupPrivateRepo adds a private AutoPkg repo
+// func SetupPrivateRepo(config *Config, prefsPath string) error {
+// 	if config.PrivateRepoPath == "" || config.PrivateRepoURL == "" {
+// 		return nil
+// 	}
 
-	// Clone the repo if it doesn't exist
-	if _, err := os.Stat(config.PrivateRepoPath); os.IsNotExist(err) {
-		cmd := exec.Command("git", "clone", config.PrivateRepoURL, config.PrivateRepoPath)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to clone private repo: %w", err)
-		}
-	}
+// 	// Clone the repo if it doesn't exist
+// 	if _, err := os.Stat(config.PrivateRepoPath); os.IsNotExist(err) {
+// 		cmd := exec.Command("git", "clone", config.PrivateRepoURL, config.PrivateRepoPath)
+// 		if err := cmd.Run(); err != nil {
+// 			return fmt.Errorf("failed to clone private repo: %w", err)
+// 		}
+// 	}
 
-	// Check if RECIPE_REPOS exists in prefs
-	cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_REPOS", prefsPath)
-	if err := cmd.Run(); err != nil {
-		// Need to create it
-		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Add :RECIPE_REPOS dict", prefsPath)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to create RECIPE_REPOS: %w", err)
-		}
-	}
+// 	// Check if RECIPE_REPOS exists in prefs
+// 	cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_REPOS", prefsPath)
+// 	if err := cmd.Run(); err != nil {
+// 		// Need to create it
+// 		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Add :RECIPE_REPOS dict", prefsPath)
+// 		if err := cmd.Run(); err != nil {
+// 			return fmt.Errorf("failed to create RECIPE_REPOS: %w", err)
+// 		}
+// 	}
 
-	// Check if the private repo is already in RECIPE_REPOS
-	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Print :RECIPE_REPOS:%s", config.PrivateRepoPath), prefsPath)
-	if err := cmd.Run(); err != nil {
-		// Need to add it
-		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_REPOS:%s dict", config.PrivateRepoPath), prefsPath)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to add private repo to RECIPE_REPOS: %w", err)
-		}
+// 	// Check if the private repo is already in RECIPE_REPOS
+// 	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Print :RECIPE_REPOS:%s", config.PrivateRepoPath), prefsPath)
+// 	if err := cmd.Run(); err != nil {
+// 		// Need to add it
+// 		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_REPOS:%s dict", config.PrivateRepoPath), prefsPath)
+// 		if err := cmd.Run(); err != nil {
+// 			return fmt.Errorf("failed to add private repo to RECIPE_REPOS: %w", err)
+// 		}
 
-		cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_REPOS:%s:URL string %s", config.PrivateRepoPath, config.PrivateRepoURL), prefsPath)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to add private repo URL: %w", err)
-		}
-	}
+// 		cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_REPOS:%s:URL string %s", config.PrivateRepoPath, config.PrivateRepoURL), prefsPath)
+// 		if err := cmd.Run(); err != nil {
+// 			return fmt.Errorf("failed to add private repo URL: %w", err)
+// 		}
+// 	}
 
-	// Check if RECIPE_SEARCH_DIRS exists
-	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_SEARCH_DIRS", prefsPath)
-	if err := cmd.Run(); err != nil {
-		// Need to create it
-		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Add :RECIPE_SEARCH_DIRS array", prefsPath)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to create RECIPE_SEARCH_DIRS: %w", err)
-		}
-	}
+// 	// Check if RECIPE_SEARCH_DIRS exists
+// 	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_SEARCH_DIRS", prefsPath)
+// 	if err := cmd.Run(); err != nil {
+// 		// Need to create it
+// 		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", "Add :RECIPE_SEARCH_DIRS array", prefsPath)
+// 		if err := cmd.Run(); err != nil {
+// 			return fmt.Errorf("failed to create RECIPE_SEARCH_DIRS: %w", err)
+// 		}
+// 	}
 
-	// Get current RECIPE_SEARCH_DIRS to check if private repo is already there
-	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_SEARCH_DIRS", prefsPath)
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to read RECIPE_SEARCH_DIRS: %w", err)
-	}
+// 	// Get current RECIPE_SEARCH_DIRS to check if private repo is already there
+// 	cmd = exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :RECIPE_SEARCH_DIRS", prefsPath)
+// 	output, err := cmd.Output()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to read RECIPE_SEARCH_DIRS: %w", err)
+// 	}
 
-	// Check if private repo is already in RECIPE_SEARCH_DIRS
-	if !strings.Contains(string(output), config.PrivateRepoPath) {
-		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_SEARCH_DIRS: string '%s'", config.PrivateRepoPath), prefsPath)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to add private repo to RECIPE_SEARCH_DIRS: %w", err)
-		}
-	}
+// 	// Check if private repo is already in RECIPE_SEARCH_DIRS
+// 	if !strings.Contains(string(output), config.PrivateRepoPath) {
+// 		cmd := exec.Command("/usr/libexec/PlistBuddy", "-c", fmt.Sprintf("Add :RECIPE_SEARCH_DIRS: string '%s'", config.PrivateRepoPath), prefsPath)
+// 		if err := cmd.Run(); err != nil {
+// 			return fmt.Errorf("failed to add private repo to RECIPE_SEARCH_DIRS: %w", err)
+// 		}
+// 	}
 
-	logger.Logger("✅ Private AutoPkg Repo Configured", logger.LogSuccess)
-	return nil
-}
+// 	logger.Logger("✅ Private AutoPkg Repo Configured", logger.LogSuccess)
+// 	return nil
+// }

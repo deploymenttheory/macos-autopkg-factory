@@ -1,3 +1,4 @@
+// orchestrator.go contains workflow functions for composing autopkg with steps taken from run.go
 package autopkg
 
 import (
@@ -62,6 +63,45 @@ func NewAutoPkgOrchestrator() *AutoPkgOrchestrator {
 	}
 }
 
+// AddRootCheckStep adds a step to verify the script is not running as root
+func (o *AutoPkgOrchestrator) AddRootCheckStep(continueOnError bool) *AutoPkgOrchestrator {
+	o.steps = append(o.steps, WorkflowStep{
+		Type:            "root-check",
+		Recipes:         []string{},
+		Options:         nil,
+		ContinueOnError: continueOnError,
+		Name:            "Root User Check",
+		Description:     "Verify script is not running as root user",
+	})
+	return o
+}
+
+// AddInstallAutoPkgStep adds a step to install/update AutoPkg
+func (o *AutoPkgOrchestrator) AddInstallAutoPkgStep(installConfig *InstallConfig, continueOnError bool) *AutoPkgOrchestrator {
+	o.steps = append(o.steps, WorkflowStep{
+		Type:            "install-autopkg",
+		Recipes:         []string{},
+		Options:         installConfig,
+		ContinueOnError: continueOnError,
+		Name:            "AutoPkg Installation",
+		Description:     "Install or update AutoPkg",
+	})
+	return o
+}
+
+// AddGitCheckStep adds a step to check/install Git
+func (o *AutoPkgOrchestrator) AddGitCheckStep(continueOnError bool) *AutoPkgOrchestrator {
+	o.steps = append(o.steps, WorkflowStep{
+		Type:            "check-git",
+		Recipes:         []string{},
+		Options:         nil,
+		ContinueOnError: continueOnError,
+		Name:            "Git Check",
+		Description:     "Check and install Git if needed",
+	})
+	return o
+}
+
 // WithPrefsPath sets the preferences path for all operations
 func (o *AutoPkgOrchestrator) WithPrefsPath(prefsPath string) *AutoPkgOrchestrator {
 	o.options.PrefsPath = prefsPath
@@ -89,6 +129,20 @@ func (o *AutoPkgOrchestrator) WithStopOnFirstError(stop bool) *AutoPkgOrchestrat
 // WithReportFile sets the path for the workflow report file
 func (o *AutoPkgOrchestrator) WithReportFile(reportFile string) *AutoPkgOrchestrator {
 	o.options.ReportFile = reportFile
+	return o
+}
+
+// AddRepoAddStep adds a step to add repositories
+// Uses AddRepo under the hood
+func (o *AutoPkgOrchestrator) AddRepoAddStep(repoURLs []string, continueOnError bool) *AutoPkgOrchestrator {
+	o.steps = append(o.steps, WorkflowStep{
+		Type:            "repo-add",
+		Recipes:         repoURLs,
+		Options:         o.options.PrefsPath,
+		ContinueOnError: continueOnError,
+		Name:            "Add Repositories",
+		Description:     fmt.Sprintf("Add %d repositories", len(repoURLs)),
+	})
 	return o
 }
 
@@ -475,6 +529,34 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 
 		var stepErr error
 		switch step.Type {
+		case "root-check":
+			err := RootCheck()
+			if err != nil {
+				stepErr = fmt.Errorf("root check failed: %w", err)
+			} else {
+				logger.Logger("✅ Root check passed - not running as root", logger.LogSuccess)
+			}
+			// In the Execute method, add these cases to the switch statement:
+		case "install-autopkg":
+			config, ok := step.Options.(*InstallConfig)
+			if !ok {
+				stepErr = fmt.Errorf("invalid options for install-autopkg step")
+				break
+			}
+
+			version, err := InstallAutoPkg(config)
+			if err != nil {
+				stepErr = fmt.Errorf("AutoPkg installation failed: %w", err)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ AutoPkg %s installed successfully", version), logger.LogSuccess)
+			}
+
+		case "check-git":
+			err := CheckGit()
+			if err != nil {
+				stepErr = fmt.Errorf("Git check/installation failed: %w", err)
+			}
+
 		case "verify":
 			verifyOptions, ok := step.Options.(*VerifyTrustInfoOptions)
 			if !ok {
@@ -509,6 +591,17 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			// Mark processed recipes
 			for _, recipe := range step.Recipes {
 				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "repo-add":
+			prefsPath, ok := step.Options.(string)
+			if !ok {
+				prefsPath = o.options.PrefsPath
+			}
+
+			err := AddRepo(step.Recipes, prefsPath)
+			if err != nil {
+				stepErr = fmt.Errorf("add repos failed: %w", err)
 			}
 
 		case "run":
@@ -725,7 +818,7 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			for _, recipe := range step.Recipes {
 				result.ProcessedRecipes[recipe] = true
 			}
-			
+
 		case "repo-update":
 			prefsPath, ok := step.Options.(string)
 			if !ok {
@@ -818,4 +911,16 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			status, result.ElapsedTime, len(result.ProcessedRecipes), len(result.CompletedSteps), len(result.FailedSteps))
 
 		if err := sendWebhookNotification(o.options.WebhookURL, notification); err != nil {
-			logger.Logger(fmt.
+			logger.Logger(fmt.Sprintf("⚠️ Failed to send completion notification: %v", err), logger.LogWarning)
+		}
+	}
+
+	logger.Logger(fmt.Sprintf("🏁 Workflow execution completed in %s: %d steps completed, %d steps failed, %d steps skipped",
+		result.ElapsedTime, len(result.CompletedSteps), len(result.FailedSteps), len(result.SkippedSteps)), logger.LogInfo)
+
+	if !result.Success {
+		return result, fmt.Errorf("workflow execution failed: %d steps failed", len(result.FailedSteps))
+	}
+
+	return result, nil
+}

@@ -1,3 +1,4 @@
+// commands.go contains a set of wrapped autopkg command line operations with centralized logging
 package autopkg
 
 import (
@@ -560,8 +561,6 @@ func UpdateRepo(repos []string, prefsPath string) error {
 	logger.Logger(fmt.Sprintf("✅ Updated %s", repoDesc), logger.LogSuccess)
 	return nil
 }
-
-//  This function is now replaced by the updated RunRecipes function that takes a RunOptions struct
 
 // SearchOptions contains options for SearchRecipes
 type SearchOptions struct {
