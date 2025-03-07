@@ -16,6 +16,17 @@ func main() {
 	// Create a new orchestrator
 	orchestrator := autopkg.NewAutoPkgOrchestrator()
 
+	// Define the recipes we want to run
+	targetRecipes := []string{
+		"MicrosoftTeams.install.recipe",
+		"MicrosoftTeams.intune.recipe",
+		"MicrosoftTeams.jamf.recipe",
+		"MicrosoftTeams.ws1.recipe",
+		"MicrosoftTeamsForWorkOrSchool.pkg.recipe",
+		"MicrosoftTeams.munki.recipe",
+		"MicrosoftTeams2.jamf-upload.recipe.yaml",
+	}
+
 	// Configure global options
 	orchestrator.
 		WithPrefsPath("~/Library/Preferences/com.github.autopkg.plist").
@@ -24,29 +35,23 @@ func main() {
 		WithStopOnFirstError(true).
 		WithReportFile("autopkg_run_report.txt")
 
-		// Create preferences configuration
+	// Create preferences configuration
 	prefsData := &autopkg.PreferencesData{
 		RECIPE_SEARCH_DIRS: []string{
 			"~/Library/AutoPkg/RecipeRepos",
 			"~/Library/AutoPkg/RecipeOverrides",
 		},
-		// Repository configuration
+		// Only include base recipes as a starting point
 		RECIPE_REPOS: map[string]interface{}{
 			"~/Library/AutoPkg/RecipeRepos/recipes": map[string]string{
 				"URL": "https://github.com/autopkg/recipes",
-			},
-			"~/Library/AutoPkg/RecipeRepos/homebysix-recipes": map[string]string{
-				"URL": "https://github.com/homebysix/recipes",
 			},
 		},
 		// Set any additional preferences as needed
 		GIT_PATH:                        "/usr/bin/git",
 		FAIL_RECIPES_WITHOUT_TRUST_INFO: true,
-		// Add Jamf/Intune/other credentials if needed
-		// JSS_URL: "https://your.jamf.server",
-		// API_USERNAME: "apiuser",
-		// API_PASSWORD: "apipassword",
 	}
+
 	// Set up the workflow steps
 	orchestrator.
 		// Initialization steps
@@ -60,30 +65,31 @@ func main() {
 		// Configure preferences
 		AddSetPreferencesStep(prefsData, true).
 
-		// Repository management steps
+		// Add the base autopkg repo to ensure we can run the analysis
 		AddRepoAddStep([]string{
 			"https://github.com/autopkg/recipes",
-			"https://github.com/homebysix/recipes",
 		}, true).
 
-		// Repository update steps (use the correct repo names after adding)
-		AddRepoListStep(true). // List repos to confirm they were added
-		AddRepoUpdateStep([]string{
-			"recipes",
-			"homebysix-recipes",
-		}, true).
+		// Analyze recipe dependencies and add required repos
+		AddRecipeRepoAnalysisStep(
+			targetRecipes,
+			&autopkg.RecipeRepoAnalysisOptions{
+				IncludeParents:   true,
+				MaxDepth:         5,
+				VerifyRepoExists: true,
+				IncludeBase:      true,
+			},
+			true, // Add the repos
+			true, // Continue on error
+		).
+
+		// List and update repositories
+		AddRepoListStep(true).
+		//AddRepoUpdateStep([]string{}, true). // Empty array means update all repos
 
 		// Recipe validation and execution
-		AddVerifyStep([]string{
-			"Firefox.install",
-			"GoogleChrome.install",
-			"MicrosoftTeams.install",
-		}, nil, true).
-		AddParallelRunStep([]string{
-			"Firefox.install",
-			"GoogleChrome.install",
-			"MicrosoftTeams.install",
-		}, nil, false).
+		AddVerifyStep(targetRecipes, nil, true).
+		AddParallelRunStep(targetRecipes, nil, false).
 
 		// Cleanup
 		AddCleanupStep(nil, true)

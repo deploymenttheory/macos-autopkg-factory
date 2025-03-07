@@ -149,6 +149,51 @@ func (o *AutoPkgOrchestrator) AddRepoAddStep(repoURLs []string, continueOnError 
 	return o
 }
 
+// AddRecipeRepoAnalysisStep adds a step to analyze recipe dependencies and add required repositories
+// This step analyzes the specified recipes, determines which repositories are needed,
+// and optionally adds them to AutoPkg automatically.
+func (o *AutoPkgOrchestrator) AddRecipeRepoAnalysisStep(
+	recipes []string,
+	options *RecipeRepoAnalysisOptions,
+	addRepos bool,
+	continueOnError bool) *AutoPkgOrchestrator {
+
+	if options == nil {
+		options = &RecipeRepoAnalysisOptions{
+			RecipeIdentifiers: recipes,
+			IncludeParents:    true,
+			MaxDepth:          5,
+			VerifyRepoExists:  true,
+			PrefsPath:         o.options.PrefsPath,
+			IncludeBase:       true,
+		}
+	} else {
+		// Ensure the recipe identifiers are set
+		options.RecipeIdentifiers = recipes
+		// Use the orchestrator prefs path if not specified
+		if options.PrefsPath == "" {
+			options.PrefsPath = o.options.PrefsPath
+		}
+	}
+
+	o.steps = append(o.steps, WorkflowStep{
+		Type:    "repo-analysis",
+		Recipes: recipes,
+		Options: &struct {
+			AnalysisOptions *RecipeRepoAnalysisOptions
+			AddRepos        bool
+		}{
+			AnalysisOptions: options,
+			AddRepos:        addRepos,
+		},
+		ContinueOnError: continueOnError,
+		Name:            "Recipe Repository Analysis",
+		Description:     fmt.Sprintf("Analyze %d recipes for required repositories", len(recipes)),
+	})
+
+	return o
+}
+
 // WithWebhookNotifications enables webhook notifications
 func (o *AutoPkgOrchestrator) WithWebhookNotifications(url string, notifyOnError, notifyOnCompletion bool) *AutoPkgOrchestrator {
 	o.options.WebhookURL = url
@@ -619,6 +664,57 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			// Mark processed recipes
 			for _, recipe := range step.Recipes {
 				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "repo-analysis":
+			options, ok := step.Options.(*struct {
+				AnalysisOptions *RecipeRepoAnalysisOptions
+				AddRepos        bool
+			})
+			if !ok {
+				stepErr = fmt.Errorf("invalid options for repo-analysis step")
+				break
+			}
+
+			// Analyze the recipes for repository dependencies
+			dependencies, err := AnalyzeRecipeRepoDependencies(options.AnalysisOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("recipe repository analysis failed: %w", err)
+				break
+			}
+
+			// Log the dependencies
+			logger.Logger(fmt.Sprintf("🔍 Found %d repository dependencies for %d recipes",
+				len(dependencies), len(step.Recipes)), logger.LogInfo)
+
+			for _, dep := range dependencies {
+				logger.Logger(fmt.Sprintf("  - %s: %s", dep.RecipeIdentifier, dep.RepoURL), logger.LogInfo)
+			}
+
+			// If requested, add the repositories
+			if options.AddRepos {
+				var repoURLs []string
+				for _, dep := range dependencies {
+					repoURLs = append(repoURLs, dep.RepoURL)
+				}
+
+				if len(repoURLs) > 0 {
+					// Remove duplicates
+					uniqueURLs := make(map[string]bool)
+					var filteredURLs []string
+					for _, url := range repoURLs {
+						if !uniqueURLs[url] {
+							uniqueURLs[url] = true
+							filteredURLs = append(filteredURLs, url)
+						}
+					}
+
+					logger.Logger(fmt.Sprintf("⬇️ Adding %d unique repositories", len(filteredURLs)), logger.LogInfo)
+					if err := AddRepo(filteredURLs, options.AnalysisOptions.PrefsPath); err != nil {
+						stepErr = fmt.Errorf("failed to add repositories: %w", err)
+						break
+					}
+				}
 			}
 
 		case "repo-add":

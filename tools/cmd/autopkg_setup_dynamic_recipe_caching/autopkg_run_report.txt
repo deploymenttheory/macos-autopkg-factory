@@ -1,15 +1,15 @@
 AutoPkg Workflow Report
 =====================
 
-Start time: 2025-03-07T11:30:59Z
-End time: 2025-03-07T11:31:03Z
-Elapsed time: 3.528548834s
+Start time: 2025-03-07T16:10:06Z
+End time: 2025-03-07T16:10:37Z
+Elapsed time: 30.618760042s
 
 Success: false
 Completed steps: 7
 Failed steps: 1
 Skipped steps: 0
-Processed recipes: 3
+Processed recipes: 7
 
 Failed Steps:
 - Trust Verification: trust verification failed for 0 recipes
