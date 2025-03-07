@@ -1,0 +1,436 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pre-Approved macOS Apps Index",
+  "description": "Schema for organization-approved macOS applications for deployment to developer devices",
+  "type": "object",
+  "required": ["schemaVersion", "lastUpdated", "organization", "macOSApps"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Version of the schema used for this document"
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last update to this index"
+    },
+    "organization": {
+      "type": "string",
+      "description": "Name of the organization managing this app index"
+    },
+    "contacts": {
+      "type": "object",
+      "description": "Contact information for teams managing the app index",
+      "properties": {
+        "packageManagement": {
+          "type": "string",
+          "format": "email",
+          "description": "Email contact for package management team"
+        },
+        "security": {
+          "type": "string",
+          "format": "email",
+          "description": "Email contact for security team"
+        }
+      }
+    },
+    "macOSApps": {
+      "type": "array",
+      "description": "List of approved macOS applications",
+      "items": {
+        "type": "object",
+        "required": ["name", "identifier", "description", "owner", "versions"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable name of the application"
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Bundle identifier for the application (e.g., com.vendor.appname)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Brief description of the application's purpose"
+          },
+          "vendor": {
+            "type": "string",
+            "description": "Company or organization that produces the application"
+          },
+          "owner": {
+            "type": "object",
+            "description": "Internal ownership information for the application",
+            "required": ["team", "contact"],
+            "properties": {
+              "team": {
+                "type": "string",
+                "description": "Internal team responsible for this application"
+              },
+              "contact": {
+                "type": "string",
+                "format": "email",
+                "description": "Email contact for the responsible team"
+              },
+              "slackChannel": {
+                "type": "string",
+                "description": "Slack channel for support inquiries"
+              }
+            }
+          },
+          "supportLevel": {
+            "type": "string",
+            "enum": ["full", "business-hours", "standard", "limited", "none"],
+            "description": "Level of internal support provided for this application"
+          },
+          "licenseType": {
+            "type": "string",
+            "enum": ["free", "open-source", "commercial", "internal"],
+            "description": "Type of license for this application"
+          },
+          "licenseExpiration": {
+            "type": "string",
+            "format": "date",
+            "description": "Date when the current license expires (for commercial licenses)"
+          },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alternative applications that provide similar functionality"
+          },
+          "versions": {
+            "type": "array",
+            "description": "Approved versions of this application",
+            "items": {
+              "type": "object",
+              "required": ["version", "minimumOS", "approvedOn", "approvedBy", "packageSource", "packagingMethod", "installMethod", "downloadURL", "sha256"],
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "description": "Version number of the application"
+                },
+                "minimumOS": {
+                  "type": "string",
+                  "description": "Minimum macOS version required for this application version"
+                },
+                "approvedOn": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Date when this version was approved"
+                },
+                "approvedBy": {
+                  "type": "string",
+                  "description": "Person or team who approved this version"
+                },
+                "expiresOn": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Date when this approval expires and requires re-review"
+                },
+                "packageSource": {
+                  "type": "object",
+                  "required": ["provider", "url", "verified"],
+                  "properties": {
+                    "provider": {
+                      "type": "string",
+                      "enum": ["vendor-direct", "third-party", "custom-build"],
+                      "description": "Source provider type for the package"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "Original source URL for the package"
+                    },
+                    "verified": {
+                      "type": "boolean",
+                      "description": "Whether the source has been verified as authentic"
+                    },
+                    "internalMirror": {
+                      "type": "string",
+                      "description": "Internal URI for the mirrored package source"
+                    }
+                  }
+                },
+                "packagingMethod": {
+                  "type": "object",
+                  "required": ["type", "tool", "packageDate"],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["native", "repackaged", "wrapped"],
+                      "description": "Type of packaging method used"
+                    },
+                    "tool": {
+                      "type": "string",
+                      "description": "Tool used to create the package"
+                    },
+                    "pipelineJob": {
+                      "type": "string",
+                      "description": "CI/CD pipeline job reference that created the package"
+                    },
+                    "wrapperScript": {
+                      "type": "string",
+                      "description": "Reference to wrapper script used for installation"
+                    },
+                    "packageDate": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "Date when the package was created"
+                    },
+                    "customizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of customizations applied to the package"
+                    },
+                    "postInstallTasks": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Post-installation tasks that are performed"
+                    }
+                  }
+                },
+                "installMethod": {
+                  "type": "string",
+                  "enum": ["pkg", "dmg", "zip", "brew", "wrapped"],
+                  "description": "Method used to install the application"
+                },
+                "downloadURL": {
+                  "type": "string",
+                  "description": "Internal URL to download the packaged application"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{64}$",
+                  "description": "SHA-256 hash of the package for verification"
+                },
+                "securityScan": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["passed", "failed", "warning"],
+                      "description": "Status of the security scan"
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "Date when the security scan was performed"
+                    },
+                    "vulnerabilities": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Number of vulnerabilities found"
+                    }
+                  }
+                },
+                "networkRequirements": {
+                  "type": "object",
+                  "properties": {
+                    "outboundHosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of outbound hosts the application needs to access"
+                    },
+                    "ports": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of ports the application needs to access"
+                    }
+                  }
+                },
+                "restrictions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "List of restrictions or special requirements for this version"
+                },
+                "settings": {
+                  "type": "object",
+                  "description": "Default settings configuration for this version"
+                },
+                "requiredExtensions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Required extensions or plugins for this application"
+                },
+                "licenseKey": {
+                  "type": "string",
+                  "description": "Reference to license key location for this application"
+                }
+              }
+            }
+          },
+          "category": {
+            "type": "string",
+            "description": "Primary category for the application"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags for categorizing and searching the application"
+          },
+          "dataStorage": {
+            "type": "string",
+            "description": "Path to where the application stores its data"
+          }
+        }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of all categories used in the index"
+    },
+    "deploymentGroups": {
+      "type": "array",
+      "description": "Defined groups of applications for different roles",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "baseApps"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the deployment group"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the deployment group's purpose"
+          },
+          "baseApps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of base applications included in this group"
+          },
+          "parent": {
+            "type": "string",
+            "description": "Parent group that this group extends"
+          }
+        }
+      }
+    },
+    "approvalWorkflows": {
+      "type": "object",
+      "description": "Defined workflows for app approval",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "approvers", "sla"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the workflow"
+          },
+          "approvers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of approver roles required for this workflow"
+          },
+          "sla": {
+            "type": "string",
+            "description": "Service level agreement for this workflow"
+          }
+        }
+      }
+    },
+    "installMethods": {
+      "type": "object",
+      "description": "Defined methods for installing applications",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the installation method"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command template used for this installation method"
+          },
+          "manual": {
+            "type": "boolean",
+            "description": "Whether this method requires manual intervention"
+          },
+          "verificationSteps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Steps for verifying successful installation"
+          }
+        }
+      }
+    },
+    "packageDeliveryMethods": {
+      "type": "object",
+      "description": "Methods for delivering packages to devices",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "tools"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the delivery method"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tools used for this delivery method"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "normal", "low"],
+            "description": "Priority level for this delivery method"
+          }
+        }
+      }
+    },
+    "packagingTools": {
+      "type": "object",
+      "description": "Tools used for packaging applications",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "supportedFormats"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the packaging tool"
+          },
+          "supportedFormats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Formats supported by this tool"
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "description": "Website for documentation about this tool"
+          }
+        }
+      }
+    }
+  }
+}
