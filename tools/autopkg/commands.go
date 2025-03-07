@@ -734,6 +734,7 @@ type RunOptions struct {
 	SearchDirs               []string
 	OverrideDirs             []string
 	UpdateTrust              bool
+	VerboseLevel             int
 }
 
 // BatchRunRecipes runs multiple recipes with the same options
@@ -837,8 +838,11 @@ func RunRecipeWithOutput(recipe string, options *RunOptions) (string, error) {
 		args = append(args, "--report-plist", options.ReportPlist)
 	}
 
-	if options.Verbose {
-		args = append(args, "--verbose")
+	// Handle verbosity levels
+	if options.VerboseLevel > 0 {
+		for i := 0; i < options.VerboseLevel; i++ {
+			args = append(args, "-v")
+		}
 	}
 
 	if options.Quiet {
@@ -859,6 +863,8 @@ func RunRecipeWithOutput(recipe string, options *RunOptions) (string, error) {
 
 	// Add recipe
 	args = append(args, recipe)
+
+	logger.Logger(fmt.Sprintf("[DEBUG] Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 	output, err := cmd.CombinedOutput()
@@ -904,7 +910,6 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
-
 	if options.RecipeList != "" {
 		args = append(args, "--recipe-list", options.RecipeList)
 	}
@@ -914,15 +919,14 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 	case 1:
 		args = append(args, "-v")
 	case 2:
-		args = append(args, "-v", "-v")
+		args = append(args, "-vv")
 	case 3:
-		args = append(args, "-v", "-v", "-v")
+		args = append(args, "-vvv")
 	}
 
 	for _, dir := range options.SearchDirs {
 		args = append(args, "--search-dir", dir)
 	}
-
 	for _, dir := range options.OverrideDirs {
 		args = append(args, "--override-dir", dir)
 	}
@@ -930,32 +934,59 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 	// Add recipes
 	args = append(args, recipes...)
 
+	// Run the AutoPkg command
 	cmd := exec.Command("autopkg", args...)
-	output, err := cmd.CombinedOutput()
+	output, execErr := cmd.CombinedOutput()
 	outputStr := string(output)
 
-	// Collect failed and successful recipes
-	var failedRecipes []string
+	// Debug log to check exact output
+	logger.Logger(fmt.Sprintf("DEBUG: verify-trust-info output:\n%s", outputStr), logger.LogDebug)
 
-	// Process output to find failed recipes
+	// Collect failed recipes and reasons
+	var failedRecipes []string
+	failureReasons := make(map[string][]string)
+	var currentRecipe string
+
 	lines := strings.Split(outputStr, "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "WARNING:") && strings.Contains(line, "trust verification failed") {
-			parts := strings.Split(line, "for ")
-			if len(parts) > 1 {
-				recipePart := strings.TrimSpace(parts[1])
-				recipePart = strings.TrimSuffix(recipePart, ":")
-				failedRecipes = append(failedRecipes, recipePart)
-			}
+		line = strings.TrimSpace(line)
+
+		// Detect trust failures
+		if strings.HasSuffix(line, ": FAILED") {
+			currentRecipe = strings.Split(line, ":")[0]
+			failedRecipes = append(failedRecipes, currentRecipe)
+			failureReasons[currentRecipe] = []string{"Unknown failure reason. try including -vvv in the options"}
+		} else if strings.HasPrefix(line, "No trust information present.") && currentRecipe != "" {
+			// Capture missing trust info
+			failureReasons[currentRecipe] = []string{"No trust information present."}
+		} else if strings.HasPrefix(line, "Audit the recipe") && currentRecipe != "" {
+			// Capture suggested remediation
+			failureReasons[currentRecipe] = append(failureReasons[currentRecipe], line)
+		} else if strings.Contains(line, "contents differ from expected") && currentRecipe != "" {
+			// Handle processor mismatches
+			failureReasons[currentRecipe] = append(failureReasons[currentRecipe], line)
+		} else if strings.Contains(line, "processor path not found") {
+			// Handle missing processor warnings
+			logger.Logger(fmt.Sprintf("⚠️  %s", line), logger.LogWarning)
 		}
 	}
 
-	if err != nil {
-		logger.Logger("❌ Trust verification failed for one or more recipes", logger.LogError)
+	// Handle error scenario
+	if execErr != nil || len(failedRecipes) > 0 {
+		logger.Logger(fmt.Sprintf("❌ Trust verification failed for %d recipes", len(failedRecipes)), logger.LogError)
+
+		// Log detailed failure reasons
+		for _, recipe := range failedRecipes {
+			logger.Logger(fmt.Sprintf("  - %s:", recipe), logger.LogWarning)
+			for _, reason := range failureReasons[recipe] {
+				logger.Logger(fmt.Sprintf("    • %s", reason), logger.LogWarning)
+			}
+		}
+
 		if options.Verbose > 0 {
 			logger.Logger(outputStr, logger.LogDebug)
 		}
-		return false, failedRecipes, fmt.Errorf("verify trust info failed: %w", err)
+		return false, failedRecipes, fmt.Errorf("verify trust info failed for %d recipes", len(failedRecipes))
 	}
 
 	logger.Logger("✅ Trust verification passed for all recipes", logger.LogSuccess)

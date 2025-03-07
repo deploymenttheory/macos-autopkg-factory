@@ -204,7 +204,7 @@ func (o *AutoPkgOrchestrator) WithWebhookNotifications(url string, notifyOnError
 
 // AddVerifyStep adds a trust verification step
 // Uses VerifyTrustInfoForRecipes under the hood
-func (o *AutoPkgOrchestrator) AddVerifyStep(recipes []string, options *VerifyTrustInfoOptions, continueOnError bool) *AutoPkgOrchestrator {
+func (o *AutoPkgOrchestrator) AddVerifyTrustInfoStep(recipes []string, options *VerifyTrustInfoOptions, continueOnError bool) *AutoPkgOrchestrator {
 	if options == nil {
 		options = &VerifyTrustInfoOptions{
 			PrefsPath: o.options.PrefsPath,
@@ -212,7 +212,7 @@ func (o *AutoPkgOrchestrator) AddVerifyStep(recipes []string, options *VerifyTru
 	}
 
 	o.steps = append(o.steps, WorkflowStep{
-		Type:            "verify",
+		Type:            "verify-trust-info",
 		Recipes:         recipes,
 		Options:         options,
 		ContinueOnError: continueOnError,
@@ -270,6 +270,7 @@ func (o *AutoPkgOrchestrator) AddParallelRunStep(recipes []string, options *Para
 			PrefsPath:     o.options.PrefsPath,
 			MaxConcurrent: o.options.MaxConcurrent,
 			Timeout:       o.options.Timeout,
+			VerboseLevel:  1,
 		}
 	}
 
@@ -630,7 +631,7 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				stepErr = fmt.Errorf("failed to set preferences: %w", err)
 			}
 
-		case "verify":
+		case "verify-trust-info":
 			verifyOptions, ok := step.Options.(*VerifyTrustInfoOptions)
 			if !ok {
 				verifyOptions = &VerifyTrustInfoOptions{

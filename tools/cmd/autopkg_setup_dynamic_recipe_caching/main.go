@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Initialize logger
-	logger.SetLogLevel(logger.LogDebug)
+	logger.SetLogLevel(logger.LogWarning)
 
 	// Create a new orchestrator
 	orchestrator := autopkg.NewAutoPkgOrchestrator()
@@ -85,11 +85,14 @@ func main() {
 
 		// List and update repositories
 		AddRepoListStep(true).
-		//AddRepoUpdateStep([]string{}, true). // Empty array means update all repos
 
 		// Recipe validation and execution
-		AddVerifyStep(targetRecipes, nil, true).
-		AddParallelRunStep(targetRecipes, nil, false).
+		AddVerifyTrustInfoStep(targetRecipes, &autopkg.VerifyTrustInfoOptions{
+			Verbose: 3, // Use verbosity level 3 for detailed output
+		}, true).
+
+		// Run recipes in parallel
+		AddParallelRunStep(targetRecipes, &autopkg.ParallelRunOptions{VerboseLevel: 3}, false).
 
 		// Cleanup
 		AddCleanupStep(nil, true)

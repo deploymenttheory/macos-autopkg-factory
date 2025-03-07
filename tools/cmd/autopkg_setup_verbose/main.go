@@ -160,7 +160,7 @@ func main() {
 		}, true).
 
 		// Recipe validation and execution
-		AddVerifyStep([]string{
+		AddVerifyTrustInfoStep([]string{
 			"Firefox.install",
 			"GoogleChrome.install",
 			"MicrosoftTeams.install",

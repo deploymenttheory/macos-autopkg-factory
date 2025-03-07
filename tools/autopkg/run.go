@@ -332,6 +332,7 @@ type ParallelRunOptions struct {
 	Variables        map[string]string
 	PreProcessors    []string
 	PostProcessors   []string
+	VerboseLevel     int
 }
 
 // ParallelRunResult contains the result of a parallel recipe run
