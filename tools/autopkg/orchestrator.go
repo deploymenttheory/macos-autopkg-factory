@@ -2,23 +2,59 @@ package autopkg
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
-// AutoPkgOrchestrator provides a fluent interface for building and executing AutoPkg pipelines
-// It uses the existing functions from the autopkg package to execute the actual operations
+// WorkflowStep defines a step in the autopkg workflow
+type WorkflowStep struct {
+	Type            string      // Type of step: "verify", "update-trust", "run", "cleanup", etc.
+	Recipes         []string    // Recipes to process in this step
+	Options         interface{} // Step-specific options
+	ContinueOnError bool        // Whether to continue if this step fails
+	Name            string      // Optional name for the step
+	Description     string      // Optional description
+	Condition       func() bool // Optional condition to determine if this step should run
+}
+
+// WorkflowOptions contains options for the entire workflow
+type WorkflowOptions struct {
+	PrefsPath          string
+	MaxConcurrent      int
+	Timeout            time.Duration
+	StopOnFirstError   bool
+	ReportFile         string
+	NotifyOnCompletion bool
+	NotifyOnError      bool
+	WebhookURL         string
+}
+
+// WorkflowResult contains the results of the workflow execution
+type WorkflowResult struct {
+	Success          bool
+	FailedSteps      []string
+	CompletedSteps   []string
+	SkippedSteps     []string
+	ProcessedRecipes map[string]bool
+	Errors           map[string]error
+	StartTime        time.Time
+	EndTime          time.Time
+	ElapsedTime      time.Duration
+}
+
+// AutoPkgOrchestrator provides a fluent interface for building and executing AutoPkg workflows
 type AutoPkgOrchestrator struct {
-	steps   []PipelineExecutionStep
-	options *PipelineOptions
+	steps   []WorkflowStep
+	options *WorkflowOptions
 }
 
 // NewAutoPkgOrchestrator creates a new orchestrator with default options
 func NewAutoPkgOrchestrator() *AutoPkgOrchestrator {
 	return &AutoPkgOrchestrator{
-		steps: []PipelineExecutionStep{},
-		options: &PipelineOptions{
+		steps: []WorkflowStep{},
+		options: &WorkflowOptions{
 			MaxConcurrent:    4,
 			Timeout:          60 * time.Minute,
 			StopOnFirstError: false,
@@ -44,13 +80,13 @@ func (o *AutoPkgOrchestrator) WithTimeout(timeout time.Duration) *AutoPkgOrchest
 	return o
 }
 
-// WithStopOnFirstError configures the pipeline to stop on the first error
+// WithStopOnFirstError configures the workflow to stop on the first error
 func (o *AutoPkgOrchestrator) WithStopOnFirstError(stop bool) *AutoPkgOrchestrator {
 	o.options.StopOnFirstError = stop
 	return o
 }
 
-// WithReportFile sets the path for the pipeline report file
+// WithReportFile sets the path for the workflow report file
 func (o *AutoPkgOrchestrator) WithReportFile(reportFile string) *AutoPkgOrchestrator {
 	o.options.ReportFile = reportFile
 	return o
@@ -73,7 +109,7 @@ func (o *AutoPkgOrchestrator) AddVerifyStep(recipes []string, options *VerifyTru
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "verify",
 		Recipes:         recipes,
 		Options:         options,
@@ -93,7 +129,7 @@ func (o *AutoPkgOrchestrator) AddUpdateTrustStep(recipes []string, options *Upda
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "update-trust",
 		Recipes:         recipes,
 		Options:         options,
@@ -113,7 +149,7 @@ func (o *AutoPkgOrchestrator) AddRunStep(recipes []string, options *RunOptions, 
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "run",
 		Recipes:         recipes,
 		Options:         options,
@@ -135,7 +171,7 @@ func (o *AutoPkgOrchestrator) AddParallelRunStep(recipes []string, options *Para
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "parallel-run",
 		Recipes:         recipes,
 		Options:         options,
@@ -156,7 +192,7 @@ func (o *AutoPkgOrchestrator) AddBatchProcessingStep(recipes []string, options *
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "batch",
 		Recipes:         recipes,
 		Options:         options,
@@ -178,7 +214,7 @@ func (o *AutoPkgOrchestrator) AddCleanupStep(options *CleanupOptions, continueOn
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "cleanup",
 		Recipes:         []string{},
 		Options:         options,
@@ -198,7 +234,7 @@ func (o *AutoPkgOrchestrator) AddValidateStep(recipes []string, options *Validat
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "validate",
 		Recipes:         recipes,
 		Options:         options,
@@ -218,7 +254,7 @@ func (o *AutoPkgOrchestrator) AddImportStep(repoURL string, options *ImportRecip
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "import",
 		Recipes:         []string{repoURL},
 		Options:         options,
@@ -238,7 +274,7 @@ func (o *AutoPkgOrchestrator) AddAuditStep(recipes []string, options *AuditOptio
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "audit",
 		Recipes:         recipes,
 		Options:         options,
@@ -258,7 +294,7 @@ func (o *AutoPkgOrchestrator) AddInstallStep(recipes []string, options *InstallO
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "install",
 		Recipes:         recipes,
 		Options:         options,
@@ -278,7 +314,7 @@ func (o *AutoPkgOrchestrator) AddSearchStep(searchTerm string, options *SearchOp
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "search",
 		Recipes:         []string{searchTerm},
 		Options:         options,
@@ -298,7 +334,7 @@ func (o *AutoPkgOrchestrator) AddListStep(options *ListRecipeOptions, continueOn
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "list",
 		Recipes:         []string{},
 		Options:         options,
@@ -312,7 +348,7 @@ func (o *AutoPkgOrchestrator) AddListStep(options *ListRecipeOptions, continueOn
 // AddRepoListStep adds a repository listing step
 // Uses ListRepos under the hood
 func (o *AutoPkgOrchestrator) AddRepoListStep(continueOnError bool) *AutoPkgOrchestrator {
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "repo-list",
 		Recipes:         []string{},
 		Options:         o.options.PrefsPath,
@@ -332,7 +368,7 @@ func (o *AutoPkgOrchestrator) AddMakeOverrideStep(recipes []string, options *Mak
 		}
 	}
 
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "make-override",
 		Recipes:         recipes,
 		Options:         options,
@@ -346,7 +382,7 @@ func (o *AutoPkgOrchestrator) AddMakeOverrideStep(recipes []string, options *Mak
 // AddRepoUpdateStep adds a repository update step
 // Uses UpdateRepo under the hood
 func (o *AutoPkgOrchestrator) AddRepoUpdateStep(repos []string, continueOnError bool) *AutoPkgOrchestrator {
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            "repo-update",
 		Recipes:         repos,
 		Options:         o.options.PrefsPath,
@@ -357,28 +393,8 @@ func (o *AutoPkgOrchestrator) AddRepoUpdateStep(repos []string, continueOnError 
 	return o
 }
 
-// AddFilterStep adds a recipe filtering step
-// Uses FilterRecipes under the hood
-func (o *AutoPkgOrchestrator) AddFilterStep(criteria *RecipeFilterCriteria, continueOnError bool) *AutoPkgOrchestrator {
-	if criteria == nil {
-		criteria = &RecipeFilterCriteria{
-			IncludeOverrides: true,
-		}
-	}
-
-	o.steps = append(o.steps, PipelineExecutionStep{
-		Type:            "filter",
-		Recipes:         []string{},
-		Options:         criteria,
-		ContinueOnError: continueOnError,
-		Name:            "Recipe Filter",
-		Description:     "Filter recipes based on criteria",
-	})
-	return o
-}
-
 // AddConditionalStep adds a step that only runs if a condition is met
-func (o *AutoPkgOrchestrator) AddConditionalStep(step PipelineExecutionStep, condition func() bool) *AutoPkgOrchestrator {
+func (o *AutoPkgOrchestrator) AddConditionalStep(step WorkflowStep, condition func() bool) *AutoPkgOrchestrator {
 	step.Condition = condition
 	o.steps = append(o.steps, step)
 	return o
@@ -386,7 +402,7 @@ func (o *AutoPkgOrchestrator) AddConditionalStep(step PipelineExecutionStep, con
 
 // AddCustomStep adds a custom step with full control over parameters
 func (o *AutoPkgOrchestrator) AddCustomStep(stepType, name, description string, recipes []string, options interface{}, continueOnError bool) *AutoPkgOrchestrator {
-	o.steps = append(o.steps, PipelineExecutionStep{
+	o.steps = append(o.steps, WorkflowStep{
 		Type:            stepType,
 		Name:            name,
 		Description:     description,
@@ -397,15 +413,10 @@ func (o *AutoPkgOrchestrator) AddCustomStep(stepType, name, description string, 
 	return o
 }
 
-// Build returns the configured pipeline steps and options
-func (o *AutoPkgOrchestrator) Build() ([]PipelineExecutionStep, *PipelineOptions) {
-	return o.steps, o.options
-}
-
-// Validate checks if the pipeline configuration is valid
+// Validate checks if the workflow configuration is valid
 func (o *AutoPkgOrchestrator) Validate() error {
 	if len(o.steps) == 0 {
-		return fmt.Errorf("pipeline must contain at least one step")
+		return fmt.Errorf("workflow must contain at least one step")
 	}
 
 	for i, step := range o.steps {
@@ -426,33 +437,385 @@ func (o *AutoPkgOrchestrator) Validate() error {
 	return nil
 }
 
-// Execute builds, validates and executes the pipeline
-// This calls the existing AutopkgPipeline function with the configured steps
-func (o *AutoPkgOrchestrator) Execute() (*PipelineResult, error) {
-	logger.Logger("🔍 Validating pipeline configuration", logger.LogInfo)
+// Execute builds, validates and executes the workflow
+// This directly executes each step without calling a separate pipeline function
+func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
+	logger.Logger("🔍 Validating workflow configuration", logger.LogInfo)
 	if err := o.Validate(); err != nil {
-		return nil, fmt.Errorf("pipeline validation failed: %w", err)
+		return nil, fmt.Errorf("workflow validation failed: %w", err)
 	}
 
-	logger.Logger("🚀 Executing pipeline with AutopkgPipeline", logger.LogInfo)
-	steps, options := o.Build()
-	return AutopkgPipeline(steps, options)
-}
+	logger.Logger("🚀 Starting AutoPkg workflow execution", logger.LogInfo)
 
-// ExecuteWithContext allows for pre/post execution hooks
-func (o *AutoPkgOrchestrator) ExecuteWithContext(preExecHook func(), postExecHook func(*PipelineResult, error)) (*PipelineResult, error) {
-	// Run pre-execution hook if provided
-	if preExecHook != nil {
-		preExecHook()
+	result := &WorkflowResult{
+		Success:          true,
+		FailedSteps:      []string{},
+		CompletedSteps:   []string{},
+		SkippedSteps:     []string{},
+		ProcessedRecipes: make(map[string]bool),
+		Errors:           make(map[string]error),
+		StartTime:        time.Now(),
 	}
 
-	// Execute the pipeline
-	result, err := o.Execute()
+	// Execute each step in sequence
+	for i, step := range o.steps {
+		stepName := step.Name
+		if stepName == "" {
+			stepName = fmt.Sprintf("Step %d (%s)", i+1, step.Type)
+		}
 
-	// Run post-execution hook if provided
-	if postExecHook != nil {
-		postExecHook(result, err)
+		// Check if this step should be run
+		if step.Condition != nil && !step.Condition() {
+			logger.Logger(fmt.Sprintf("⏭️ Skipping step %s: condition not met", stepName), logger.LogInfo)
+			result.SkippedSteps = append(result.SkippedSteps, stepName)
+			continue
+		}
+
+		logger.Logger(fmt.Sprintf("▶️ Executing step %s: %s", stepName, step.Description), logger.LogInfo)
+
+		var stepErr error
+		switch step.Type {
+		case "verify":
+			verifyOptions, ok := step.Options.(*VerifyTrustInfoOptions)
+			if !ok {
+				verifyOptions = &VerifyTrustInfoOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			success, failedRecipes, err := VerifyTrustInfoForRecipes(step.Recipes, verifyOptions)
+			if err != nil || !success {
+				stepErr = fmt.Errorf("trust verification failed for %d recipes", len(failedRecipes))
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "update-trust":
+			updateOptions, ok := step.Options.(*UpdateTrustInfoOptions)
+			if !ok {
+				updateOptions = &UpdateTrustInfoOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			err := UpdateTrustInfoForRecipes(step.Recipes, updateOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("trust update failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "run":
+			runOptions, ok := step.Options.(*RunOptions)
+			if !ok {
+				runOptions = &RunOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			err := RunRecipes(step.Recipes, runOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("run recipes failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "parallel-run":
+			parallelOptions, ok := step.Options.(*ParallelRunOptions)
+			if !ok {
+				parallelOptions = &ParallelRunOptions{
+					PrefsPath:     o.options.PrefsPath,
+					MaxConcurrent: o.options.MaxConcurrent,
+					Timeout:       o.options.Timeout,
+				}
+			}
+
+			_, err := ParallelRunRecipes(step.Recipes, parallelOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("parallel run failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "batch":
+			batchOptions, ok := step.Options.(*RecipeBatchOptions)
+			if !ok {
+				batchOptions = &RecipeBatchOptions{
+					PrefsPath:            o.options.PrefsPath,
+					MaxConcurrentRecipes: o.options.MaxConcurrent,
+				}
+			}
+
+			_, err := RecipeBatchProcessing(step.Recipes, batchOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("batch processing failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "cleanup":
+			cleanupOptions, ok := step.Options.(*CleanupOptions)
+			if !ok {
+				cleanupOptions = &CleanupOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			err := CleanupCache(cleanupOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("cleanup failed: %w", err)
+			}
+
+		case "validate":
+			validateOptions, ok := step.Options.(*ValidateRecipeListOptions)
+			if !ok {
+				validateOptions = &ValidateRecipeListOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			_, err := ValidateRecipeList(step.Recipes, validateOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("validation failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "import":
+			if len(step.Recipes) != 1 {
+				stepErr = fmt.Errorf("import step requires exactly one repo URL")
+				break
+			}
+
+			importOptions, ok := step.Options.(*ImportRecipesFromRepoOptions)
+			if !ok {
+				importOptions = &ImportRecipesFromRepoOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			importedRecipes, err := ImportRecipesFromRepo(step.Recipes[0], importOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("import failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range importedRecipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "audit":
+			auditOptions, ok := step.Options.(*AuditOptions)
+			if !ok {
+				auditOptions = &AuditOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			err := AuditRecipe(step.Recipes, auditOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("audit failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "install":
+			installOptions, ok := step.Options.(*InstallOptions)
+			if !ok {
+				installOptions = &InstallOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			err := InstallRecipe(step.Recipes, installOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("install failed: %w", err)
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+
+		case "search":
+			if len(step.Recipes) != 1 {
+				stepErr = fmt.Errorf("search step requires exactly one search term")
+				break
+			}
+
+			searchOptions, ok := step.Options.(*SearchOptions)
+			if !ok {
+				searchOptions = &SearchOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			err := SearchRecipes(step.Recipes[0], searchOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("search failed: %w", err)
+			}
+
+		case "list":
+			listOptions, ok := step.Options.(*ListRecipeOptions)
+			if !ok {
+				listOptions = &ListRecipeOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			err := ListRecipes(listOptions)
+			if err != nil {
+				stepErr = fmt.Errorf("list recipes failed: %w", err)
+			}
+
+		case "repo-list":
+			prefsPath, ok := step.Options.(string)
+			if !ok {
+				prefsPath = o.options.PrefsPath
+			}
+
+			err := ListRepos(prefsPath)
+			if err != nil {
+				stepErr = fmt.Errorf("list repos failed: %w", err)
+			}
+
+		case "make-override":
+			if len(step.Recipes) == 0 {
+				stepErr = fmt.Errorf("make-override step requires at least one recipe")
+				break
+			}
+
+			overrideOptions, ok := step.Options.(*MakeOverrideOptions)
+			if !ok {
+				overrideOptions = &MakeOverrideOptions{
+					PrefsPath: o.options.PrefsPath,
+				}
+			}
+
+			for _, recipe := range step.Recipes {
+				err := MakeOverride(recipe, overrideOptions)
+				if err != nil {
+					stepErr = fmt.Errorf("make override for %s failed: %w", recipe, err)
+					break
+				}
+			}
+
+			// Mark processed recipes
+			for _, recipe := range step.Recipes {
+				result.ProcessedRecipes[recipe] = true
+			}
+			
+		case "repo-update":
+			prefsPath, ok := step.Options.(string)
+			if !ok {
+				prefsPath = o.options.PrefsPath
+			}
+
+			err := UpdateRepo(step.Recipes, prefsPath)
+			if err != nil {
+				stepErr = fmt.Errorf("repo update failed: %w", err)
+			}
+
+		default:
+			stepErr = fmt.Errorf("unknown step type: %s", step.Type)
+		}
+
+		if stepErr != nil {
+			logger.Logger(fmt.Sprintf("❌ Step %s failed: %v", stepName, stepErr), logger.LogError)
+			result.Errors[stepName] = stepErr
+			result.FailedSteps = append(result.FailedSteps, stepName)
+			result.Success = false
+
+			if o.options.NotifyOnError {
+				// Send error notification if configured
+				if o.options.WebhookURL != "" {
+					notifyErr := sendWebhookNotification(o.options.WebhookURL, fmt.Sprintf("Workflow step '%s' failed: %v", stepName, stepErr))
+					if notifyErr != nil {
+						logger.Logger(fmt.Sprintf("⚠️ Failed to send error notification: %v", notifyErr), logger.LogWarning)
+					}
+				}
+			}
+
+			if o.options.StopOnFirstError {
+				break
+			}
+		} else {
+			logger.Logger(fmt.Sprintf("✅ Step %s completed successfully", stepName), logger.LogSuccess)
+			result.CompletedSteps = append(result.CompletedSteps, stepName)
+		}
 	}
 
-	return result, err
-}
+	// Calculate elapsed time
+	result.EndTime = time.Now()
+	result.ElapsedTime = result.EndTime.Sub(result.StartTime)
+
+	// Generate report if requested
+	if o.options.ReportFile != "" {
+		reportData := fmt.Sprintf("AutoPkg Workflow Report\n"+
+			"=====================\n\n"+
+			"Start time: %s\n"+
+			"End time: %s\n"+
+			"Elapsed time: %s\n\n"+
+			"Success: %t\n"+
+			"Completed steps: %d\n"+
+			"Failed steps: %d\n"+
+			"Skipped steps: %d\n"+
+			"Processed recipes: %d\n\n",
+			result.StartTime.Format(time.RFC3339),
+			result.EndTime.Format(time.RFC3339),
+			result.ElapsedTime,
+			result.Success,
+			len(result.CompletedSteps),
+			len(result.FailedSteps),
+			len(result.SkippedSteps),
+			len(result.ProcessedRecipes))
+
+		// Add details about failed steps
+		if len(result.FailedSteps) > 0 {
+			reportData += "Failed Steps:\n"
+			for _, stepName := range result.FailedSteps {
+				reportData += fmt.Sprintf("- %s: %v\n", stepName, result.Errors[stepName])
+			}
+			reportData += "\n"
+		}
+
+		if err := os.WriteFile(o.options.ReportFile, []byte(reportData), 0644); err != nil {
+			logger.Logger(fmt.Sprintf("⚠️ Failed to write report file: %v", err), logger.LogWarning)
+		} else {
+			logger.Logger(fmt.Sprintf("📊 Workflow report written to %s", o.options.ReportFile), logger.LogInfo)
+		}
+	}
+
+	// Send completion notification if configured
+	if o.options.NotifyOnCompletion && o.options.WebhookURL != "" {
+		status := "succeeded"
+		if !result.Success {
+			status = "failed"
+		}
+
+		notification := fmt.Sprintf("AutoPkg Workflow %s after %s. Processed %d recipes, %d steps completed, %d steps failed.",
+			status, result.ElapsedTime, len(result.ProcessedRecipes), len(result.CompletedSteps), len(result.FailedSteps))
+
+		if err := sendWebhookNotification(o.options.WebhookURL, notification); err != nil {
+			logger.Logger(fmt.
