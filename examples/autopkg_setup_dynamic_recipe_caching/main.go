@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Initialize logger
-	logger.SetLogLevel(logger.LogWarning)
+	logger.SetLogLevel(logger.LogDebug)
 
 	// Create a new orchestrator
 	orchestrator := autopkg.NewAutoPkgOrchestrator()

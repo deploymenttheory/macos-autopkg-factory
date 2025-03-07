@@ -272,6 +272,8 @@ func (o *AutoPkgOrchestrator) AddParallelRunStep(recipes []string, options *Para
 			Timeout:       o.options.Timeout,
 			VerboseLevel:  1,
 		}
+	} else if options.Timeout == 0 {
+		options.Timeout = 10 * time.Minute // Ensure a valid timeout
 	}
 
 	o.steps = append(o.steps, WorkflowStep{
@@ -748,23 +750,24 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			}
 
 		case "parallel-run":
-			parallelOptions, ok := step.Options.(*ParallelRunOptions)
-			if !ok {
-				parallelOptions = &ParallelRunOptions{
-					PrefsPath:     o.options.PrefsPath,
-					MaxConcurrent: o.options.MaxConcurrent,
-					Timeout:       o.options.Timeout,
-				}
-			}
-
-			_, err := ParallelRunRecipes(step.Recipes, parallelOptions)
-			if err != nil {
-				stepErr = fmt.Errorf("parallel run failed: %w", err)
-			}
-
-			// Mark processed recipes
 			for _, recipe := range step.Recipes {
-				result.ProcessedRecipes[recipe] = true
+				uniqueCache := fmt.Sprintf("/tmp/autopkg_cache_%s", recipe)
+
+				parallelOptions, ok := step.Options.(*ParallelRunOptions)
+				if !ok {
+					parallelOptions = &ParallelRunOptions{
+						PrefsPath:     o.options.PrefsPath,
+						MaxConcurrent: o.options.MaxConcurrent,
+						Timeout:       10 * time.Minute,
+						VerboseLevel:  3,
+						Variables:     map[string]string{"RECIPE_CACHE_DIR": uniqueCache},
+					}
+				}
+
+				_, err := ParallelRunRecipes([]string{recipe}, parallelOptions)
+				if err != nil {
+					stepErr = fmt.Errorf("parallel run failed for %s: %w", recipe, err)
+				}
 			}
 
 		case "batch":
