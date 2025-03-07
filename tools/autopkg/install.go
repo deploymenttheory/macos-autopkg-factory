@@ -79,62 +79,96 @@ func installGit() error {
 	return nil
 }
 
-// InstallAutoPkg downloads and installs the latest AutoPkg release
+// InstallAutoPkg ensures AutoPkg is installed and up to date.
+// - If AutoPkg is already installed, it verifies the existing version and skips installation.
+// - If 'ForceUpdate' is enabled, it will update AutoPkg instead of skipping.
+// - If AutoPkg is not installed, it proceeds with installation.
 func InstallAutoPkg(installConfig *InstallConfig) (string, error) {
-	autopkgPath := "/usr/local/bin/autopkg"
+	autopkgPath := "/Library/AutoPkg/autopkg"
+	autopkgSymlinkPath := "/usr/local/bin/autopkg"
 
-	// Only install if not present or forced update requested
-	if _, err := os.Stat(autopkgPath); !os.IsNotExist(err) && !installConfig.ForceUpdate {
-		// Get current version
-		versionCmd := exec.Command(autopkgPath, "version")
+	autopkgExists := false
+	actualPath := ""
+
+	// Check if AutoPkg is installed via main path
+	if _, err := os.Stat(autopkgPath); err == nil {
+		autopkgExists = true
+		actualPath = autopkgPath
+	}
+
+	// Check if AutoPkg is installed via symlink
+	if _, err := os.Stat(autopkgSymlinkPath); err == nil {
+		autopkgExists = true
+		if actualPath == "" {
+			actualPath = autopkgSymlinkPath
+		}
+	}
+
+	// If AutoPkg exists and we're not forcing an update, just return the current version
+	if autopkgExists && !installConfig.ForceUpdate {
+		logger.Logger("✅ AutoPkg is already installed, checking version...", logger.LogInfo)
+
+		versionCmd := exec.Command(actualPath, "version")
 		versionOutput, err := versionCmd.Output()
 		if err != nil {
 			return "", fmt.Errorf("failed to get AutoPkg version: %w", err)
 		}
+
 		version := strings.TrimSpace(string(versionOutput))
+		logger.Logger(fmt.Sprintf("✅ AutoPkg %s is already installed. Skipping installation.", version), logger.LogSuccess)
 		return version, nil
 	}
 
-	logger.Logger("⬇️ Downloading AutoPkg", logger.LogInfo)
+	// If we're here, either AutoPkg is missing or a forced update is required
+	if autopkgExists {
+		logger.Logger("🔄 Force update enabled. Updating AutoPkg...", logger.LogInfo)
+	} else {
+		logger.Logger("⬇️ AutoPkg not found. Installing AutoPkg...", logger.LogInfo)
+	}
 
 	var releaseURL string
 	var err error
 
-	// Get release URL based on config
+	// Get the correct release URL (Beta or Stable)
 	if installConfig.UseBeta {
 		releaseURL, err = getBetaAutoPkgReleaseURL()
-		logger.Logger("🧪 Installing latest Beta AutoPkg Release", logger.LogInfo)
+		logger.Logger("🧪 Fetching latest Beta AutoPkg Release...", logger.LogInfo)
 	} else {
 		releaseURL, err = getLatestAutoPkgReleaseURL()
-		logger.Logger("🚀 Installing latest Stable AutoPkg Release", logger.LogInfo)
+		logger.Logger("🚀 Fetching latest Stable AutoPkg Release...", logger.LogInfo)
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("failed to get AutoPkg release URL: %w", err)
+		return "", fmt.Errorf("failed to retrieve AutoPkg release URL: %w", err)
 	}
-	fmt.Printf("AutoPkg release URL: %s\n", releaseURL)
 
-	// Download the package
+	logger.Logger(fmt.Sprintf("📥 AutoPkg release URL: %s", releaseURL), logger.LogInfo)
+
+	// Proceed with downloading and installing AutoPkg
 	pkgPath := "/tmp/autopkg-latest.pkg"
 	if err := helpers.DownloadFile(releaseURL, pkgPath); err != nil {
 		return "", fmt.Errorf("failed to download AutoPkg package: %w", err)
 	}
 
-	// Install the package
 	cmd := exec.Command("sudo", "installer", "-pkg", pkgPath, "-target", "/")
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to install AutoPkg package: %w", err)
 	}
 
-	// Verify installation and capture version
-	versionCmd := exec.Command(autopkgPath, "version")
+	// Verify installation by checking the installed version
+	versionCmd := exec.Command("/Library/AutoPkg/autopkg", "version")
 	versionOutput, err := versionCmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to get AutoPkg version: %w", err)
+		// Fallback to checking the symlink if needed
+		versionCmd = exec.Command(autopkgSymlinkPath, "version")
+		versionOutput, err = versionCmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("failed to retrieve AutoPkg version after installation: %w", err)
+		}
 	}
 
 	version := strings.TrimSpace(string(versionOutput))
-	logger.Logger(fmt.Sprintf("✅ AutoPkg %s Installed", version), logger.LogSuccess)
+	logger.Logger(fmt.Sprintf("✅ AutoPkg %s successfully installed", version), logger.LogSuccess)
 
 	return version, nil
 }

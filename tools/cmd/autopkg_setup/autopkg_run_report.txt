@@ -1,9 +1,9 @@
 AutoPkg Workflow Report
 =====================
 
-Start time: 2025-03-07T10:57:42Z
-End time: 2025-03-07T10:58:23Z
-Elapsed time: 41.413281083s
+Start time: 2025-03-07T11:30:59Z
+End time: 2025-03-07T11:31:03Z
+Elapsed time: 3.528548834s
 
 Success: false
 Completed steps: 7

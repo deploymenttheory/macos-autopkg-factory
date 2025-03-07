@@ -53,7 +53,7 @@ func main() {
 		AddRootCheckStep(false).
 		AddGitCheckStep(true).
 		AddInstallAutoPkgStep(&autopkg.InstallConfig{
-			ForceUpdate: true,
+			ForceUpdate: false,
 			UseBeta:     false,
 		}, true).
 

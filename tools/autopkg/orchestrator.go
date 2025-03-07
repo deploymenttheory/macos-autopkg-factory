@@ -76,15 +76,18 @@ func (o *AutoPkgOrchestrator) AddRootCheckStep(continueOnError bool) *AutoPkgOrc
 	return o
 }
 
-// AddInstallAutoPkgStep adds a step to install/update AutoPkg
+// AddInstallAutoPkgStep adds a step to ensure AutoPkg is installed and up to date.
+// If AutoPkg is already installed, it verifies the existing version.
+// If 'ForceUpdate' is enabled in the InstallConfig, it will perform a forced update;
+// otherwise, it will skip installation.
 func (o *AutoPkgOrchestrator) AddInstallAutoPkgStep(installConfig *InstallConfig, continueOnError bool) *AutoPkgOrchestrator {
 	o.steps = append(o.steps, WorkflowStep{
 		Type:            "install-autopkg",
 		Recipes:         []string{},
 		Options:         installConfig,
 		ContinueOnError: continueOnError,
-		Name:            "AutoPkg Installation",
-		Description:     "Install or update AutoPkg",
+		Name:            "Ensure AutoPkg Installed",
+		Description:     "Check for AutoPkg installation, verify version, and update if required",
 	})
 	return o
 }
