@@ -413,6 +413,19 @@ func (o *AutoPkgOrchestrator) AddRepoListStep(continueOnError bool) *AutoPkgOrch
 	return o
 }
 
+// AddSetPreferencesStep adds a step to configure AutoPkg preferences
+func (o *AutoPkgOrchestrator) AddSetPreferencesStep(prefs *PreferencesData, continueOnError bool) *AutoPkgOrchestrator {
+	o.steps = append(o.steps, WorkflowStep{
+		Type:            "set-preferences",
+		Recipes:         []string{},
+		Options:         prefs,
+		ContinueOnError: continueOnError,
+		Name:            "Configure Preferences",
+		Description:     "Set AutoPkg preferences",
+	})
+	return o
+}
+
 // AddMakeOverrideStep adds a step to create recipe overrides
 // Uses MakeOverride under the hood
 func (o *AutoPkgOrchestrator) AddMakeOverrideStep(recipes []string, options *MakeOverrideOptions, continueOnError bool) *AutoPkgOrchestrator {
@@ -555,6 +568,18 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			err := CheckGit()
 			if err != nil {
 				stepErr = fmt.Errorf("Git check/installation failed: %w", err)
+			}
+
+		case "set-preferences":
+			prefs, ok := step.Options.(*PreferencesData)
+			if !ok {
+				stepErr = fmt.Errorf("invalid options for set-preferences step")
+				break
+			}
+
+			err := SetAutoPkgPreferences(o.options.PrefsPath, prefs)
+			if err != nil {
+				stepErr = fmt.Errorf("failed to set preferences: %w", err)
 			}
 
 		case "verify":

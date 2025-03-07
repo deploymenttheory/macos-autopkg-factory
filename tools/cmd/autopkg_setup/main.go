@@ -24,6 +24,29 @@ func main() {
 		WithStopOnFirstError(true).
 		WithReportFile("autopkg_run_report.txt")
 
+		// Create preferences configuration
+	prefsData := &autopkg.PreferencesData{
+		RECIPE_SEARCH_DIRS: []string{
+			"~/Library/AutoPkg/RecipeRepos",
+			"~/Library/AutoPkg/RecipeOverrides",
+		},
+		// Repository configuration
+		RECIPE_REPOS: map[string]interface{}{
+			"~/Library/AutoPkg/RecipeRepos/recipes": map[string]string{
+				"URL": "https://github.com/autopkg/recipes",
+			},
+			"~/Library/AutoPkg/RecipeRepos/homebysix-recipes": map[string]string{
+				"URL": "https://github.com/homebysix/recipes",
+			},
+		},
+		// Set any additional preferences as needed
+		GIT_PATH:                        "/usr/bin/git",
+		FAIL_RECIPES_WITHOUT_TRUST_INFO: true,
+		// Add Jamf/Intune/other credentials if needed
+		// JSS_URL: "https://your.jamf.server",
+		// API_USERNAME: "apiuser",
+		// API_PASSWORD: "apipassword",
+	}
 	// Set up the workflow steps
 	orchestrator.
 		// Initialization steps
@@ -34,13 +57,21 @@ func main() {
 			UseBeta:     false,
 		}, true).
 
+		// Configure preferences
+		AddSetPreferencesStep(prefsData, true).
+
 		// Repository management steps
-		AddRepoUpdateStep([]string{
-			"autopkg/recipes",
-			"homebysix/recipes",
-			// Add other repositories as needed
+		AddRepoAddStep([]string{
+			"https://github.com/autopkg/recipes",
+			"https://github.com/homebysix/recipes",
 		}, true).
-		AddRepoUpdateStep([]string{"recipes", "homebysix-recipes"}, true).
+
+		// Repository update steps (use the correct repo names after adding)
+		AddRepoListStep(true). // List repos to confirm they were added
+		AddRepoUpdateStep([]string{
+			"recipes",
+			"homebysix-recipes",
+		}, true).
 
 		// Recipe validation and execution
 		AddVerifyStep([]string{
