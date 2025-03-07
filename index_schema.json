@@ -228,6 +228,53 @@
                     }
                   }
                 },
+                "buildStatus": {
+                  "type": "object",
+                  "required": ["isCore", "status"],
+                  "properties": {
+                    "isCore": {
+                      "type": "boolean",
+                      "description": "Whether this package is part of the core build"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["production", "beta", "prerelease", "deprecated"],
+                      "description": "Current status in the deployment lifecycle"
+                    },
+                    "coreBuildVersion": {
+                      "type": "string",
+                      "description": "Core build version this package is associated with"
+                    },
+                    "priority": {
+                      "type": "string",
+                      "enum": ["critical", "high", "standard", "optional"],
+                      "description": "Priority level for this package within its build"
+                    }
+                  }
+                },
+                "notarization": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["notarized", "not-notarized", "exempt", "in-progress"],
+                      "description": "Apple notarization status of the package"
+                    },
+                    "ticketId": {
+                      "type": "string",
+                      "description": "Apple notarization ticket identifier"
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "Date when notarization was completed"
+                    },
+                    "stapled": {
+                      "type": "boolean",
+                      "description": "Whether the notarization ticket is stapled to the package"
+                    }
+                  }
+                },
                 "networkRequirements": {
                   "type": "object",
                   "properties": {
@@ -428,6 +475,88 @@
             "type": "string",
             "format": "uri",
             "description": "Website for documentation about this tool"
+          }
+        }
+      }
+    },
+    "testingProtocols": {
+      "type": "object",
+      "description": "Standardized testing protocols for package validation",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "steps", "devices"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the testing protocol"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "description"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the test step"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of what this step tests"
+                },
+                "command": {
+                  "type": "string",
+                  "description": "Command or script to execute for this step"
+                },
+                "expectedResult": {
+                  "type": "string",
+                  "description": "Expected result or output from this step"
+                },
+                "timeout": {
+                  "type": "integer",
+                  "description": "Timeout in seconds for this step"
+                }
+              }
+            },
+            "description": "Test steps to execute for validation"
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["model", "osVersion"],
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "description": "Mac model identifier to test on"
+                },
+                "osVersion": {
+                  "type": "string",
+                  "description": "macOS version to test on"
+                },
+                "architecture": {
+                  "type": "string",
+                  "enum": ["x86_64", "arm64", "universal"],
+                  "description": "CPU architecture to test on"
+                },
+                "baseImage": {
+                  "type": "string",
+                  "description": "Reference to base system image for testing"
+                }
+              }
+            },
+            "description": "Device configurations for testing this package"
+          },
+          "automationScript": {
+            "type": "string",
+            "description": "Reference to automation script for this protocol"
+          },
+          "requiredApps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Other applications required for testing this package"
           }
         }
       }
