@@ -87,9 +87,10 @@ func main() {
 		AddRepoListStep(true).
 
 		// Recipe validation and execution
-		AddVerifyTrustInfoStep(targetRecipes, &autopkg.VerifyTrustInfoOptions{
-			Verbose: 3, // Use verbosity level 3 for detailed output
-		}, true).
+		AddParallelRunStep(targetRecipes, &autopkg.ParallelRunOptions{
+			MaxConcurrent: 4, // Max concurrent parallel packaging Runs
+			VerboseLevel:  3, // Keep verbosity high for debugging
+		}, false).
 
 		// Run recipes in parallel
 		AddParallelRunStep(targetRecipes, &autopkg.ParallelRunOptions{VerboseLevel: 3}, false).

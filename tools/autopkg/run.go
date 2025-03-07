@@ -47,18 +47,17 @@ type RecipeBatchResult struct {
 	ExecutionError    error
 }
 
-// RecipeBatchProcessing runs a batch of recipes through multiple steps (verify, update trust, run)
+// RecipeBatchProcessing executes a batch of recipes in parallel or sequentially.
 func RecipeBatchProcessing(recipes []string, options *RecipeBatchOptions) (map[string]*RecipeBatchResult, error) {
 	if options == nil {
 		options = &RecipeBatchOptions{
-			VerifyTrust:          true,
-			UpdateTrustOnFailure: true,
 			MaxConcurrentRecipes: 1,
 		}
 	}
 
-	logger.Logger(fmt.Sprintf("🚀 Processing batch of %d recipes", len(recipes)), logger.LogInfo)
+	logger.Logger(fmt.Sprintf("🚀 Running batch of %d recipes", len(recipes)), logger.LogInfo)
 
+	// Initialize results map
 	results := make(map[string]*RecipeBatchResult)
 	for _, recipe := range recipes {
 		results[recipe] = &RecipeBatchResult{
@@ -66,142 +65,101 @@ func RecipeBatchProcessing(recipes []string, options *RecipeBatchOptions) (map[s
 		}
 	}
 
-	// 1. Verify trust for all recipes if requested
-	if options.VerifyTrust {
-		verifyOptions := &VerifyTrustInfoOptions{
-			PrefsPath:    options.PrefsPath,
-			Verbose:      boolToInt(options.Verbose),
-			SearchDirs:   options.SearchDirs,
-			OverrideDirs: options.OverrideDirs,
+	// Parallel execution if MaxConcurrentRecipes > 1
+	if options.MaxConcurrentRecipes > 1 {
+		var wg sync.WaitGroup
+		recipeChan := make(chan string, len(recipes))
+		resultChan := make(chan *RecipeBatchResult, len(recipes))
+
+		// Worker function
+		worker := func() {
+			for recipe := range recipeChan {
+				startTime := time.Now()
+				runOptions := &RunOptions{
+					PrefsPath:      options.PrefsPath,
+					PreProcessors:  options.PreProcessors,
+					PostProcessors: options.PostProcessors,
+					Variables:      options.Variables,
+					ReportPlist:    options.ReportPlist,
+					Verbose:        options.Verbose,
+					SearchDirs:     options.SearchDirs,
+					OverrideDirs:   options.OverrideDirs,
+				}
+
+				output, err := RunRecipeWithOutput(recipe, runOptions)
+
+				resultChan <- &RecipeBatchResult{
+					Recipe:         recipe,
+					Executed:       true,
+					Output:         output,
+					ExecutionError: err,
+				}
+
+				// Log result
+				elapsedTime := time.Since(startTime)
+				if err == nil {
+					logger.Logger(fmt.Sprintf("✅ Recipe %s completed in %s", recipe, elapsedTime), logger.LogSuccess)
+				} else {
+					logger.Logger(fmt.Sprintf("❌ Recipe %s failed after %s: %v", recipe, elapsedTime, err), logger.LogError)
+				}
+			}
+			wg.Done()
 		}
 
-		allSuccess, failedRecipes, err := VerifyTrustInfoForRecipes(recipes, verifyOptions)
-		if err != nil {
-			logger.Logger(fmt.Sprintf("⚠️ Trust verification had issues: %v", err), logger.LogWarning)
+		// Start worker goroutines
+		for i := 0; i < options.MaxConcurrentRecipes; i++ {
+			wg.Add(1)
+			go worker()
 		}
 
-		// Mark verification status in results
+		// Send recipes to the workers
 		for _, recipe := range recipes {
-			results[recipe].TrustVerified = true
+			recipeChan <- recipe
 		}
-		for _, failedRecipe := range failedRecipes {
-			results[failedRecipe].TrustVerified = false
-			results[failedRecipe].VerificationError = fmt.Errorf("trust verification failed")
+		close(recipeChan)
+
+		// Wait for all workers
+		wg.Wait()
+		close(resultChan)
+
+		// Collect results
+		for result := range resultChan {
+			results[result.Recipe] = result
+			if result.ExecutionError != nil && options.StopOnFirstError {
+				return results, fmt.Errorf("recipe %s execution failed: %w", result.Recipe, result.ExecutionError)
+			}
 		}
 
-		// 2. Update trust info for failed recipes if requested
-		if !allSuccess && options.UpdateTrustOnFailure && len(failedRecipes) > 0 {
-			updateOptions := &UpdateTrustInfoOptions{
-				PrefsPath:    options.PrefsPath,
-				SearchDirs:   options.SearchDirs,
-				OverrideDirs: options.OverrideDirs,
+	} else {
+		// Sequential execution
+		for _, recipe := range recipes {
+			runOptions := &RunOptions{
+				PrefsPath:      options.PrefsPath,
+				PreProcessors:  options.PreProcessors,
+				PostProcessors: options.PostProcessors,
+				Variables:      options.Variables,
+				ReportPlist:    options.ReportPlist,
+				Verbose:        options.Verbose,
+				SearchDirs:     options.SearchDirs,
+				OverrideDirs:   options.OverrideDirs,
 			}
 
-			err := UpdateTrustInfoForRecipes(failedRecipes, updateOptions)
-			if err != nil {
-				logger.Logger(fmt.Sprintf("⚠️ Trust update had issues: %v", err), logger.LogWarning)
-			} else {
-				// Mark trust update status in results
-				for _, recipe := range failedRecipes {
-					results[recipe].TrustUpdated = true
-				}
-
-				// Re-verify the updated recipes
-				updateSuccess, stillFailedRecipes, _ := VerifyTrustInfoForRecipes(failedRecipes, verifyOptions)
-
-				// Update verification status after trust update
-				for _, recipe := range failedRecipes {
-					results[recipe].TrustVerified = true
-				}
-				for _, stillFailedRecipe := range stillFailedRecipes {
-					results[stillFailedRecipe].TrustVerified = false
-					results[stillFailedRecipe].VerificationError = fmt.Errorf("trust verification failed even after update")
-				}
-
-				if !updateSuccess && !options.IgnoreVerifyFailures {
-					return results, fmt.Errorf("some recipes still failed trust verification after update")
-				}
-			}
-		} else if !allSuccess && !options.IgnoreVerifyFailures {
-			return results, fmt.Errorf("some recipes failed trust verification")
-		}
-	}
-
-	// 3. Run the recipes that should be executed
-	var recipesToRun []string
-	for recipe, result := range results {
-		if !options.VerifyTrust || result.TrustVerified || options.IgnoreVerifyFailures {
-			recipesToRun = append(recipesToRun, recipe)
-		}
-	}
-
-	if len(recipesToRun) > 0 {
-		// Use ParallelRunRecipes if maxConcurrent > 1, otherwise use RunRecipes directly
-		if options.MaxConcurrentRecipes > 1 {
-			parallelOptions := &ParallelRunOptions{
-				PrefsPath:        options.PrefsPath,
-				MaxConcurrent:    options.MaxConcurrentRecipes,
-				StopOnFirstError: options.StopOnFirstError,
-				ReportPlist:      options.ReportPlist,
-				Verbose:          options.Verbose,
-				SearchDirs:       options.SearchDirs,
-				OverrideDirs:     options.OverrideDirs,
-				Variables:        options.Variables,
-				PreProcessors:    options.PreProcessors,
-				PostProcessors:   options.PostProcessors,
-			}
-
-			parallelResults, err := ParallelRunRecipes(recipesToRun, parallelOptions)
-
-			// Convert parallel results to batch results
-			for recipe, parallelResult := range parallelResults {
-				results[recipe].Executed = true
-				results[recipe].Output = parallelResult.Output
-				if !parallelResult.Success {
-					results[recipe].ExecutionError = parallelResult.Error
-				}
+			output, err := RunRecipeWithOutput(recipe, runOptions)
+			results[recipe] = &RecipeBatchResult{
+				Recipe:         recipe,
+				Executed:       true,
+				Output:         output,
+				ExecutionError: err,
 			}
 
 			if err != nil && options.StopOnFirstError {
-				return results, fmt.Errorf("at least one recipe execution failed: %w", err)
-			}
-		} else {
-			// Sequential execution
-			runOptions := &RunOptions{
-				PrefsPath:                options.PrefsPath,
-				PreProcessors:            options.PreProcessors,
-				PostProcessors:           options.PostProcessors,
-				Variables:                options.Variables,
-				ReportPlist:              options.ReportPlist,
-				Verbose:                  options.Verbose,
-				SearchDirs:               options.SearchDirs,
-				OverrideDirs:             options.OverrideDirs,
-				IgnoreParentVerification: options.IgnoreVerifyFailures,
-			}
-
-			for _, recipe := range recipesToRun {
-				output, err := RunRecipeWithOutput(recipe, runOptions)
-				results[recipe].Executed = true
-				results[recipe].Output = output
-				results[recipe].ExecutionError = err
-
-				if err != nil && options.StopOnFirstError {
-					return results, fmt.Errorf("recipe %s execution failed: %w", recipe, err)
-				}
+				return results, fmt.Errorf("recipe %s execution failed: %w", recipe, err)
 			}
 		}
 	}
 
-	logger.Logger(fmt.Sprintf("✅ Batch processing completed for %d recipes", len(recipes)), logger.LogSuccess)
+	logger.Logger(fmt.Sprintf("✅ Batch execution completed for %d recipes", len(recipes)), logger.LogSuccess)
 	return results, nil
-}
-
-// Helper function to convert boolean to integer
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // CleanupOptions contains options for cleaning up the AutoPkg cache
