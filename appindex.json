@@ -1,0 +1,350 @@
+{
+  "schemaVersion": "1.1",
+  "lastUpdated": "2025-03-07T12:00:00Z",
+  "organization": "YourCompany",
+  "contacts": {
+    "packageManagement": "package-team@yourcompany.com",
+    "security": "security@yourcompany.com"
+  },
+  "macOSApps": [
+    {
+      "name": "Visual Studio Code",
+      "identifier": "com.microsoft.VSCode",
+      "description": "Code editor with debugging and git support",
+      "vendor": "Microsoft",
+      "owner": {
+        "team": "Developer Tools",
+        "contact": "devtools-lead@yourcompany.com",
+        "slackChannel": "#dev-tools-support"
+      },
+      "supportLevel": "full",
+      "licenseType": "free",
+      "versions": [
+        {
+          "version": "1.87.2",
+          "minimumOS": "12.0",
+          "approvedOn": "2025-02-10",
+          "approvedBy": "dev-tools-team",
+          "expiresOn": "2025-08-10",
+          "packageSource": {
+            "provider": "vendor-direct",
+            "url": "https://code.visualstudio.com/download",
+            "verified": true,
+            "internalMirror": "storage://app-repository/vendors/microsoft/"
+          },
+          "packagingMethod": {
+            "type": "repackaged",
+            "tool": "munki-composer",
+            "pipelineJob": "jenkins://app-packaging/vscode-1.87.2",
+            "packageDate": "2025-02-08",
+            "customizations": [
+              "disabled-telemetry",
+              "preconfigured-extensions"
+            ]
+          },
+          "installMethod": "pkg",
+          "downloadURL": "internal://app-repo/vscode/VSCode-1.87.2.pkg",
+          "sha256": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3",
+          "securityScan": {
+            "status": "passed",
+            "date": "2025-02-05",
+            "vulnerabilities": 0
+          },
+          "networkRequirements": {
+            "outboundHosts": ["update.code.visualstudio.com", "marketplace.visualstudio.com"],
+            "ports": ["443"]
+          },
+          "restrictions": [],
+          "settings": {
+            "telemetryEnabled": false,
+            "autoUpdate": false
+          },
+          "requiredExtensions": [
+            "ms-vscode.cpptools",
+            "golang.go"
+          ]
+        },
+        {
+          "version": "1.86.0",
+          "minimumOS": "11.0",
+          "approvedOn": "2025-01-05",
+          "approvedBy": "dev-tools-team",
+          "expiresOn": "2025-07-05",
+          "packageSource": {
+            "provider": "vendor-direct",
+            "url": "https://code.visualstudio.com/download",
+            "verified": true,
+            "internalMirror": "storage://app-repository/vendors/microsoft/"
+          },
+          "packagingMethod": {
+            "type": "repackaged",
+            "tool": "autopkg",
+            "pipelineJob": "jenkins://app-packaging/vscode-1.86.0",
+            "packageDate": "2025-01-03",
+            "customizations": [
+              "disabled-telemetry",
+              "preconfigured-extensions"
+            ]
+          },
+          "installMethod": "pkg",
+          "downloadURL": "internal://app-repo/vscode/VSCode-1.86.0.pkg",
+          "sha256": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
+          "securityScan": {
+            "status": "passed",
+            "date": "2024-12-30",
+            "vulnerabilities": 0
+          },
+          "networkRequirements": {
+            "outboundHosts": ["update.code.visualstudio.com", "marketplace.visualstudio.com"],
+            "ports": ["443"]
+          },
+          "restrictions": [],
+          "settings": {
+            "telemetryEnabled": false,
+            "autoUpdate": false
+          },
+          "requiredExtensions": [
+            "ms-vscode.cpptools",
+            "golang.go"
+          ]
+        }
+      ],
+      "category": "development",
+      "tags": ["editor", "development", "git"],
+      "dataStorage": "~/Library/Application Support/Code"
+    },
+    {
+      "name": "Docker Desktop",
+      "identifier": "com.docker.docker",
+      "description": "Container management platform",
+      "vendor": "Docker, Inc.",
+      "owner": {
+        "team": "Platform Engineering",
+        "contact": "platform-lead@yourcompany.com",
+        "slackChannel": "#platform-support"
+      },
+      "supportLevel": "business-hours",
+      "licenseType": "commercial",
+      "licenseExpiration": "2026-01-15",
+      "versions": [
+        {
+          "version": "4.25.1",
+          "minimumOS": "12.0",
+          "approvedOn": "2025-02-20",
+          "approvedBy": "platform-team",
+          "expiresOn": "2025-08-20",
+          "packageSource": {
+            "provider": "vendor-direct",
+            "url": "https://www.docker.com/products/docker-desktop/",
+            "verified": true,
+            "internalMirror": "storage://app-repository/vendors/docker/"
+          },
+          "packagingMethod": {
+            "type": "wrapped",
+            "tool": "installomator",
+            "wrapperScript": "scripts://docker-desktop-installer.sh",
+            "packageDate": "2025-02-22",
+            "postInstallTasks": [
+              "configure-resource-limits",
+              "disable-kubernetes"
+            ]
+          },
+          "installMethod": "dmg",
+          "downloadURL": "internal://app-repo/docker/Docker-4.25.1.dmg",
+          "sha256": "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3",
+          "securityScan": {
+            "status": "passed",
+            "date": "2025-02-18",
+            "vulnerabilities": 0
+          },
+          "networkRequirements": {
+            "outboundHosts": ["hub.docker.com", "registry-1.docker.io"],
+            "ports": ["443"]
+          },
+          "restrictions": ["requires-approval-for-personal-license"],
+          "settings": {
+            "resourceLimits": {
+              "cpu": 4,
+              "memory": "8GB"
+            },
+            "kubernetes": false
+          }
+        }
+      ],
+      "category": "containerization",
+      "tags": ["docker", "containers", "development"],
+      "dataStorage": "~/Library/Containers/com.docker.docker"
+    },
+    {
+      "name": "GoLand",
+      "identifier": "com.jetbrains.goland",
+      "description": "Go IDE with intelligent code assistance",
+      "vendor": "JetBrains",
+      "owner": {
+        "team": "Go Development",
+        "contact": "go-lead@yourcompany.com",
+        "slackChannel": "#go-development"
+      },
+      "supportLevel": "standard",
+      "licenseType": "commercial",
+      "licenseExpiration": "2025-12-31",
+      "alternatives": ["VSCode with Go extension"],
+      "versions": [
+        {
+          "version": "2024.1.3",
+          "minimumOS": "12.0",
+          "approvedOn": "2025-03-01",
+          "approvedBy": "dev-tools-team",
+          "expiresOn": "2025-09-01",
+          "packageSource": {
+            "provider": "vendor-direct",
+            "url": "https://www.jetbrains.com/go/download/",
+            "verified": true,
+            "internalMirror": "storage://app-repository/vendors/jetbrains/"
+          },
+          "packagingMethod": {
+            "type": "repackaged",
+            "tool": "autopkg",
+            "pipelineJob": "jenkins://app-packaging/goland-2024.1.3",
+            "packageDate": "2025-03-02",
+            "customizations": [
+              "preconfigured-settings",
+              "license-application"
+            ]
+          },
+          "installMethod": "dmg",
+          "downloadURL": "internal://app-repo/jetbrains/GoLand-2024.1.3.dmg",
+          "sha256": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6",
+          "securityScan": {
+            "status": "passed",
+            "date": "2025-03-01",
+            "vulnerabilities": 0
+          },
+          "networkRequirements": {
+            "outboundHosts": ["account.jetbrains.com", "plugins.jetbrains.com"],
+            "ports": ["443"]
+          },
+          "restrictions": [],
+          "licenseKey": "licensefile://server/jetbrains/goland-license.key",
+          "settings": {
+            "initialConfig": "configs://jetbrains/goland-defaults.zip"
+          }
+        }
+      ],
+      "category": "development",
+      "tags": ["go", "development", "ide"],
+      "dataStorage": "~/Library/Application Support/JetBrains/GoLand2024.1"
+    }
+  ],
+  "categories": [
+    "development",
+    "containerization",
+    "database",
+    "networking",
+    "security",
+    "productivity",
+    "utilities",
+    "design"
+  ],
+  "deploymentGroups": [
+    {
+      "name": "core-developer",
+      "description": "Standard development environment",
+      "baseApps": ["Visual Studio Code", "Docker Desktop"]
+    },
+    {
+      "name": "go-developer",
+      "description": "Go development environment",
+      "baseApps": ["Visual Studio Code", "Docker Desktop", "GoLand"],
+      "parent": "core-developer"
+    }
+  ],
+  "approvalWorkflows": {
+    "standard": {
+      "description": "Standard approval process",
+      "approvers": ["team-lead", "security-review"],
+      "sla": "3 business days"
+    },
+    "expedited": {
+      "description": "Expedited approval for critical needs",
+      "approvers": ["director-level"],
+      "sla": "1 business day"
+    }
+  },
+  "installMethods": {
+    "pkg": {
+      "description": "macOS installer package",
+      "command": "installer -pkg {path} -target /",
+      "verificationSteps": [
+        "check-signature",
+        "validate-hash"
+      ]
+    },
+    "dmg": {
+      "description": "Disk image with drag-and-drop installation",
+      "manual": true,
+      "verificationSteps": [
+        "check-signature",
+        "validate-hash",
+        "verify-app-bundle"
+      ]
+    },
+    "zip": {
+      "description": "Compressed application bundle",
+      "command": "unzip {path} -d /Applications/",
+      "verificationSteps": [
+        "validate-hash",
+        "verify-app-bundle"
+      ]
+    },
+    "brew": {
+      "description": "Homebrew package manager",
+      "command": "brew install {identifier}",
+      "verificationSteps": [
+        "verify-formula-source"
+      ]
+    },
+    "wrapped": {
+      "description": "Custom wrapper script for installation",
+      "command": "bash {script_path} {app_identifier}",
+      "verificationSteps": [
+        "validate-script-hash",
+        "verify-installation-result"
+      ]
+    }
+  },
+  "packageDeliveryMethods": {
+    "push": {
+      "description": "MDM push installation",
+      "tools": ["jamf", "mosyle", "microsoft-intune"],
+      "priority": "high"
+    },
+    "self-service": {
+      "description": "User-initiated installation from app catalog",
+      "tools": ["jamf-self-service", "company-portal"],
+      "priority": "normal"
+    },
+    "bootstrap": {
+      "description": "Initial device setup script",
+      "tools": ["installomator", "outset"],
+      "priority": "critical"
+    }
+  },
+  "packagingTools": {
+    "munki-composer": {
+      "description": "Composer from the Munki project",
+      "supportedFormats": ["pkg"],
+      "website": "https://github.com/munki/munki"
+    },
+    "autopkg": {
+      "description": "Automated packaging and testing",
+      "supportedFormats": ["pkg", "dmg"],
+      "website": "https://github.com/autopkg/autopkg"
+    },
+    "installomator": {
+      "description": "Script-based installer for various apps",
+      "supportedFormats": ["script"],
+      "website": "https://github.com/Installomator/Installomator"
+    }
+  }
+}
