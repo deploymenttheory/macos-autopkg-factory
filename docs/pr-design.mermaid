@@ -103,8 +103,8 @@ flowchart TB
         OwnerCheck -->|Yes| InternalPath["Feature Team Change"]:::serviceOwning
         OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]:::sisterTeam
         
-        InternalPath --> InternalGradeCheck{Author's<br>Grade?}
-        ExternalPath --> ExternalGradeCheck{Author's<br>Grade?}
+        InternalPath --> InternalGradeCheck{Author's<br>Job<br>Grade?}
+        ExternalPath --> ExternalGradeCheck{Author's<br>Job<br>Grade?}
         
         %% Feature team approval path
         InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]:::gradeC
