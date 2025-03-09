@@ -189,15 +189,15 @@ flowchart TB
         OFApproval --> ReviewChecklist
         
        ReviewChecklist[[Reviewer Checklist:<br>
-        - HCL Code quality standards<br>
-        - Security considerations<br>
-        - Test coverage<br>
-        - Documentation<br>
-        - tf hcl plan verified<br>
-        - tf linting (tflint/checkov)<br>
-        - Secrets scanning<br>
-        - Resource policy validation (Sentinel)]]:::reviewChecklist
-        
+- Code quality standards<br>
+- Security considerations<br>
+- Test coverage<br>
+- Documentation<br>
+- Infrastructure plan verified<br>
+- Terraform linting (tflint/checkov)<br>
+- Secrets scanning<br>
+- Resource policy (Sentinel)]]:::reviewChecklist
+
         ReviewChecklist --> JiraReviewComment["Add Review Comments 
         to Jira (GitHub Integration)"]:::jiraStatus
         
