@@ -1,0 +1,63 @@
+flowchart TB
+    PR([New PR Created]) -->     OwnerCheck{Is PR Author\nfrom Service Owning Team?}
+    
+    OwnerCheck -->|Yes| InternalPath["Feature Team Change"]
+    OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]
+    
+    InternalPath --> InternalGradeCheck{Author's\nGrade?}
+    ExternalPath --> ExternalGradeCheck{Author's\nGrade?}
+    
+    %% Internal team approval path
+    InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]
+    InternalGradeCheck -->|Grade D| ID["Feature Team Grade D"]
+    InternalGradeCheck -->|Grade E| IE["Feature Team Grade E"]
+    InternalGradeCheck -->|Grade F| IF["Feature Team Grade F"]
+    
+    IC --> ICApproval["Required: Grade D+\nfrom Service Owning Team"]
+    ID --> IDApproval["Required: Grade D+\nfrom Service Owning Team"]
+    IE --> IEApproval["Required: Grade E+\nfrom Service Owning Team"]
+    IF --> IFApproval["Required: Grade E or F\nfrom Service Owning Team"]
+    
+    %% Sister team approval path
+    ExternalGradeCheck -->|Grade C| EC["External Grade C"]
+    ExternalGradeCheck -->|Grade D| ED["External Grade D"]
+    ExternalGradeCheck -->|Grade E| EE["External Grade E"]
+    ExternalGradeCheck -->|Grade F| EF["External Grade F"]
+    
+    %% Sister team internal 4-eyes check
+    EC --> ECApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
+    ED --> EDApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
+    EE --> EEApproval["Required: Grade E+\nfrom Sister Team (4-eyes)"]
+    EF --> EFApproval["Required: Grade E or F\nfrom Sister Team (4-eyes)"]
+    
+    %% Owning team approval (same grade pattern)
+    ECApproval --> OCApproval["Required: Grade D+\nfrom Service Owning Team"]
+    EDApproval --> ODApproval["Required: Grade D+\nfrom Service Owning Team"]
+    EEApproval --> OEApproval["Required: Grade E+\nfrom Service Owning Team"]
+    EFApproval --> OFApproval["Required: Grade E or F\nfrom Service Owning Team"]
+    
+    %% Connect all approval paths to review checklist
+    ICApproval --> ReviewChecklist
+    IDApproval --> ReviewChecklist
+    IEApproval --> ReviewChecklist
+    IFApproval --> ReviewChecklist
+    
+    OCApproval --> ReviewChecklist
+    ODApproval --> ReviewChecklist
+    OEApproval --> ReviewChecklist
+    OFApproval --> ReviewChecklist
+    
+    ReviewChecklist["Reviewer Checklist:\n- Code quality standards\n- Security considerations\n- Test coverage\n- Documentation\n- Infrastructure plan verified"] --> FeedbackLoop{Feedback\nProvided?}
+    
+    FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]
+    FeedbackLoop -->|No| FinalApproval["Final Approval"]
+    
+    AddressFeedback --> ReviewChecklist
+    
+    FinalApproval --> MergePR([Merge PR])
+    
+    subgraph "Key Principles"
+        p1["Service Ownership: Service Owning team must approve all changes"]
+        p2["4-eyes Principle: Independent review required for all changes"]
+        p3["Cross-team: Requires approval from both teams following grade patterns"]
+    end
