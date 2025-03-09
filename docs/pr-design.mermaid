@@ -137,12 +137,15 @@ flowchart LR
         AddressFeedback --> ReviewChecklist
         
         %% Final staging deployment
-        FinalCodeApproval --> DeployStaging["Deploy to Staging Environment"]:::staging
+        FinalCodeApproval --> MergePRStaging["Merge PR to Staging"]
+        MergePRStaging --> DeployStaging["Deploy to Staging Environment"]:::staging
         
         DeployStaging --> StagingTest["Validation Tests in Staging"]:::staging
         StagingTest --> StagingOK{Staging\nValidation\nOK?}
         StagingOK -->|No| FixStaging["Fix Issues"]:::staging
-        StagingOK -->|Yes| RaiseITSM["Raise Change Request in ITSM Tool"]:::itsm
+        StagingOK -->|Yes| CreatePRProd["Create PR for Production"]
+        
+        CreatePRProd --> RaiseITSM["Raise Change Request in ITSM Tool"]:::itsm
         
         FixStaging --> PR
         
@@ -164,7 +167,8 @@ flowchart LR
         Rollback --> LearnFromFailure["Document Learnings"]:::itsm
         LearnFromFailure --> ReviseChange
         
-        Complete --> Completion([Process Complete])
+        Complete --> MergePRProd["Merge PR to Production"]
+        MergePRProd --> Completion([Process Complete])
     end
     
     %% Apply classes
