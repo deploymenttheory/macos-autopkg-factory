@@ -149,10 +149,10 @@ flowchart TB
         ExternalPath --> ExternalGradeCheck{Author's<br>Grade?}
         
         %% Feature team approval path
-        InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]:::gradeC
-        InternalGradeCheck -->|Grade D| ID["Feature Team Grade D"]:::gradeD
-        InternalGradeCheck -->|Grade E| IE["Feature Team Grade E"]:::gradeE
-        InternalGradeCheck -->|Grade F| IF["Feature Team Grade F"]:::gradeF
+        InternalGradeCheck -->|Grade C| IC["Feature Team Engineer:<br>Grade C"]:::gradeC
+        InternalGradeCheck -->|Grade D| ID["Feature Team Engineer:<br>Grade D"]:::gradeD
+        InternalGradeCheck -->|Grade E| IE["Feature Team Engineer:<br>Grade E"]:::gradeE
+        InternalGradeCheck -->|Grade F| IF["Feature Team Engineer:<br>Grade F"]:::gradeF
         
         IC --> ICApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
         ID --> IDApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
