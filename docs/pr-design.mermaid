@@ -166,16 +166,16 @@ flowchart TB
         ExternalGradeCheck --> EF["Collaborating Engineer:<br>Grade F"]:::gradeF
         
         %% Sister team internal 4-eyes check
-        EC --> |Grade C approval flow|ECApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
-        ED --> |Grade D approval flow|EDApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
-        EE --> |Grade E approval flow|EEApproval(Required: Grade E or above<br>approval from Sister Team for 4-eyes check):::approval
+        EC --> |Grade C approval flow|ECApproval(Required: Grade D or above<br>approval from<br> Sister Team for 4-eyes check):::approval
+        ED --> |Grade D approval flow|EDApproval(Required: Grade D or above<br>approval from<br> Sister Team for 4-eyes check):::approval
+        EE --> |Grade E approval flow|EEApproval(Required: Grade E or above<br>approval from<br> Sister Team for 4-eyes check):::approval
         EF --> |Grade F approval flow|EFApproval(Required: Grade E or F<br>approval from Sister Team for 4-eyes check):::approval
         
         %% Service owning team approval (same grade pattern)
-        ECApproval --> OCApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        EDApproval --> ODApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        EEApproval --> OEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
-        EFApproval --> OFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
+        ECApproval --> OCApproval(Required: Grade D or above<br>approval from<br> Service Owning Team):::approval
+        EDApproval --> ODApproval(Required: Grade D or above<br>approval from<br> Service Owning Team):::approval
+        EEApproval --> OEApproval(Required: Grade E or above<br>approval from<br> Service Owning Team):::approval
+        EFApproval --> OFApproval(Required: Grade E or F<br>approval from<br> Service Owning Team):::approval
         
         %% Connect all approval paths to review checklist
         ICApproval --> ReviewChecklist
