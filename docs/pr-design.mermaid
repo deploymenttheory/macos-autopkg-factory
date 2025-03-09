@@ -154,10 +154,10 @@ flowchart TB
         InternalGradeCheck -->|Grade E approval| IE["Feature Team Engineer:<br>Grade E"]:::gradeE
         InternalGradeCheck -->|Grade F approval| IF["Feature Team Engineer:<br>Grade F"]:::gradeF
         
-        IC --> ICApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        ID --> IDApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        IE --> IEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
-        IF --> IFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
+        IC --> |Grade C approval|ICApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        ID --> |Grade C approval|IDApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        IE --> |Grade C approval|IEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
+        IF --> |Grade C approval|IFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
         
         %% Sister team approval path with approval in edge labels
         ExternalGradeCheck -->|Grade C approval| EC["Collaborating Engineer:<br>Grade C"]:::gradeC
@@ -166,16 +166,16 @@ flowchart TB
         ExternalGradeCheck -->|Grade F approval| EF["Collaborating Engineer:<br>Grade F"]:::gradeF
         
         %% Sister team internal 4-eyes check
-        EC --> |Grade C approval|ECApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
-        ED --> |Grade D approval|EDApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
-        EE --> |Grade E approval|EEApproval(Required: Grade E or above<br>approval from Sister Team for 4-eyes check):::approval
-        EF --> |Grade F approval|EFApproval(Required: Grade E or F<br>approval from Sister Team for 4-eyes check):::approval
+        EC --> |Grade C approval flow|ECApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
+        ED --> |Grade D approval flow|EDApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
+        EE --> |Grade E approval flow|EEApproval(Required: Grade E or above<br>approval from Sister Team for 4-eyes check):::approval
+        EF --> |Grade F approval flow|EFApproval(Required: Grade E or F<br>approval from Sister Team for 4-eyes check):::approval
         
         %% Service owning team approval (same grade pattern)
-        ECApproval --> |Grade C approval|OCApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        EDApproval --> |Grade D approval|ODApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        EEApproval --> |Grade E approval|OEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
-        EFApproval --> |Grade F approval|OFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
+        ECApproval --> OCApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        EDApproval --> ODApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        EEApproval --> OEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
+        EFApproval --> OFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
         
         %% Connect all approval paths to review checklist
         ICApproval --> ReviewChecklist
