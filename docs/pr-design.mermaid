@@ -46,46 +46,27 @@ flowchart TB
     classDef production fill:#e3f2fd,stroke:#1976d2,color:#0d47a1,stroke-width:1px
     classDef itsm fill:#f3e5f5,stroke:#9c27b0,color:#6a1b9a,stroke-width:1px
     
-    subgraph Reference["Reference Information"]
-        direction LR
-        
-        subgraph Principles["Key Principles"]
-            direction TB
-            p1["Service Ownership: Service Owning team must approve all changes"]:::process
-            p2["4-eyes Principle: Independent review required for all changes"]:::process
-            p3["Cross-team: Requires approval from both teams following grade patterns"]:::process
-            p4["Solution Proving: Initial validation in sandbox before code review"]:::process
-            p5["Change Management: Production changes require ITSM approval"]:::process
-            p6["Jira Integration: All changes tracked in Jira throughout lifecycle"]:::process
-        end
-        
-        subgraph ColorKey["Color Key"]
-            direction TB
-            k1([Start/End Points]):::startEnd
-            k2{Decision Points}:::question
-            k3["Service Owning Team"]:::serviceOwning
-            k4["Sister Team"]:::sisterTeam
-            k5["Grade C"]:::gradeC
-            k6["Grade D"]:::gradeD
-            k7["Grade E"]:::gradeE
-            k8["Grade F"]:::gradeF
-            k9(Approval Steps):::approval
-            k10[[Review Checklist]]:::reviewChecklist
-            k11>Feedback Process]:::feedback
-            k12([Final Approval]):::finalApproval
-            k13[/"Jira Ticket Creation"/]:::jiraTicket
-            k13a["Jira Status Updates"]:::jiraStatus
-            k14["Sandbox Environment"]:::sandbox
-            k15["Staging Environment"]:::staging
-            k16["Production Environment"]:::production
-            k17{{ITSM Process}}:::itsm
-        end
-        
-        %% Force side-by-side layout
-        Principles --- ColorKey
+    subgraph Principles["Key Principles"]
+        direction TB
+        p1["Service Ownership: Service Owning team must approve all changes"]:::process
+        p2["4-eyes Principle: Independent review required for all changes"]:::process
+        p3["Cross-team: Requires approval from both teams following grade patterns"]:::process
+        p4["Solution Proving: Initial validation in sandbox before code review"]:::process
+        p5["Change Management: Production changes require ITSM approval"]:::process
+        p6["Jira Integration: All changes tracked in Jira throughout lifecycle"]:::process
     end
     
-    Reference ~~~ Process
+    Principles ~~~ ColorKey
+    
+    subgraph ColorKey["Color Key"]
+        k1([Start/End Points]):::startEnd --- k2{Decision Points}:::question --- k3["Service Owning Team"]:::serviceOwning --- k4["Sister Team"]:::sisterTeam
+        k5["Grade C"]:::gradeC --- k6["Grade D"]:::gradeD --- k7["Grade E"]:::gradeE --- k8["Grade F"]:::gradeF
+        k9(Approval Steps):::approval --- k10[[Review Checklist]]:::reviewChecklist --- k11>Feedback Process]:::feedback --- k12([Final Approval]):::finalApproval
+        k13[/"Jira Ticket Creation"/]:::jiraTicket --- k13a["Jira Status Updates"]:::jiraStatus --- k14["Sandbox Environment"]:::sandbox --- k15["Staging Environment"]:::staging
+        k16["Production Environment"]:::production --- k17{{ITSM Process}}:::itsm
+    end
+    
+    ColorKey ~~~ Process
     
     subgraph Process["Approval and Deployment Process"]
         direction TB
