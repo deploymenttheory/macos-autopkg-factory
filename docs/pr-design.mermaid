@@ -160,10 +160,10 @@ flowchart TB
         IF --> IFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
         
         %% Sister team approval path
-        ExternalGradeCheck -->|Grade C| EC["Collaborating Engineer: Grade C"]:::gradeC
-        ExternalGradeCheck -->|Grade D| ED["Collaborating Engineer: Grade D"]:::gradeD
-        ExternalGradeCheck -->|Grade E| EE["Collaborating Engineer: Grade E"]:::gradeE
-        ExternalGradeCheck -->|Grade F| EF["Collaborating Engineer: Grade F"]:::gradeF
+        ExternalGradeCheck -->|Grade C| EC["Collaborating Engineer:<br> Grade C"]:::gradeC
+        ExternalGradeCheck -->|Grade D| ED["Collaborating Engineer:<br> Grade D"]:::gradeD
+        ExternalGradeCheck -->|Grade E| EE["Collaborating Engineer:<br> Grade E"]:::gradeE
+        ExternalGradeCheck -->|Grade F| EF["Collaborating Engineer:<br> Grade F"]:::gradeF
         
         %% Sister team internal 4-eyes check
         EC --> ECApproval(Required: Grade D or above<br>from Sister Team for 4-eyes check):::approval
