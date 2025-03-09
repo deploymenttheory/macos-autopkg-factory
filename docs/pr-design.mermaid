@@ -131,10 +131,12 @@ flowchart LR
         
         ReviewChecklist["Reviewer Checklist:\n- Code quality standards\n- Security considerations\n- Test coverage\n- Documentation\n- Infrastructure plan verified"] --> FeedbackLoop{Feedback\nProvided?}
         
-        FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]
+        FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]:::feedback
         FeedbackLoop -->|No| FinalCodeApproval["Final Code Approval"]
         
-        AddressFeedback --> ReviewChecklist
+        %% NEW STEP: Update PR after addressing feedback
+        AddressFeedback --> UpdatePR["Update PR with changes"]:::feedback
+        UpdatePR --> ReviewChecklist
         
         %% Final staging deployment
         FinalCodeApproval --> MergePRStaging["Merge PR to Staging"]
@@ -189,7 +191,7 @@ flowchart LR
     class ICApproval,IDApproval,IEApproval,IFApproval approval
     class OCApproval,ODApproval,OEApproval,OFApproval approval
     class ReviewChecklist reviewChecklist
-    class AddressFeedback feedback
+    class AddressFeedback,UpdatePR feedback
     class FinalCodeApproval finalApproval
     
     %% Environment node colors
