@@ -129,7 +129,7 @@ flowchart LR
         OEApproval --> ReviewChecklist
         OFApproval --> ReviewChecklist
         
-        ReviewChecklist["Reviewer Checklist:\n- Code quality standards\n- Security considerations\n- Test coverage\n- Documentation\n- Infrastructure plan verified"] --> FeedbackLoop{Feedback\nProvided?}
+        ReviewChecklist["Reviewer Checklist:<br>- Code quality standards<br>- Security considerations<br>- Test coverage<br>- Documentation<br>- Infrastructure plan verified"] --> FeedbackLoop{Feedback<br>Provided?}
         
         FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]:::feedback
         FeedbackLoop -->|No| FinalCodeApproval["Final Code Approval"]
