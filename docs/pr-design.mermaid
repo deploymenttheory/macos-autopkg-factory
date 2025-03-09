@@ -3,31 +3,31 @@ flowchart LR
     %% Main flow colors
     classDef startEnd fill:#1a73e8,stroke:#0d47a1,color:white,stroke-width:2px
     classDef question fill:#ffab40,stroke:#f57c00,color:black,stroke-width:2px
-    classDef process fill:#f5f5f5,stroke:#9e9e9e,color:black
+    classDef process fill:#f5f5f5,stroke:#616161,color:black,stroke-width:1px
     classDef hidden fill:none,stroke:none,color:none
     
     %% Team colors
-    classDef serviceOwning fill:#4caf50,stroke:#2e7d32,color:white
-    classDef sisterTeam fill:#7986cb,stroke:#3949ab,color:white
+    classDef serviceOwning fill:#4caf50,stroke:#2e7d32,color:white,stroke-width:1px
+    classDef sisterTeam fill:#7986cb,stroke:#3949ab,color:white,stroke-width:1px
     
     %% Grade colors
-    classDef gradeC fill:#fff9c4,stroke:#fbc02d,color:black
-    classDef gradeD fill:#ffe0b2,stroke:#fb8c00,color:black
-    classDef gradeE fill:#c8e6c9,stroke:#43a047,color:black
-    classDef gradeF fill:#bbdefb,stroke:#1976d2,color:black
+    classDef gradeC fill:#fff9c4,stroke:#f9a825,color:black,stroke-width:1px
+    classDef gradeD fill:#ffe0b2,stroke:#e65100,color:black,stroke-width:1px
+    classDef gradeE fill:#c8e6c9,stroke:#2e7d32,color:black,stroke-width:1px
+    classDef gradeF fill:#bbdefb,stroke:#0d47a1,color:black,stroke-width:1px
     
     %% Approval colors
-    classDef approval fill:#e8f5e9,stroke:#4caf50,color:black
-    classDef reviewChecklist fill:#e3f2fd,stroke:#2196f3,color:black
-    classDef feedback fill:#f3e5f5,stroke:#9c27b0,color:black
-    classDef finalApproval fill:#1b5e20,stroke:#004d40,color:white
-    classDef noApproval fill:#e0e0e0,stroke:#9e9e9e,color:black
+    classDef approval fill:#e8f5e9,stroke:#2e7d32,color:black,stroke-width:1px
+    classDef reviewChecklist fill:#e3f2fd,stroke:#0d47a1,color:black,stroke-width:1px
+    classDef feedback fill:#f3e5f5,stroke:#6a1b9a,color:black,stroke-width:1px
+    classDef finalApproval fill:#1b5e20,stroke:#004d40,color:white,stroke-width:1px
+    classDef noApproval fill:#e0e0e0,stroke:#424242,color:black,stroke-width:1px
     
     %% Environment colors
-    classDef sandbox fill:#DCEDC8,stroke:#8BC34A,color:black
-    classDef staging fill:#FFE0B2,stroke:#FF9800,color:black
-    classDef production fill:#FFCDD2,stroke:#F44336,color:black
-    classDef itsm fill:#E1BEE7,stroke:#9C27B0,color:black
+    classDef sandbox fill:#DCEDC8,stroke:#558b2f,color:black,stroke-width:1px
+    classDef staging fill:#FFE0B2,stroke:#e65100,color:black,stroke-width:1px
+    classDef production fill:#FFCDD2,stroke:#b71c1c,color:black,stroke-width:1px
+    classDef itsm fill:#E1BEE7,stroke:#6a1b9a,color:black,stroke-width:1px
     
     subgraph Reference["Reference Information"]
         direction TB
@@ -181,6 +181,7 @@ UpdateRelease --> Complete["Change Complete"]:::production
     class OwnerCheck,InternalGradeCheck,ExternalGradeCheck,FeedbackLoop,SandboxValidation,StagingOK,ChangeApproval,ProdOK question
     class InternalPath,IC,ID,IE,IF serviceOwning
     class ExternalPath,EC,ED,EE,EF sisterTeam
+    class MergePRStaging,CreateGitHubRelease,CreatePRProd,MergePRProd process
     
     %% Grade-specific node colors
     class IC,EC gradeC
@@ -199,7 +200,7 @@ UpdateRelease --> Complete["Change Complete"]:::production
     %% Environment node colors
     class SandboxDev,SolutionProving,FixSolution sandbox
     class DeployStaging,StagingTest,FixStaging staging
-    class ProdEnv,ProdValidation,Rollback,Complete production
+    class ProdEnv,ProdValidation,Rollback,Complete,UpdateRelease production
     class RaiseITSM,ITSMDetails,ReviseChange,LearnFromFailure itsm
     
     %% Apply classes to color key
@@ -219,3 +220,4 @@ UpdateRelease --> Complete["Change Complete"]:::production
     class k15 staging
     class k16 production
     class k17 itsm
+    class p1,p2,p3,p4,p5 process
