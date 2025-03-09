@@ -61,19 +61,39 @@ flowchart TB
     
     subgraph BranchNaming["Branch Naming & Jira Ticket Conventions"]
         direction TB
-        b1["feat/descriptive_name/JIRA-123 - For new features"]:::branchNaming
-        b2["fix/descriptive_name/JIRA-123 - For bug fixes"]:::branchNaming
-        b3["docs/descriptive_name/JIRA-123 - For documentation updates"]:::branchNaming
-        b4["refactor/descriptive_name/JIRA-123 - For code refactoring"]:::branchNaming
-        b5["test/descriptive_name/JIRA-123 - For adding tests"]:::branchNaming
-        b6["chore/descriptive_name/JIRA-123 - For build process or tooling changes"]:::branchNaming
+        subgraph feat["Features"]
+            b1["Branch: feat/descriptive_name/JIRA-123"]:::branchNaming
+            j1["Jira: [FEAT] JIRA-123: Descriptive title of feature"]:::jiraStatus
+        end
         
-        j1["[FEAT] JIRA-123: Descriptive title of feature"]:::jiraStatus
-        j2["[FIX] JIRA-123: Descriptive title of fix"]:::jiraStatus
-        j3["[DOCS] JIRA-123: Descriptive title of documentation"]:::jiraStatus
-        j4["[REFACTOR] JIRA-123: Descriptive title of refactoring"]:::jiraStatus
-        j5["[TEST] JIRA-123: Descriptive title of test addition"]:::jiraStatus
-        j6["[CHORE] JIRA-123: Descriptive title of chore"]:::jiraStatus
+        subgraph fix["Bug Fixes"]
+            b2["Branch: fix/descriptive_name/JIRA-123"]:::branchNaming
+            j2["Jira: [FIX] JIRA-123: Descriptive title of fix"]:::jiraStatus
+        end
+        
+        subgraph docs["Documentation"]
+            b3["Branch: docs/descriptive_name/JIRA-123"]:::branchNaming
+            j3["Jira: [DOCS] JIRA-123: Descriptive title of documentation"]:::jiraStatus
+        end
+        
+        subgraph refactor["Refactoring"]
+            b4["Branch: refactor/descriptive_name/JIRA-123"]:::branchNaming
+            j4["Jira: [REFACTOR] JIRA-123: Descriptive title of refactoring"]:::jiraStatus
+        end
+        
+        subgraph test["Testing"]
+            b5["Branch: test/descriptive_name/JIRA-123"]:::branchNaming
+            j5["Jira: [TEST] JIRA-123: Descriptive title of test addition"]:::jiraStatus
+        end
+        
+        subgraph chore["Build/Tooling"]
+            b6["Branch: chore/descriptive_name/JIRA-123"]:::branchNaming
+            j6["Jira: [CHORE] JIRA-123: Descriptive title of chore"]:::jiraStatus
+        end
+        
+        %% Layout direction
+        feat --- fix --- docs
+        refactor --- test --- chore
     end
     
     BranchNaming ~~~ ColorKey
