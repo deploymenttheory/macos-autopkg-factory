@@ -149,21 +149,21 @@ flowchart TB
         ExternalPath --> ExternalGradeCheck{Author's<br>Grade?}
         
         %% Feature team approval path with approval in edge labels
-        InternalGradeCheck -->|Grade C approval| IC["Feature Team Engineer:<br>Grade C"]:::gradeC
-        InternalGradeCheck -->|Grade D approval| ID["Feature Team Engineer:<br>Grade D"]:::gradeD
-        InternalGradeCheck -->|Grade E approval| IE["Feature Team Engineer:<br>Grade E"]:::gradeE
-        InternalGradeCheck -->|Grade F approval| IF["Feature Team Engineer:<br>Grade F"]:::gradeF
+        InternalGradeCheck --> IC["Feature Team Engineer:<br>Grade C"]:::gradeC
+        InternalGradeCheck --> ID["Feature Team Engineer:<br>Grade D"]:::gradeD
+        InternalGradeCheck --> IE["Feature Team Engineer:<br>Grade E"]:::gradeE
+        InternalGradeCheck --> IF["Feature Team Engineer:<br>Grade F"]:::gradeF
         
         IC --> |Grade C approval flow|ICApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        ID --> |Grade C approval flow|IDApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        IE --> |Grade C approval flow|IEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
-        IF --> |Grade C approval flow|IFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
+        ID --> |Grade D approval flow|IDApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        IE --> |Grade E approval flow|IEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
+        IF --> |Grade F approval flow|IFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
         
         %% Sister team approval path with approval in edge labels
-        ExternalGradeCheck -->|Grade C approval| EC["Collaborating Engineer:<br>Grade C"]:::gradeC
-        ExternalGradeCheck -->|Grade D approval| ED["Collaborating Engineer:<br>Grade D"]:::gradeD
-        ExternalGradeCheck -->|Grade E approval| EE["Collaborating Engineer:<br>Grade E"]:::gradeE
-        ExternalGradeCheck -->|Grade F approval| EF["Collaborating Engineer:<br>Grade F"]:::gradeF
+        ExternalGradeCheck --> EC["Collaborating Engineer:<br>Grade C"]:::gradeC
+        ExternalGradeCheck --> ED["Collaborating Engineer:<br>Grade D"]:::gradeD
+        ExternalGradeCheck --> EE["Collaborating Engineer:<br>Grade E"]:::gradeE
+        ExternalGradeCheck --> EF["Collaborating Engineer:<br>Grade F"]:::gradeF
         
         %% Sister team internal 4-eyes check
         EC --> |Grade C approval flow|ECApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
