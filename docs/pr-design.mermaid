@@ -166,16 +166,16 @@ flowchart TB
         ExternalGradeCheck -->|Grade F approval| EF["Collaborating Engineer:<br>Grade F"]:::gradeF
         
         %% Sister team internal 4-eyes check
-        EC --> |Grade F approval|ECApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
-        ED --> |Grade F approval|EDApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
-        EE --> |Grade F approval|EEApproval(Required: Grade E or above<br>approval from Sister Team for 4-eyes check):::approval
+        EC --> |Grade C approval|ECApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
+        ED --> |Grade D approval|EDApproval(Required: Grade D or above<br>approval from Sister Team for 4-eyes check):::approval
+        EE --> |Grade E approval|EEApproval(Required: Grade E or above<br>approval from Sister Team for 4-eyes check):::approval
         EF --> |Grade F approval|EFApproval(Required: Grade E or F<br>approval from Sister Team for 4-eyes check):::approval
         
         %% Service owning team approval (same grade pattern)
-        ECApproval --> OCApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        EDApproval --> ODApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        EEApproval --> OEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
-        EFApproval --> OFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
+        ECApproval --> |Grade C approval|OCApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        EDApproval --> |Grade D approval|ODApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        EEApproval --> |Grade E approval|OEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
+        EFApproval --> |Grade F approval|OFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
         
         %% Connect all approval paths to review checklist
         ICApproval --> ReviewChecklist
