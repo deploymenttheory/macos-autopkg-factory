@@ -43,22 +43,22 @@ flowchart LR
         
         subgraph ColorKey["Color Key"]
             direction TB
-            k1["Start/End Points"]
-            k2["Decision Points"]
+            k1([Start/End Points])
+            k2{Decision Points}
             k3["Service Owning Team"]
             k4["Sister Team"]
             k5["Grade C"]
             k6["Grade D"]
             k7["Grade E"]
             k8["Grade F"]
-            k9["Approval Steps"]
-            k10["Review Checklist"]
-            k11["Feedback Process"]
-            k12["Final Approval"]
+            k9(Approval Steps)
+            k10[[Review Checklist]]
+            k11>Feedback Process]
+            k12([Final Approval])
             k14["Sandbox Environment"]
             k15["Staging Environment"]
             k16["Production Environment"]
-            k17["ITSM Process"]
+            k17{{ITSM Process}}
         end
         
         %% Force side-by-side layout
@@ -73,7 +73,7 @@ flowchart LR
         %% Sandbox Development (No PR)
         DevStart([Development Start]) --> SandboxDev["Direct Development in Sandbox"]:::sandbox
         SandboxDev --> SolutionProving["Solution Proving in Sandbox"]:::sandbox
-        SolutionProving --> SandboxValidation{Solution\nValidated?}
+        SolutionProving --> SandboxValidation{Solution<br>Validated?}
         
         SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]:::sandbox
         SandboxValidation -->|Yes| PR([Create PR for Staging])
@@ -81,13 +81,13 @@ flowchart LR
         FixSolution --> SolutionProving
         
         %% PR Approval Process for Staging
-        PR --> OwnerCheck{Is PR Author\nfrom Service Owning Team?}
+        PR --> OwnerCheck{Is PR Author<br>from Service Owning Team?}
         
         OwnerCheck -->|Yes| InternalPath["Feature Team Change"]
         OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]
         
-        InternalPath --> InternalGradeCheck{Author's\nGrade?}
-        ExternalPath --> ExternalGradeCheck{Author's\nGrade?}
+        InternalPath --> InternalGradeCheck{Author's<br>Grade?}
+        ExternalPath --> ExternalGradeCheck{Author's<br>Grade?}
         
         %% Feature team approval path
         InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]
@@ -95,10 +95,10 @@ flowchart LR
         InternalGradeCheck -->|Grade E| IE["Feature Team Grade E"]
         InternalGradeCheck -->|Grade F| IF["Feature Team Grade F"]
         
-        IC --> ICApproval["Required: Grade D or above\nfrom Service Owning Team"]
-        ID --> IDApproval["Required: Grade D or above\nfrom Service Owning Team"]
-        IE --> IEApproval["Required: Grade E or above\nfrom Service Owning Team"]
-        IF --> IFApproval["Required: Grade E or F\nfrom Service Owning Team"]
+        IC --> ICApproval(Required: Grade D or above<br>from Service Owning Team)
+        ID --> IDApproval(Required: Grade D or above<br>from Service Owning Team)
+        IE --> IEApproval(Required: Grade E or above<br>from Service Owning Team)
+        IF --> IFApproval(Required: Grade E or F<br>from Service Owning Team)
         
         %% Sister team approval path
         ExternalGradeCheck -->|Grade C| EC["External Grade C"]
@@ -107,16 +107,16 @@ flowchart LR
         ExternalGradeCheck -->|Grade F| EF["External Grade F"]
         
         %% Sister team internal 4-eyes check
-        EC --> ECApproval["Required: Grade D or above\nfrom Sister Team (4-eyes)"]
-        ED --> EDApproval["Required: Grade D or above\nfrom Sister Team (4-eyes)"]
-        EE --> EEApproval["Required: Grade E or above\nfrom Sister Team (4-eyes)"]
-        EF --> EFApproval["Required: Grade E or F\nfrom Sister Team (4-eyes)"]
+        EC --> ECApproval(Required: Grade D or above<br>from Sister Team 4-eyes)
+        ED --> EDApproval(Required: Grade D or above<br>from Sister Team 4-eyes)
+        EE --> EEApproval(Required: Grade E or above<br>from Sister Team 4-eyes)
+        EF --> EFApproval(Required: Grade E or F<br>from Sister Team 4-eyes)
         
         %% Service owning team approval (same grade pattern)
-        ECApproval --> OCApproval["Required: Grade D or above\nfrom Service Owning Team"]
-        EDApproval --> ODApproval["Required: Grade D or above\nfrom Service Owning Team"]
-        EEApproval --> OEApproval["Required: Grade E or above\nfrom Service Owning Team"]
-        EFApproval --> OFApproval["Required: Grade E or F\nfrom Service Owning Team"]
+        ECApproval --> OCApproval(Required: Grade D or above<br>from Service Owning Team)
+        EDApproval --> ODApproval(Required: Grade D or above<br>from Service Owning Team)
+        EEApproval --> OEApproval(Required: Grade E or above<br>from Service Owning Team)
+        EFApproval --> OFApproval(Required: Grade E or F<br>from Service Owning Team)
         
         %% Connect all approval paths to review checklist
         ICApproval --> ReviewChecklist
@@ -129,13 +129,13 @@ flowchart LR
         OEApproval --> ReviewChecklist
         OFApproval --> ReviewChecklist
         
-        ReviewChecklist["Reviewer Checklist:<br>- Code quality standards<br>- Security considerations<br>- Test coverage<br>- Documentation<br>- Infrastructure plan verified"] --> FeedbackLoop{Feedback<br>Provided?}
+        ReviewChecklist[[Reviewer Checklist:<br>- Code quality standards<br>- Security considerations<br>- Test coverage<br>- Documentation<br>- Infrastructure plan verified]] --> FeedbackLoop{Feedback<br>Provided?}
         
-        FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]:::feedback
-        FeedbackLoop -->|No| FinalCodeApproval["Final Code Approval"]
+        FeedbackLoop -->|Yes| AddressFeedback>Author addresses<br>feedback]:::feedback
+        FeedbackLoop -->|No| FinalCodeApproval([Final Code Approval])
         
         %% NEW STEP: Update PR after addressing feedback
-        AddressFeedback --> UpdatePR["Update PR with changes"]:::feedback
+        AddressFeedback --> UpdatePR>Update PR with changes]:::feedback
         UpdatePR --> ReviewChecklist
         
         %% Final staging deployment
@@ -143,20 +143,20 @@ flowchart LR
         MergePRStaging --> DeployStaging["Deploy to Staging Environment"]:::staging
         
         DeployStaging --> StagingTest["Validation Tests in Staging"]:::staging
-        StagingTest --> StagingOK{Staging\nValidation\nOK?}
+        StagingTest --> StagingOK{Staging<br>Validation<br>OK?}
         StagingOK -->|No| FixStaging["Fix Issues"]:::staging
-        StagingOK -->|Yes| CreateGitHubRelease["Create GitHub Release\nwith Semantic Versioning"]
-CreateGitHubRelease --> CreatePRProd["Create PR for Production"]
+        StagingOK -->|Yes| CreateGitHubRelease[(Create GitHub Release<br>with Semantic Versioning)]
+        CreateGitHubRelease --> CreatePRProd["Create PR for Production"]
         
-        CreatePRProd --> RaiseITSM["Raise Change Request in ITSM Tool"]:::itsm
+        CreatePRProd --> RaiseITSM{{Raise Change Request in ITSM Tool}}:::itsm
         
         FixStaging --> PR
         
         %% Production Path via ITSM
-        RaiseITSM --> ITSMDetails["Include:\n- Change Intent (TF Plan)\n- Staging Test Results\n- Risk Assessment"]:::itsm
-        ITSMDetails --> ChangeApproval{Change\nApproval\nProcess}
+        RaiseITSM --> ITSMDetails{{Include:<br>- Change Intent TF Plan<br>- Staging Test Results<br>- Risk Assessment}}:::itsm
+        ITSMDetails --> ChangeApproval{Change<br>Approval<br>Process}
         
-        ChangeApproval -->|Rejected| ReviseChange["Revise Change"]:::itsm
+        ChangeApproval -->|Rejected| ReviseChange{{Revise Change}}:::itsm
         ChangeApproval -->|Approved| MergePRProd["Merge PR to Production"]
         
         MergePRProd --> ProdEnv["Deploy to Production Environment"]:::production
@@ -164,13 +164,13 @@ CreateGitHubRelease --> CreatePRProd["Create PR for Production"]
         ReviseChange --> PR
         
         ProdEnv --> ProdValidation["Production Validation"]:::production
-        ProdValidation --> ProdOK{Production\nValidation\nOK?}
+        ProdValidation --> ProdOK{Production<br>Validation<br>OK?}
         
-        ProdOK -->|No| Rollback["Rollback to Last Known Good\nProduction Release Version"]:::production
-        ProdOK -->|Yes| UpdateRelease["Update GitHub Release\nto 'Deployed to Production'"]:::production
-UpdateRelease --> Complete["Change Complete"]:::production
+        ProdOK -->|No| Rollback["Rollback to Last Known Good<br>Production Release Version"]:::production
+        ProdOK -->|Yes| UpdateRelease[(Update GitHub Release<br>to Deployed to Production)]:::production
+        UpdateRelease --> Complete["Change Complete"]:::production
         
-        Rollback --> LearnFromFailure["Document Learnings"]:::itsm
+        Rollback --> LearnFromFailure{{Document Learnings}}:::itsm
         LearnFromFailure --> ReviseChange
         
         Complete --> Completion([Process Complete])
