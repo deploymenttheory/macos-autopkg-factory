@@ -23,6 +23,7 @@ flowchart TB
     classDef hidden fill:none,stroke:none,color:none
     classDef jiraTicket fill:#0065ff,stroke:#0052cc,color:white,stroke-width:1px
     classDef jiraStatus fill:#deebff,stroke:#0052cc,color:#0052cc,stroke-width:1px
+    classDef branchNaming fill:#e1f5fe,stroke:#039be5,color:#01579b,stroke-width:1px
     
     %% Team colors
     classDef serviceOwning fill:#00897b,stroke:#00695c,color:white,stroke-width:1px
@@ -56,7 +57,26 @@ flowchart TB
         p6["Jira Integration: All changes tracked in Jira throughout lifecycle"]:::process
     end
     
-    Principles ~~~ ColorKey
+    Principles ~~~ BranchNaming
+    
+    subgraph BranchNaming["Branch Naming & Jira Ticket Conventions"]
+        direction TB
+        b1["feat/descriptive_name/JIRA-123 - For new features"]:::branchNaming
+        b2["fix/descriptive_name/JIRA-123 - For bug fixes"]:::branchNaming
+        b3["docs/descriptive_name/JIRA-123 - For documentation updates"]:::branchNaming
+        b4["refactor/descriptive_name/JIRA-123 - For code refactoring"]:::branchNaming
+        b5["test/descriptive_name/JIRA-123 - For adding tests"]:::branchNaming
+        b6["chore/descriptive_name/JIRA-123 - For build process or tooling changes"]:::branchNaming
+        
+        j1["[FEAT] JIRA-123: Descriptive title of feature"]:::jiraStatus
+        j2["[FIX] JIRA-123: Descriptive title of fix"]:::jiraStatus
+        j3["[DOCS] JIRA-123: Descriptive title of documentation"]:::jiraStatus
+        j4["[REFACTOR] JIRA-123: Descriptive title of refactoring"]:::jiraStatus
+        j5["[TEST] JIRA-123: Descriptive title of test addition"]:::jiraStatus
+        j6["[CHORE] JIRA-123: Descriptive title of chore"]:::jiraStatus
+    end
+    
+    BranchNaming ~~~ ColorKey
     
     subgraph ColorKey["Color Key"]
         k1([Start/End Points]):::startEnd --- k2{Decision Points}:::question --- k3["Service Owning Team"]:::serviceOwning --- k4["Sister Team"]:::sisterTeam
@@ -72,7 +92,8 @@ flowchart TB
         direction TB
         %% Jira Integration - Start
         JiraCreate[/"Create Jira Ticket
-        Feature/Bug/Task"/]:::jiraTicket
+        With Conventional Format
+        [TYPE] JIRA-123: Title"/]:::jiraTicket
         
         JiraCreate --> JiraRefine["Refinement:
         Requirements,
@@ -88,7 +109,8 @@ flowchart TB
         SolutionProving --> SandboxValidation{Solution<br>Validated?}
         
         SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]:::sandbox
-        SandboxValidation -->|Yes| JiraBranch["Branch: JIRA-123-feature"]:::jiraStatus
+        SandboxValidation -->|Yes| JiraBranch["Branch Format: 
+        type/descriptive_name/JIRA-123"]:::jiraStatus
         
         FixSolution --> SolutionProving
         
@@ -103,8 +125,8 @@ flowchart TB
         OwnerCheck -->|Yes| InternalPath["Feature Team Change"]:::serviceOwning
         OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]:::sisterTeam
         
-        InternalPath --> InternalGradeCheck{Author's<br>Job<br>Grade?}
-        ExternalPath --> ExternalGradeCheck{Author's<br>Job<br>Grade?}
+        InternalPath --> InternalGradeCheck{Author's<br>Grade?}
+        ExternalPath --> ExternalGradeCheck{Author's<br>Grade?}
         
         %% Feature team approval path
         InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]:::gradeC
@@ -241,3 +263,7 @@ flowchart TB
     %% Jira nodes
     class JiraCreate,JiraLinkPR jiraTicket
     class JiraRefine,JiraInProgress,JiraBranch,JiraReview,JiraReviewComment,JiraFeedback,JiraUpdated,JiraApproved,JiraStaging,JiraFailedTest,JiraStagingPassed,JiraITSM,JiraRejected,JiraITSMApproved,JiraDeploying,JiraRollback,JiraComplete jiraStatus
+    
+    %% Branch naming conventions
+    class b1,b2,b3,b4,b5,b6 branchNaming
+    class j1,j2,j3,j4,j5,j6 jiraStatus
