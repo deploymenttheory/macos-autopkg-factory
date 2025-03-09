@@ -1,3 +1,20 @@
+%%{init: {
+  'theme': 'base', 
+  'themeVariables': { 
+    'primaryColor': '#0277bd',
+    'primaryTextColor': '#ffffff',
+    'primaryBorderColor': '#01579b',
+    'lineColor': '#37474f',
+    'secondaryColor': '#0097a7',
+    'tertiaryColor': '#f3f9fd',
+    'canvasBg': '#f8fcff'
+  },
+  'flowchart': {
+    'curve': 'basis',
+    'diagramPadding': 20
+  }
+}}%%
+
 flowchart TB
     %% Main flow colors - Professional Blue Theme
     classDef startEnd fill:#0277bd,stroke:#01579b,color:white,stroke-width:2px
@@ -30,7 +47,7 @@ flowchart TB
     classDef itsm fill:#f3e5f5,stroke:#9c27b0,color:#6a1b9a,stroke-width:1px
     
     subgraph Reference["Reference Information"]
-        direction TB
+        direction LR
         
         subgraph Principles["Key Principles"]
             direction TB
@@ -65,11 +82,10 @@ flowchart TB
         end
         
         %% Force side-by-side layout
-        Principles -.- ColorKey
+        Principles --- ColorKey
     end
     
-    spacer1[" "]:::hidden
-    Reference -.- spacer1:::hidden
+    Reference ~~~ Process
     
     subgraph Process["Approval and Deployment Process"]
         direction TB
