@@ -21,6 +21,7 @@ flowchart LR
     classDef reviewChecklist fill:#e3f2fd,stroke:#2196f3,color:black
     classDef feedback fill:#f3e5f5,stroke:#9c27b0,color:black
     classDef finalApproval fill:#1b5e20,stroke:#004d40,color:white
+    classDef noApproval fill:#e0e0e0,stroke:#9e9e9e,color:black
     
     %% Environment colors
     classDef sandbox fill:#DCEDC8,stroke:#8BC34A,color:black
@@ -54,10 +55,10 @@ flowchart LR
             k10["Review Checklist"]
             k11["Feedback Process"]
             k12["Final Approval"]
-            k13["Sandbox Environment"]
-            k14["Staging Environment"]
-            k15["Production Environment"]
-            k16["ITSM Process"]
+            k14["Sandbox Environment"]
+            k15["Staging Environment"]
+            k16["Production Environment"]
+            k17["ITSM Process"]
         end
         
         %% Force side-by-side layout
@@ -69,13 +70,18 @@ flowchart LR
     
     subgraph Process["Approval and Deployment Process"]
         direction TB
-        PR([New PR Created]) --> SolutionProving["Solution Proving in Sandbox"]
+        %% Sandbox Development (No PR)
+        DevStart([Development Start]) --> SandboxDev["Direct Development in Sandbox"]:::sandbox
+        SandboxDev --> SolutionProving["Solution Proving in Sandbox"]:::sandbox
         SolutionProving --> SandboxValidation{Solution\nValidated?}
         
-        SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]
-        SandboxValidation -->|Yes| OwnerCheck{Is PR Author\nfrom Service Owning Team?}
+        SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]:::sandbox
+        SandboxValidation -->|Yes| PR([Create PR for Staging])
         
         FixSolution --> SolutionProving
+        
+        %% PR Approval Process for Staging
+        PR --> OwnerCheck{Is PR Author\nfrom Service Owning Team?}
         
         OwnerCheck -->|Yes| InternalPath["Feature Team Change"]
         OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]
@@ -89,9 +95,9 @@ flowchart LR
         InternalGradeCheck -->|Grade E| IE["Feature Team Grade E"]
         InternalGradeCheck -->|Grade F| IF["Feature Team Grade F"]
         
-        IC --> ICApproval["Required: Grade D+\nfrom Service Owning Team"]
-        ID --> IDApproval["Required: Grade D+\nfrom Service Owning Team"]
-        IE --> IEApproval["Required: Grade E+\nfrom Service Owning Team"]
+        IC --> ICApproval["Required: Grade D or above\nfrom Service Owning Team"]
+        ID --> IDApproval["Required: Grade D or above\nfrom Service Owning Team"]
+        IE --> IEApproval["Required: Grade E or above\nfrom Service Owning Team"]
         IF --> IFApproval["Required: Grade E or F\nfrom Service Owning Team"]
         
         %% Sister team approval path
@@ -101,15 +107,15 @@ flowchart LR
         ExternalGradeCheck -->|Grade F| EF["External Grade F"]
         
         %% Sister team internal 4-eyes check
-        EC --> ECApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
-        ED --> EDApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
-        EE --> EEApproval["Required: Grade E+\nfrom Sister Team (4-eyes)"]
+        EC --> ECApproval["Required: Grade D or above\nfrom Sister Team (4-eyes)"]
+        ED --> EDApproval["Required: Grade D or above\nfrom Sister Team (4-eyes)"]
+        EE --> EEApproval["Required: Grade E or above\nfrom Sister Team (4-eyes)"]
         EF --> EFApproval["Required: Grade E or F\nfrom Sister Team (4-eyes)"]
         
         %% Service owning team approval (same grade pattern)
-        ECApproval --> OCApproval["Required: Grade D+\nfrom Service Owning Team"]
-        EDApproval --> ODApproval["Required: Grade D+\nfrom Service Owning Team"]
-        EEApproval --> OEApproval["Required: Grade E+\nfrom Service Owning Team"]
+        ECApproval --> OCApproval["Required: Grade D or above\nfrom Service Owning Team"]
+        EDApproval --> ODApproval["Required: Grade D or above\nfrom Service Owning Team"]
+        EEApproval --> OEApproval["Required: Grade E or above\nfrom Service Owning Team"]
         EFApproval --> OFApproval["Required: Grade E or F\nfrom Service Owning Team"]
         
         %% Connect all approval paths to review checklist
@@ -130,38 +136,39 @@ flowchart LR
         
         AddressFeedback --> ReviewChecklist
         
-        %% Environment Progression
-        FinalCodeApproval --> DeployStaging["Deploy to Staging Environment"]
+        %% Final staging deployment
+        FinalCodeApproval --> DeployStaging["Deploy to Staging Environment"]:::staging
         
-        DeployStaging --> StagingTest["Validation Tests in Staging"]
+        DeployStaging --> StagingTest["Validation Tests in Staging"]:::staging
         StagingTest --> StagingOK{Staging\nValidation\nOK?}
-        StagingOK -->|No| FixStaging["Fix Issues"]
-        StagingOK -->|Yes| RaiseITSM["Raise Change Request in ITSM Tool"]
+        StagingOK -->|No| FixStaging["Fix Issues"]:::staging
+        StagingOK -->|Yes| RaiseITSM["Raise Change Request in ITSM Tool"]:::itsm
         
         FixStaging --> PR
         
-        RaiseITSM --> ITSMDetails["Include:\n- Change Intent (TF Plan)\n- Staging Test Results\n- Risk Assessment"]
+        %% Production Path via ITSM
+        RaiseITSM --> ITSMDetails["Include:\n- Change Intent (TF Plan)\n- Staging Test Results\n- Risk Assessment"]:::itsm
         ITSMDetails --> ChangeApproval{Change\nApproval\nProcess}
         
-        ChangeApproval -->|Rejected| ReviseChange["Revise Change"]
-        ChangeApproval -->|Approved| ProdEnv["Deploy to Production Environment"]
+        ChangeApproval -->|Rejected| ReviseChange["Revise Change"]:::itsm
+        ChangeApproval -->|Approved| ProdEnv["Deploy to Production Environment"]:::production
         
         ReviseChange --> PR
         
-        ProdEnv --> ProdValidation["Production Validation"]
+        ProdEnv --> ProdValidation["Production Validation"]:::production
         ProdValidation --> ProdOK{Production\nValidation\nOK?}
         
-        ProdOK -->|No| Rollback["Rollback Change"]
-        ProdOK -->|Yes| Complete["Change Complete"]
+        ProdOK -->|No| Rollback["Rollback Change"]:::production
+        ProdOK -->|Yes| Complete["Change Complete"]:::production
         
-        Rollback --> LearnFromFailure["Document Learnings"]
+        Rollback --> LearnFromFailure["Document Learnings"]:::itsm
         LearnFromFailure --> ReviseChange
         
-        Complete --> MergePR([Merge Completion Record])
+        Complete --> Completion([Process Complete])
     end
     
     %% Apply classes
-    class PR,MergePR startEnd
+    class DevStart,PR,Completion startEnd
     class OwnerCheck,InternalGradeCheck,ExternalGradeCheck,FeedbackLoop,SandboxValidation,StagingOK,ChangeApproval,ProdOK question
     class InternalPath,IC,ID,IE,IF serviceOwning
     class ExternalPath,EC,ED,EE,EF sisterTeam
@@ -181,7 +188,7 @@ flowchart LR
     class FinalCodeApproval finalApproval
     
     %% Environment node colors
-    class SolutionProving,FixSolution sandbox
+    class SandboxDev,SolutionProving,FixSolution sandbox
     class DeployStaging,StagingTest,FixStaging staging
     class ProdEnv,ProdValidation,Rollback,Complete production
     class RaiseITSM,ITSMDetails,ReviseChange,LearnFromFailure itsm
@@ -199,7 +206,7 @@ flowchart LR
     class k10 reviewChecklist
     class k11 feedback
     class k12 finalApproval
-    class k13 sandbox
-    class k14 staging
-    class k15 production
-    class k16 itsm
+    class k14 sandbox
+    class k15 staging
+    class k16 production
+    class k17 itsm
