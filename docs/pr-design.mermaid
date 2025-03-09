@@ -145,7 +145,8 @@ flowchart LR
         DeployStaging --> StagingTest["Validation Tests in Staging"]:::staging
         StagingTest --> StagingOK{Staging\nValidation\nOK?}
         StagingOK -->|No| FixStaging["Fix Issues"]:::staging
-        StagingOK -->|Yes| CreatePRProd["Create PR for Production"]
+        StagingOK -->|Yes| CreateGitHubRelease["Create GitHub Release\nwith Semantic Versioning"]
+CreateGitHubRelease --> CreatePRProd["Create PR for Production"]
         
         CreatePRProd --> RaiseITSM["Raise Change Request in ITSM Tool"]:::itsm
         
@@ -165,8 +166,9 @@ flowchart LR
         ProdEnv --> ProdValidation["Production Validation"]:::production
         ProdValidation --> ProdOK{Production\nValidation\nOK?}
         
-        ProdOK -->|No| Rollback["Rollback Change"]:::production
-        ProdOK -->|Yes| Complete["Change Complete"]:::production
+        ProdOK -->|No| Rollback["Rollback to Last Known Good\nProduction Release Version"]:::production
+        ProdOK -->|Yes| UpdateRelease["Update GitHub Release\nto 'Deployed to Production'"]:::production
+UpdateRelease --> Complete["Change Complete"]:::production
         
         Rollback --> LearnFromFailure["Document Learnings"]:::itsm
         LearnFromFailure --> ReviseChange
