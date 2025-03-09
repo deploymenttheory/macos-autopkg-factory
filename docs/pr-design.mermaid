@@ -154,10 +154,10 @@ flowchart TB
         InternalGradeCheck -->|Grade E approval| IE["Feature Team Engineer:<br>Grade E"]:::gradeE
         InternalGradeCheck -->|Grade F approval| IF["Feature Team Engineer:<br>Grade F"]:::gradeF
         
-        IC --> |Grade C approval|ICApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        ID --> |Grade C approval|IDApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
-        IE --> |Grade C approval|IEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
-        IF --> |Grade C approval|IFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
+        IC --> |Grade C approval flow|ICApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        ID --> |Grade C approval flow|IDApproval(Required: Grade D or above<br>approval from Service Owning Team):::approval
+        IE --> |Grade C approval flow|IEApproval(Required: Grade E or above<br>approval from Service Owning Team):::approval
+        IF --> |Grade C approval flow|IFApproval(Required: Grade E or F<br>approval from Service Owning Team):::approval
         
         %% Sister team approval path with approval in edge labels
         ExternalGradeCheck -->|Grade C approval| EC["Collaborating Engineer:<br>Grade C"]:::gradeC
