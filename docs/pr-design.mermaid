@@ -1,33 +1,48 @@
-%%{init: {'theme': 'base', 'themeVariables': { 'canvasBg': '#f0f0f0' }}}%%
+%%{init: {
+  'theme': 'base', 
+  'themeVariables': { 
+    'primaryColor': '#0277bd',
+    'primaryTextColor': '#ffffff',
+    'primaryBorderColor': '#01579b',
+    'lineColor': '#37474f',
+    'secondaryColor': '#0097a7',
+    'tertiaryColor': '#f3f9fd',
+    'canvasBg': '#f8fcff'
+  },
+  'flowchart': {
+    'curve': 'basis',
+    'diagramPadding': 20
+  }
+}}%%
+
 flowchart LR
-    %% Main flow colors
-    classDef startEnd fill:#1a73e8,stroke:#0d47a1,color:white,stroke-width:2px
-    classDef question fill:#ffab40,stroke:#f57c00,color:black,stroke-width:2px
-    classDef process fill:#f5f5f5,stroke:#616161,color:black,stroke-width:1px
+    %% Main flow colors - Professional Blue Theme
+    classDef startEnd fill:#0277bd,stroke:#01579b,color:white,stroke-width:2px
+    classDef question fill:#0097a7,stroke:#00838f,color:white,stroke-width:2px
+    classDef process fill:#ffffff,stroke:#90a4ae,color:#37474f,stroke-width:1px
     classDef hidden fill:none,stroke:none,color:none
     
     %% Team colors
-    classDef serviceOwning fill:#4caf50,stroke:#2e7d32,color:white,stroke-width:1px
-    classDef sisterTeam fill:#7986cb,stroke:#3949ab,color:white,stroke-width:1px
+    classDef serviceOwning fill:#00897b,stroke:#00695c,color:white,stroke-width:1px
+    classDef sisterTeam fill:#5c6bc0,stroke:#3949ab,color:white,stroke-width:1px
     
     %% Grade colors
-    classDef gradeC fill:#fff9c4,stroke:#f9a825,color:black,stroke-width:1px
-    classDef gradeD fill:#ffe0b2,stroke:#e65100,color:black,stroke-width:1px
-    classDef gradeE fill:#c8e6c9,stroke:#2e7d32,color:black,stroke-width:1px
-    classDef gradeF fill:#bbdefb,stroke:#0d47a1,color:black,stroke-width:1px
+    classDef gradeC fill:#fff9c4,stroke:#fbc02d,color:#424242,stroke-width:1px
+    classDef gradeD fill:#ffe0b2,stroke:#fb8c00,color:#424242,stroke-width:1px
+    classDef gradeE fill:#c8e6c9,stroke:#43a047,color:#424242,stroke-width:1px
+    classDef gradeF fill:#bbdefb,stroke:#1976d2,color:#424242,stroke-width:1px
     
     %% Approval colors
-    classDef approval fill:#e8f5e9,stroke:#2e7d32,color:black,stroke-width:1px
-    classDef reviewChecklist fill:#e3f2fd,stroke:#0d47a1,color:black,stroke-width:1px
-    classDef feedback fill:#f3e5f5,stroke:#6a1b9a,color:black,stroke-width:1px
-    classDef finalApproval fill:#1b5e20,stroke:#004d40,color:white,stroke-width:1px
-    classDef noApproval fill:#e0e0e0,stroke:#424242,color:black,stroke-width:1px
+    classDef approval fill:#e8f5e9,stroke:#43a047,color:#2e7d32,stroke-width:1px
+    classDef reviewChecklist fill:#e3f2fd,stroke:#1976d2,color:#0d47a1,stroke-width:1px
+    classDef feedback fill:#f3e5f5,stroke:#8e24aa,color:#4a148c,stroke-width:1px
+    classDef finalApproval fill:#00695c,stroke:#004d40,color:white,stroke-width:1px
     
     %% Environment colors
-    classDef sandbox fill:#DCEDC8,stroke:#558b2f,color:black,stroke-width:1px
-    classDef staging fill:#FFE0B2,stroke:#e65100,color:black,stroke-width:1px
-    classDef production fill:#FFCDD2,stroke:#b71c1c,color:black,stroke-width:1px
-    classDef itsm fill:#E1BEE7,stroke:#6a1b9a,color:black,stroke-width:1px
+    classDef sandbox fill:#e8f5e9,stroke:#66bb6a,color:#2e7d32,stroke-width:1px
+    classDef staging fill:#fff8e1,stroke:#ffa000,color:#e65100,stroke-width:1px
+    classDef production fill:#e3f2fd,stroke:#1976d2,color:#0d47a1,stroke-width:1px
+    classDef itsm fill:#f3e5f5,stroke:#9c27b0,color:#6a1b9a,stroke-width:1px
     
     subgraph Reference["Reference Information"]
         direction TB
