@@ -1,0 +1,221 @@
+flowchart LR
+    %% Main flow colors - Professional Blue Theme
+    classDef startEnd fill:#0277bd,stroke:#01579b,color:white,stroke-width:2px
+    classDef question fill:#0097a7,stroke:#00838f,color:white,stroke-width:2px
+    classDef process fill:#ffffff,stroke:#90a4ae,color:#37474f,stroke-width:1px
+    classDef hidden fill:none,stroke:none,color:none
+    classDef jiraTicket fill:#0065ff,stroke:#0052cc,color:white,stroke-width:1px
+    classDef jiraStatus fill:#deebff,stroke:#0052cc,color:#0052cc,stroke-width:1px
+    
+    %% Team colors
+    classDef serviceOwning fill:#00897b,stroke:#00695c,color:white,stroke-width:1px
+    classDef sisterTeam fill:#5c6bc0,stroke:#3949ab,color:white,stroke-width:1px
+    
+    %% Grade colors
+    classDef gradeC fill:#fff9c4,stroke:#fbc02d,color:#424242,stroke-width:1px
+    classDef gradeD fill:#ffe0b2,stroke:#fb8c00,color:#424242,stroke-width:1px
+    classDef gradeE fill:#c8e6c9,stroke:#43a047,color:#424242,stroke-width:1px
+    classDef gradeF fill:#bbdefb,stroke:#1976d2,color:#424242,stroke-width:1px
+    
+    %% Approval colors
+    classDef approval fill:#e8f5e9,stroke:#43a047,color:#2e7d32,stroke-width:1px
+    classDef reviewChecklist fill:#e3f2fd,stroke:#1976d2,color:#0d47a1,stroke-width:1px
+    classDef feedback fill:#f3e5f5,stroke:#8e24aa,color:#4a148c,stroke-width:1px
+    classDef finalApproval fill:#00695c,stroke:#004d40,color:white,stroke-width:1px
+    
+    %% Environment colors
+    classDef sandbox fill:#e8f5e9,stroke:#66bb6a,color:#2e7d32,stroke-width:1px
+    classDef staging fill:#fff8e1,stroke:#ffa000,color:#e65100,stroke-width:1px
+    classDef production fill:#e3f2fd,stroke:#1976d2,color:#0d47a1,stroke-width:1px
+    classDef itsm fill:#f3e5f5,stroke:#9c27b0,color:#6a1b9a,stroke-width:1px
+    
+    %% Jira Integration - Start
+    JiraCreate[/"Create Jira Ticket
+    Feature/Bug/Task"/]:::jiraTicket
+    
+    JiraCreate --> JiraRefine["Refinement:
+    Requirements,
+    Acceptance Criteria"]:::jiraStatus
+    
+    JiraRefine --> JiraInProgress["Status: In Progress"]:::jiraStatus
+    
+    JiraInProgress --> DevStart([Development Start])
+    
+    %% Sandbox Development (No PR)
+    DevStart --> SandboxDev["Direct Development in Sandbox"]:::sandbox
+    SandboxDev --> SolutionProving["Solution Proving in Sandbox"]:::sandbox
+    SolutionProving --> SandboxValidation{Solution<br>Validated?}
+    
+    SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]:::sandbox
+    SandboxValidation -->|Yes| JiraBranch["Branch: JIRA-123-feature"]:::jiraStatus
+    
+    FixSolution --> SolutionProving
+    
+    JiraBranch --> PR([Create PR for Staging])
+    
+    %% PR Approval Process for Staging
+    PR --> JiraLinkPR["Link PR to Jira Ticket"]:::jiraStatus
+    JiraLinkPR --> JiraReview["Status: In Review"]:::jiraStatus
+    
+    JiraReview --> OwnerCheck{Is PR Author<br>from Service Owning Team?}
+    
+    OwnerCheck -->|Yes| InternalPath["Feature Team Change"]
+    OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]
+    
+    InternalPath --> InternalGradeCheck{Author's<br>Grade?}
+    ExternalPath --> ExternalGradeCheck{Author's<br>Grade?}
+    
+    %% Feature team approval path
+    InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]
+    InternalGradeCheck -->|Grade D| ID["Feature Team Grade D"]
+    InternalGradeCheck -->|Grade E| IE["Feature Team Grade E"]
+    InternalGradeCheck -->|Grade F| IF["Feature Team Grade F"]
+    
+    IC --> ICApproval(Required: Grade D or above<br>from Service Owning Team)
+    ID --> IDApproval(Required: Grade D or above<br>from Service Owning Team)
+    IE --> IEApproval(Required: Grade E or above<br>from Service Owning Team)
+    IF --> IFApproval(Required: Grade E or F<br>from Service Owning Team)
+    
+    %% Sister team approval path
+    ExternalGradeCheck -->|Grade C| EC["External Grade C"]
+    ExternalGradeCheck -->|Grade D| ED["External Grade D"]
+    ExternalGradeCheck -->|Grade E| EE["External Grade E"]
+    ExternalGradeCheck -->|Grade F| EF["External Grade F"]
+    
+    %% Sister team internal 4-eyes check
+    EC --> ECApproval(Required: Grade D or above<br>from Sister Team 4-eyes)
+    ED --> EDApproval(Required: Grade D or above<br>from Sister Team 4-eyes)
+    EE --> EEApproval(Required: Grade E or above<br>from Sister Team 4-eyes)
+    EF --> EFApproval(Required: Grade E or F<br>from Sister Team 4-eyes)
+    
+    %% Service owning team approval (same grade pattern)
+    ECApproval --> OCApproval(Required: Grade D or above<br>from Service Owning Team)
+    EDApproval --> ODApproval(Required: Grade D or above<br>from Service Owning Team)
+    EEApproval --> OEApproval(Required: Grade E or above<br>from Service Owning Team)
+    EFApproval --> OFApproval(Required: Grade E or F<br>from Service Owning Team)
+    
+    %% Connect all approval paths to review checklist
+    ICApproval --> ReviewChecklist
+    IDApproval --> ReviewChecklist
+    IEApproval --> ReviewChecklist
+    IFApproval --> ReviewChecklist
+    
+    OCApproval --> ReviewChecklist
+    ODApproval --> ReviewChecklist
+    OEApproval --> ReviewChecklist
+    OFApproval --> ReviewChecklist
+    
+    ReviewChecklist[[Reviewer Checklist:<br>- Code quality standards<br>- Security considerations<br>- Test coverage<br>- Documentation<br>- Infrastructure plan verified]]
+    
+    ReviewChecklist --> JiraReviewComment["Add Review Comments 
+    to Jira (GitHub Integration)"]:::jiraStatus
+    
+    JiraReviewComment --> FeedbackLoop{Feedback<br>Provided?}
+    
+    FeedbackLoop -->|Yes| JiraFeedback["Status: 
+    Changes Requested"]:::jiraStatus
+    
+    JiraFeedback --> AddressFeedback>Author addresses<br>feedback]:::feedback
+    FeedbackLoop -->|No| JiraApproved["Status: 
+    Approved for Staging"]:::jiraStatus
+    
+    %% NEW STEP: Update PR after addressing feedback
+    AddressFeedback --> UpdatePR>Update PR with changes]:::feedback
+    UpdatePR --> JiraUpdated["Status: 
+    Review Updated"]:::jiraStatus
+    
+    JiraUpdated --> ReviewChecklist
+    
+    %% Final staging deployment
+    JiraApproved --> FinalCodeApproval([Final Code Approval])
+    FinalCodeApproval --> MergePRStaging["Merge PR to Staging"]
+    MergePRStaging --> JiraStaging["Status: In Staging"]:::jiraStatus
+    
+    JiraStaging --> DeployStaging["Deploy to Staging Environment"]:::staging
+    
+    DeployStaging --> StagingTest["Validation Tests in Staging"]:::staging
+    StagingTest --> StagingOK{Staging<br>Validation<br>OK?}
+    StagingOK -->|No| JiraFailedTest["Status: Failed Staging Tests"]:::jiraStatus
+    
+    JiraFailedTest --> FixStaging["Fix Issues"]:::staging
+    StagingOK -->|Yes| JiraStagingPassed["Status: 
+    Ready for Production"]:::jiraStatus
+    
+    JiraStagingPassed --> CreateGitHubRelease[(Create GitHub Release<br>with Semantic Versioning)]
+    CreateGitHubRelease --> CreatePRProd["Create PR for Production"]
+    
+    CreatePRProd --> RaiseITSM{{Raise Change Request in ITSM Tool}}:::itsm
+    
+    FixStaging --> PR
+    
+    %% Production Path via ITSM
+    RaiseITSM --> ITSMDetails{{Include:<br>- Change Intent TF Plan<br>- Staging Test Results<br>- Risk Assessment<br>- Jira Ticket Link}}:::itsm
+    
+    ITSMDetails --> JiraITSM["Add ITSM CR# 
+    to Jira Ticket"]:::jiraStatus
+    
+    JiraITSM --> ChangeApproval{Change<br>Approval<br>Process}
+    
+    ChangeApproval -->|Rejected| JiraRejected["Status: 
+    ITSM Rejected"]:::jiraStatus
+    
+    JiraRejected --> ReviseChange{{Revise Change}}:::itsm
+    ChangeApproval -->|Approved| JiraITSMApproved["Status: 
+    ITSM Approved"]:::jiraStatus
+    
+    JiraITSMApproved --> MergePRProd["Merge PR to Production"]
+    
+    MergePRProd --> JiraDeploying["Status: 
+    Deploying to Production"]:::jiraStatus
+    
+    JiraDeploying --> ProdEnv["Deploy to Production Environment"]:::production
+    
+    ReviseChange --> PR
+    
+    ProdEnv --> ProdValidation["Production Validation"]:::production
+    ProdValidation --> ProdOK{Production<br>Validation<br>OK?}
+    
+    ProdOK -->|No| JiraRollback["Status: 
+    Rolling Back"]:::jiraStatus
+    
+    JiraRollback --> Rollback["Rollback to Last Known Good<br>Production Release Version"]:::production
+    ProdOK -->|Yes| JiraComplete["Status: 
+    Done"]:::jiraStatus
+    
+    JiraComplete --> UpdateRelease[(Update GitHub Release<br>to Deployed to Production)]:::production
+    UpdateRelease --> Complete["Change Complete"]:::production
+    
+    Rollback --> LearnFromFailure{{Document Learnings<br>in Jira & ITSM}}:::itsm
+    LearnFromFailure --> ReviseChange
+    
+    Complete --> Completion([Process Complete])
+    
+    %% Apply classes
+    class DevStart,PR,Completion,FinalCodeApproval startEnd
+    class OwnerCheck,InternalGradeCheck,ExternalGradeCheck,FeedbackLoop,SandboxValidation,StagingOK,ChangeApproval,ProdOK question
+    class InternalPath,IC,ID,IE,IF serviceOwning
+    class ExternalPath,EC,ED,EE,EF sisterTeam
+    class MergePRStaging,CreateGitHubRelease,CreatePRProd,MergePRProd process
+    
+    %% Grade-specific node colors
+    class IC,EC gradeC
+    class ID,ED gradeD
+    class IE,EE gradeE
+    class IF,EF gradeF
+    
+    %% Process node colors
+    class ECApproval,EDApproval,EEApproval,EFApproval approval
+    class ICApproval,IDApproval,IEApproval,IFApproval approval
+    class OCApproval,ODApproval,OEApproval,OFApproval approval
+    class ReviewChecklist reviewChecklist
+    class AddressFeedback,UpdatePR feedback
+    
+    %% Environment node colors
+    class SandboxDev,SolutionProving,FixSolution sandbox
+    class DeployStaging,StagingTest,FixStaging staging
+    class ProdEnv,ProdValidation,Rollback,Complete,UpdateRelease production
+    class RaiseITSM,ITSMDetails,ReviseChange,LearnFromFailure itsm
+    
+    %% Jira nodes
+    class JiraCreate,JiraLinkPR jiraTicket
+    class JiraRefine,JiraInProgress,JiraBranch,JiraReview,JiraReviewComment,JiraFeedback,JiraUpdated,JiraApproved,JiraStaging,JiraFailedTest,JiraStagingPassed,JiraITSM,JiraRejected,JiraITSMApproved,JiraDeploying,JiraRollback,JiraComplete jiraStatus
