@@ -154,7 +154,9 @@ flowchart LR
         ITSMDetails --> ChangeApproval{Change\nApproval\nProcess}
         
         ChangeApproval -->|Rejected| ReviseChange["Revise Change"]:::itsm
-        ChangeApproval -->|Approved| ProdEnv["Deploy to Production Environment"]:::production
+        ChangeApproval -->|Approved| MergePRProd["Merge PR to Production"]
+        
+        MergePRProd --> ProdEnv["Deploy to Production Environment"]:::production
         
         ReviseChange --> PR
         
@@ -167,8 +169,7 @@ flowchart LR
         Rollback --> LearnFromFailure["Document Learnings"]:::itsm
         LearnFromFailure --> ReviseChange
         
-        Complete --> MergePRProd["Merge PR to Production"]
-        MergePRProd --> Completion([Process Complete])
+        Complete --> Completion([Process Complete])
     end
     
     %% Apply classes
