@@ -20,7 +20,46 @@ flowchart TB
     classDef feedback fill:#f3e5f5,stroke:#9c27b0,color:black
     classDef finalApproval fill:#1b5e20,stroke:#004d40,color:white
     
-    PR([New PR Created]) --> OwnerCheck{Is PR Author\nfrom Service Owning Team?}
+    %% Environment colors
+    classDef sandbox fill:#DCEDC8,stroke:#8BC34A,color:black
+    classDef staging fill:#FFE0B2,stroke:#FF9800,color:black
+    classDef production fill:#FFCDD2,stroke:#F44336,color:black
+    classDef itsm fill:#E1BEE7,stroke:#9C27B0,color:black
+    
+    subgraph "Key Principles"
+        p1["Service Ownership: Service Owning team must approve all changes"]
+        p2["4-eyes Principle: Independent review required for all changes"]
+        p3["Cross-team: Requires approval from both teams following grade patterns"]
+        p4["Solution Proving: Initial validation in sandbox before code review"]
+        p5["Change Management: Production changes require ITSM approval"]
+    end
+    
+    subgraph "Color Key"
+        k1["Start/End Points"]
+        k2["Decision Points"]
+        k3["Service Owning Team"]
+        k4["Sister Team"]
+        k5["Grade C"]
+        k6["Grade D"]
+        k7["Grade E"]
+        k8["Grade F"]
+        k9["Approval Steps"]
+        k10["Review Checklist"]
+        k11["Feedback Process"]
+        k12["Final Approval"]
+        k13["Sandbox Environment"]
+        k14["Staging Environment"]
+        k15["Production Environment"]
+        k16["ITSM Process"]
+    end
+    
+    PR([New PR Created]) --> SolutionProving["Solution Proving in Sandbox"]
+    SolutionProving --> SandboxValidation{Solution\nValidated?}
+    
+    SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]
+    SandboxValidation -->|Yes| OwnerCheck{Is PR Author\nfrom Service Owning Team?}
+    
+    FixSolution --> SolutionProving
     
     OwnerCheck -->|Yes| InternalPath["Feature Team Change"]
     OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]
@@ -71,50 +110,42 @@ flowchart TB
     ReviewChecklist["Reviewer Checklist:\n- Code quality standards\n- Security considerations\n- Test coverage\n- Documentation\n- Infrastructure plan verified"] --> FeedbackLoop{Feedback\nProvided?}
     
     FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]
-    FeedbackLoop -->|No| FinalApproval["Final Approval"]
+    FeedbackLoop -->|No| FinalCodeApproval["Final Code Approval"]
     
     AddressFeedback --> ReviewChecklist
     
-    FinalApproval --> MergePR([Merge PR])
+    %% Environment Progression
+    FinalCodeApproval --> DeployStaging["Deploy to Staging Environment"]
     
-    subgraph "Key Principles"
-        p1["Service Ownership: Service Owning team must approve all changes"]
-        p2["4-eyes Principle: Independent review required for all changes"]
-        p3["Cross-team: Requires approval from both teams following grade patterns"]
-    end
+    DeployStaging --> StagingTest["Validation Tests in Staging"]
+    StagingTest --> StagingOK{Staging\nValidation\nOK?}
+    StagingOK -->|No| FixStaging["Fix Issues"]
+    StagingOK -->|Yes| RaiseITSM["Raise Change Request in ITSM Tool"]
     
-    subgraph "Color Key"
-        k1["Start/End Points"]
-        k2["Decision Points"]
-        k3["Service Owning Team"]
-        k4["Sister Team"]
-        k5["Grade C"]
-        k6["Grade D"]
-        k7["Grade E"]
-        k8["Grade F"]
-        k9["Approval Steps"]
-        k10["Review Checklist"]
-        k11["Feedback Process"]
-        k12["Final Approval"]
-    end
+    FixStaging --> PR
     
-    %% Apply classes to color key
-    class k1 startEnd
-    class k2 question
-    class k3 serviceOwning
-    class k4 sisterTeam
-    class k5 gradeC
-    class k6 gradeD
-    class k7 gradeE
-    class k8 gradeF
-    class k9 approval
-    class k10 reviewChecklist
-    class k11 feedback
-    class k12 finalApproval
+    RaiseITSM --> ITSMDetails["Include:\n- Change Intent (TF Plan)\n- Staging Test Results\n- Risk Assessment"]
+    ITSMDetails --> ChangeApproval{Change\nApproval\nProcess}
+    
+    ChangeApproval -->|Rejected| ReviseChange["Revise Change"]
+    ChangeApproval -->|Approved| ProdEnv["Deploy to Production Environment"]
+    
+    ReviseChange --> PR
+    
+    ProdEnv --> ProdValidation["Production Validation"]
+    ProdValidation --> ProdOK{Production\nValidation\nOK?}
+    
+    ProdOK -->|No| Rollback["Rollback Change"]
+    ProdOK -->|Yes| Complete["Change Complete"]
+    
+    Rollback --> LearnFromFailure["Document Learnings"]
+    LearnFromFailure --> ReviseChange
+    
+    Complete --> MergePR([Merge Completion Record])
     
     %% Apply classes
     class PR,MergePR startEnd
-    class OwnerCheck,InternalGradeCheck,ExternalGradeCheck,FeedbackLoop question
+    class OwnerCheck,InternalGradeCheck,ExternalGradeCheck,FeedbackLoop,SandboxValidation,StagingOK,ChangeApproval,ProdOK question
     class InternalPath,IC,ID,IE,IF serviceOwning
     class ExternalPath,EC,ED,EE,EF sisterTeam
     
@@ -130,4 +161,28 @@ flowchart TB
     class OCApproval,ODApproval,OEApproval,OFApproval approval
     class ReviewChecklist reviewChecklist
     class AddressFeedback feedback
-    class FinalApproval finalApproval
+    class FinalCodeApproval finalApproval
+    
+    %% Environment node colors
+    class SolutionProving,FixSolution sandbox
+    class DeployStaging,StagingTest,FixStaging staging
+    class ProdEnv,ProdValidation,Rollback,Complete production
+    class RaiseITSM,ITSMDetails,ReviseChange,LearnFromFailure itsm
+    
+    %% Apply classes to color key
+    class k1 startEnd
+    class k2 question
+    class k3 serviceOwning
+    class k4 sisterTeam
+    class k5 gradeC
+    class k6 gradeD
+    class k7 gradeE
+    class k8 gradeF
+    class k9 approval
+    class k10 reviewChecklist
+    class k11 feedback
+    class k12 finalApproval
+    class k13 sandbox
+    class k14 staging
+    class k15 production
+    class k16 itsm
