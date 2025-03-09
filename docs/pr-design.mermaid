@@ -1,8 +1,10 @@
-flowchart TB
+%%{init: {'theme': 'base', 'themeVariables': { 'canvasBg': '#f0f0f0' }}}%%
+flowchart LR
     %% Main flow colors
     classDef startEnd fill:#1a73e8,stroke:#0d47a1,color:white,stroke-width:2px
     classDef question fill:#ffab40,stroke:#f57c00,color:black,stroke-width:2px
     classDef process fill:#f5f5f5,stroke:#9e9e9e,color:black
+    classDef hidden fill:none,stroke:none,color:none
     
     %% Team colors
     classDef serviceOwning fill:#4caf50,stroke:#2e7d32,color:white
@@ -26,122 +28,137 @@ flowchart TB
     classDef production fill:#FFCDD2,stroke:#F44336,color:black
     classDef itsm fill:#E1BEE7,stroke:#9C27B0,color:black
     
-    subgraph "Key Principles"
-        p1["Service Ownership: Service Owning team must approve all changes"]
-        p2["4-eyes Principle: Independent review required for all changes"]
-        p3["Cross-team: Requires approval from both teams following grade patterns"]
-        p4["Solution Proving: Initial validation in sandbox before code review"]
-        p5["Change Management: Production changes require ITSM approval"]
+    subgraph Reference["Reference Information"]
+        direction TB
+        
+        subgraph Principles["Key Principles"]
+            direction TB
+            p1["Service Ownership: Service Owning team must approve all changes"]
+            p2["4-eyes Principle: Independent review required for all changes"]
+            p3["Cross-team: Requires approval from both teams following grade patterns"]
+            p4["Solution Proving: Initial validation in sandbox before code review"]
+            p5["Change Management: Production changes require ITSM approval"]
+        end
+        
+        subgraph ColorKey["Color Key"]
+            direction TB
+            k1["Start/End Points"]
+            k2["Decision Points"]
+            k3["Service Owning Team"]
+            k4["Sister Team"]
+            k5["Grade C"]
+            k6["Grade D"]
+            k7["Grade E"]
+            k8["Grade F"]
+            k9["Approval Steps"]
+            k10["Review Checklist"]
+            k11["Feedback Process"]
+            k12["Final Approval"]
+            k13["Sandbox Environment"]
+            k14["Staging Environment"]
+            k15["Production Environment"]
+            k16["ITSM Process"]
+        end
+        
+        %% Force side-by-side layout
+        Principles -.- ColorKey
     end
     
-    subgraph "Color Key"
-        k1["Start/End Points"]
-        k2["Decision Points"]
-        k3["Service Owning Team"]
-        k4["Sister Team"]
-        k5["Grade C"]
-        k6["Grade D"]
-        k7["Grade E"]
-        k8["Grade F"]
-        k9["Approval Steps"]
-        k10["Review Checklist"]
-        k11["Feedback Process"]
-        k12["Final Approval"]
-        k13["Sandbox Environment"]
-        k14["Staging Environment"]
-        k15["Production Environment"]
-        k16["ITSM Process"]
+    spacer1[" "]:::hidden
+    Reference -.- spacer1:::hidden
+    
+    subgraph Process["Approval and Deployment Process"]
+        direction TB
+        PR([New PR Created]) --> SolutionProving["Solution Proving in Sandbox"]
+        SolutionProving --> SandboxValidation{Solution\nValidated?}
+        
+        SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]
+        SandboxValidation -->|Yes| OwnerCheck{Is PR Author\nfrom Service Owning Team?}
+        
+        FixSolution --> SolutionProving
+        
+        OwnerCheck -->|Yes| InternalPath["Feature Team Change"]
+        OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]
+        
+        InternalPath --> InternalGradeCheck{Author's\nGrade?}
+        ExternalPath --> ExternalGradeCheck{Author's\nGrade?}
+        
+        %% Feature team approval path
+        InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]
+        InternalGradeCheck -->|Grade D| ID["Feature Team Grade D"]
+        InternalGradeCheck -->|Grade E| IE["Feature Team Grade E"]
+        InternalGradeCheck -->|Grade F| IF["Feature Team Grade F"]
+        
+        IC --> ICApproval["Required: Grade D+\nfrom Service Owning Team"]
+        ID --> IDApproval["Required: Grade D+\nfrom Service Owning Team"]
+        IE --> IEApproval["Required: Grade E+\nfrom Service Owning Team"]
+        IF --> IFApproval["Required: Grade E or F\nfrom Service Owning Team"]
+        
+        %% Sister team approval path
+        ExternalGradeCheck -->|Grade C| EC["External Grade C"]
+        ExternalGradeCheck -->|Grade D| ED["External Grade D"]
+        ExternalGradeCheck -->|Grade E| EE["External Grade E"]
+        ExternalGradeCheck -->|Grade F| EF["External Grade F"]
+        
+        %% Sister team internal 4-eyes check
+        EC --> ECApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
+        ED --> EDApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
+        EE --> EEApproval["Required: Grade E+\nfrom Sister Team (4-eyes)"]
+        EF --> EFApproval["Required: Grade E or F\nfrom Sister Team (4-eyes)"]
+        
+        %% Service owning team approval (same grade pattern)
+        ECApproval --> OCApproval["Required: Grade D+\nfrom Service Owning Team"]
+        EDApproval --> ODApproval["Required: Grade D+\nfrom Service Owning Team"]
+        EEApproval --> OEApproval["Required: Grade E+\nfrom Service Owning Team"]
+        EFApproval --> OFApproval["Required: Grade E or F\nfrom Service Owning Team"]
+        
+        %% Connect all approval paths to review checklist
+        ICApproval --> ReviewChecklist
+        IDApproval --> ReviewChecklist
+        IEApproval --> ReviewChecklist
+        IFApproval --> ReviewChecklist
+        
+        OCApproval --> ReviewChecklist
+        ODApproval --> ReviewChecklist
+        OEApproval --> ReviewChecklist
+        OFApproval --> ReviewChecklist
+        
+        ReviewChecklist["Reviewer Checklist:\n- Code quality standards\n- Security considerations\n- Test coverage\n- Documentation\n- Infrastructure plan verified"] --> FeedbackLoop{Feedback\nProvided?}
+        
+        FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]
+        FeedbackLoop -->|No| FinalCodeApproval["Final Code Approval"]
+        
+        AddressFeedback --> ReviewChecklist
+        
+        %% Environment Progression
+        FinalCodeApproval --> DeployStaging["Deploy to Staging Environment"]
+        
+        DeployStaging --> StagingTest["Validation Tests in Staging"]
+        StagingTest --> StagingOK{Staging\nValidation\nOK?}
+        StagingOK -->|No| FixStaging["Fix Issues"]
+        StagingOK -->|Yes| RaiseITSM["Raise Change Request in ITSM Tool"]
+        
+        FixStaging --> PR
+        
+        RaiseITSM --> ITSMDetails["Include:\n- Change Intent (TF Plan)\n- Staging Test Results\n- Risk Assessment"]
+        ITSMDetails --> ChangeApproval{Change\nApproval\nProcess}
+        
+        ChangeApproval -->|Rejected| ReviseChange["Revise Change"]
+        ChangeApproval -->|Approved| ProdEnv["Deploy to Production Environment"]
+        
+        ReviseChange --> PR
+        
+        ProdEnv --> ProdValidation["Production Validation"]
+        ProdValidation --> ProdOK{Production\nValidation\nOK?}
+        
+        ProdOK -->|No| Rollback["Rollback Change"]
+        ProdOK -->|Yes| Complete["Change Complete"]
+        
+        Rollback --> LearnFromFailure["Document Learnings"]
+        LearnFromFailure --> ReviseChange
+        
+        Complete --> MergePR([Merge Completion Record])
     end
-    
-    PR([New PR Created]) --> SolutionProving["Solution Proving in Sandbox"]
-    SolutionProving --> SandboxValidation{Solution\nValidated?}
-    
-    SandboxValidation -->|No| FixSolution["Fix Solution in Sandbox"]
-    SandboxValidation -->|Yes| OwnerCheck{Is PR Author\nfrom Service Owning Team?}
-    
-    FixSolution --> SolutionProving
-    
-    OwnerCheck -->|Yes| InternalPath["Feature Team Change"]
-    OwnerCheck -->|No| ExternalPath["Sister Team Contribution"]
-    
-    InternalPath --> InternalGradeCheck{Author's\nGrade?}
-    ExternalPath --> ExternalGradeCheck{Author's\nGrade?}
-    
-    %% Feature team approval path
-    InternalGradeCheck -->|Grade C| IC["Feature Team Grade C"]
-    InternalGradeCheck -->|Grade D| ID["Feature Team Grade D"]
-    InternalGradeCheck -->|Grade E| IE["Feature Team Grade E"]
-    InternalGradeCheck -->|Grade F| IF["Feature Team Grade F"]
-    
-    IC --> ICApproval["Required: Grade D+\nfrom Service Owning Team"]
-    ID --> IDApproval["Required: Grade D+\nfrom Service Owning Team"]
-    IE --> IEApproval["Required: Grade E+\nfrom Service Owning Team"]
-    IF --> IFApproval["Required: Grade E or F\nfrom Service Owning Team"]
-    
-    %% Sister team approval path
-    ExternalGradeCheck -->|Grade C| EC["External Grade C"]
-    ExternalGradeCheck -->|Grade D| ED["External Grade D"]
-    ExternalGradeCheck -->|Grade E| EE["External Grade E"]
-    ExternalGradeCheck -->|Grade F| EF["External Grade F"]
-    
-    %% Sister team internal 4-eyes check
-    EC --> ECApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
-    ED --> EDApproval["Required: Grade D+\nfrom Sister Team (4-eyes)"]
-    EE --> EEApproval["Required: Grade E+\nfrom Sister Team (4-eyes)"]
-    EF --> EFApproval["Required: Grade E or F\nfrom Sister Team (4-eyes)"]
-    
-    %% Service owning team approval (same grade pattern)
-    ECApproval --> OCApproval["Required: Grade D+\nfrom Service Owning Team"]
-    EDApproval --> ODApproval["Required: Grade D+\nfrom Service Owning Team"]
-    EEApproval --> OEApproval["Required: Grade E+\nfrom Service Owning Team"]
-    EFApproval --> OFApproval["Required: Grade E or F\nfrom Service Owning Team"]
-    
-    %% Connect all approval paths to review checklist
-    ICApproval --> ReviewChecklist
-    IDApproval --> ReviewChecklist
-    IEApproval --> ReviewChecklist
-    IFApproval --> ReviewChecklist
-    
-    OCApproval --> ReviewChecklist
-    ODApproval --> ReviewChecklist
-    OEApproval --> ReviewChecklist
-    OFApproval --> ReviewChecklist
-    
-    ReviewChecklist["Reviewer Checklist:\n- Code quality standards\n- Security considerations\n- Test coverage\n- Documentation\n- Infrastructure plan verified"] --> FeedbackLoop{Feedback\nProvided?}
-    
-    FeedbackLoop -->|Yes| AddressFeedback["Author addresses\nfeedback"]
-    FeedbackLoop -->|No| FinalCodeApproval["Final Code Approval"]
-    
-    AddressFeedback --> ReviewChecklist
-    
-    %% Environment Progression
-    FinalCodeApproval --> DeployStaging["Deploy to Staging Environment"]
-    
-    DeployStaging --> StagingTest["Validation Tests in Staging"]
-    StagingTest --> StagingOK{Staging\nValidation\nOK?}
-    StagingOK -->|No| FixStaging["Fix Issues"]
-    StagingOK -->|Yes| RaiseITSM["Raise Change Request in ITSM Tool"]
-    
-    FixStaging --> PR
-    
-    RaiseITSM --> ITSMDetails["Include:\n- Change Intent (TF Plan)\n- Staging Test Results\n- Risk Assessment"]
-    ITSMDetails --> ChangeApproval{Change\nApproval\nProcess}
-    
-    ChangeApproval -->|Rejected| ReviseChange["Revise Change"]
-    ChangeApproval -->|Approved| ProdEnv["Deploy to Production Environment"]
-    
-    ReviseChange --> PR
-    
-    ProdEnv --> ProdValidation["Production Validation"]
-    ProdValidation --> ProdOK{Production\nValidation\nOK?}
-    
-    ProdOK -->|No| Rollback["Rollback Change"]
-    ProdOK -->|Yes| Complete["Change Complete"]
-    
-    Rollback --> LearnFromFailure["Document Learnings"]
-    LearnFromFailure --> ReviseChange
-    
-    Complete --> MergePR([Merge Completion Record])
     
     %% Apply classes
     class PR,MergePR startEnd
