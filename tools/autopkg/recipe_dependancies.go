@@ -1,9 +1,7 @@
 package autopkg
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -173,29 +171,13 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 // This function uses the autopkg search command to find repositories that contain recipes matching
 // the provided name, then extracts the repository information for each match.
 func findRecipeByNameAndExtractRepo(recipeName string, prefsPath string) ([]RecipeRepoDependency, error) {
-	// Create a buffer to capture command output
-	var stdoutBuf bytes.Buffer
-	originalStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Set up search options
 	searchOptions := &SearchOptions{
 		PrefsPath: prefsPath,
 		UseToken:  true, // Use token to avoid GitHub API rate limiting
 	}
 
 	// Call the wrapped search function
-	err := SearchRecipes(recipeName, searchOptions)
-
-	// Restore original stdout
-	w.Close()
-	os.Stdout = originalStdout
-
-	// Read captured output
-	io.Copy(&stdoutBuf, r)
-	output := stdoutBuf.String()
-
+	output, err := SearchRecipes(recipeName, searchOptions)
 	if err != nil {
 		return nil, fmt.Errorf("search recipes failed: %w", err)
 	}

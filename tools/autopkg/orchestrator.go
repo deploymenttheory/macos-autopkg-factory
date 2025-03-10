@@ -273,7 +273,7 @@ func (o *AutoPkgOrchestrator) AddParallelRunStep(recipes []string, options *Para
 			VerboseLevel:  1,
 		}
 	} else if options.Timeout == 0 {
-		options.Timeout = 10 * time.Minute // Ensure a valid timeout
+		options.Timeout = 10 * time.Minute // Ensure a default timeout
 	}
 
 	o.steps = append(o.steps, WorkflowStep{
@@ -641,9 +641,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				}
 			}
 
-			success, failedRecipes, err := VerifyTrustInfoForRecipes(step.Recipes, verifyOptions)
+			success, failedRecipes, verifyOutput, err := VerifyTrustInfoForRecipes(step.Recipes, verifyOptions)
 			if err != nil || !success {
 				stepErr = fmt.Errorf("trust verification failed for %d recipes", len(failedRecipes))
+				logger.Logger(fmt.Sprintf("❌ Trust verification output:\n%s", verifyOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Trust verification passed for all recipes:\n%s", verifyOutput), logger.LogDebug)
 			}
 
 			// Mark processed recipes
@@ -659,9 +662,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				}
 			}
 
-			err := UpdateTrustInfoForRecipes(step.Recipes, updateOptions)
+			updateOutput, err := UpdateTrustInfoForRecipes(step.Recipes, updateOptions)
 			if err != nil {
 				stepErr = fmt.Errorf("trust update failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ Trust update output with error:\n%s", updateOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Trust update output:\n%s", updateOutput), logger.LogDebug)
 			}
 
 			// Mark processed recipes
@@ -713,9 +719,13 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 					}
 
 					logger.Logger(fmt.Sprintf("⬇️ Adding %d unique repositories", len(filteredURLs)), logger.LogInfo)
-					if err := AddRepo(filteredURLs, options.AnalysisOptions.PrefsPath); err != nil {
+					addOutput, err := AddRepo(filteredURLs, options.AnalysisOptions.PrefsPath)
+					if err != nil {
 						stepErr = fmt.Errorf("failed to add repositories: %w", err)
+						logger.Logger(fmt.Sprintf("❌ Repository add output with error:\n%s", addOutput), logger.LogDebug)
 						break
+					} else {
+						logger.Logger(fmt.Sprintf("✅ Repository add details:\n%s", addOutput), logger.LogDebug)
 					}
 				}
 			}
@@ -726,9 +736,11 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				prefsPath = o.options.PrefsPath
 			}
 
-			err := AddRepo(step.Recipes, prefsPath)
+			repoOutput, err := AddRepo(step.Recipes, prefsPath)
 			if err != nil {
 				stepErr = fmt.Errorf("add repos failed: %w", err)
+			} else {
+				logger.Logger(fmt.Sprintf("📦 Repository add details:\n%s", repoOutput), logger.LogDebug)
 			}
 
 		case "run":
@@ -739,9 +751,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				}
 			}
 
-			err := RunRecipes(step.Recipes, runOptions)
+			runOutput, err := RunRecipes(step.Recipes, runOptions)
 			if err != nil {
 				stepErr = fmt.Errorf("run recipes failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ Run output with error:\n%s", runOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Run output:\n%s", runOutput), logger.LogDebug)
 			}
 
 			// Mark processed recipes
@@ -851,9 +866,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				}
 			}
 
-			err := AuditRecipe(step.Recipes, auditOptions)
+			auditOutput, err := AuditRecipe(step.Recipes, auditOptions)
 			if err != nil {
 				stepErr = fmt.Errorf("audit failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ Audit output with error:\n%s", auditOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Audit output:\n%s", auditOutput), logger.LogDebug)
 			}
 
 			// Mark processed recipes
@@ -869,9 +887,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				}
 			}
 
-			err := InstallRecipe(step.Recipes, installOptions)
+			installOutput, err := InstallRecipe(step.Recipes, installOptions)
 			if err != nil {
 				stepErr = fmt.Errorf("install failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ Installation output with error:\n%s", installOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Installation output:\n%s", installOutput), logger.LogDebug)
 			}
 
 			// Mark processed recipes
@@ -892,9 +913,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				}
 			}
 
-			err := SearchRecipes(step.Recipes[0], searchOptions)
+			searchOutput, err := SearchRecipes(step.Recipes[0], searchOptions)
 			if err != nil {
 				stepErr = fmt.Errorf("search failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ Search output with error:\n%s", searchOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Search results for '%s':\n%s", step.Recipes[0], searchOutput), logger.LogDebug)
 			}
 
 		case "list":
@@ -905,9 +929,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				}
 			}
 
-			err := ListRecipes(listOptions)
+			listOutput, err := ListRecipes(listOptions)
 			if err != nil {
 				stepErr = fmt.Errorf("list recipes failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ List recipes output with error:\n%s", listOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Available recipes:\n%s", listOutput), logger.LogDebug)
 			}
 
 		case "repo-list":
@@ -916,9 +943,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				prefsPath = o.options.PrefsPath
 			}
 
-			err := ListRepos(prefsPath)
+			repoListOutput, err := ListRepos(prefsPath)
 			if err != nil {
 				stepErr = fmt.Errorf("list repos failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ List repositories output with error:\n%s", repoListOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Available repositories:\n%s", repoListOutput), logger.LogDebug)
 			}
 
 		case "make-override":
@@ -935,10 +965,13 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			}
 
 			for _, recipe := range step.Recipes {
-				err := MakeOverride(recipe, overrideOptions)
+				overrideOutput, err := MakeOverride(recipe, overrideOptions)
 				if err != nil {
 					stepErr = fmt.Errorf("make override for %s failed: %w", recipe, err)
+					logger.Logger(fmt.Sprintf("❌ Override creation output with error for %s:\n%s", recipe, overrideOutput), logger.LogDebug)
 					break
+				} else {
+					logger.Logger(fmt.Sprintf("✅ Created override for %s:\n%s", recipe, overrideOutput), logger.LogDebug)
 				}
 			}
 
@@ -953,9 +986,12 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				prefsPath = o.options.PrefsPath
 			}
 
-			err := UpdateRepo(step.Recipes, prefsPath)
+			updateOutput, err := UpdateRepo(step.Recipes, prefsPath)
 			if err != nil {
 				stepErr = fmt.Errorf("repo update failed: %w", err)
+				logger.Logger(fmt.Sprintf("❌ Repository update output with error:\n%s", updateOutput), logger.LogDebug)
+			} else {
+				logger.Logger(fmt.Sprintf("✅ Repository update output:\n%s", updateOutput), logger.LogDebug)
 			}
 
 		default:

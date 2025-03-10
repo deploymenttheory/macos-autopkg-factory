@@ -16,24 +16,18 @@ func main() {
 	// Create a new orchestrator
 	orchestrator := autopkg.NewAutoPkgOrchestrator()
 
-	// Define the recipes we want to run
+	// Define the recipes we want to audit
 	targetRecipes := []string{
-		//"MicrosoftTeams.install.recipe",
-		//"MicrosoftTeams.intune.recipe",
-		"MicrosoftTeams.jamf.recipe",
-		//"MicrosoftTeams.ws1.recipe",
-		//"MicrosoftTeamsForWorkOrSchool.pkg.recipe",
-		//"MicrosoftTeams.munki.recipe",
-		//"MicrosoftTeams2.jamf-upload.recipe.yaml",
+		"BBEdit.jamf.recipe",
 	}
 
 	// Configure global options
 	orchestrator.
 		WithPrefsPath("~/Library/Preferences/com.github.autopkg.plist").
-		WithConcurrency(4).
+		WithConcurrency(1).
 		WithTimeout(30 * time.Minute).
 		WithStopOnFirstError(true).
-		WithReportFile("autopkg_run_report.txt")
+		WithReportFile("autopkg_audit_report.txt")
 
 	// Create preferences configuration
 	prefsData := &autopkg.PreferencesData{
@@ -83,17 +77,12 @@ func main() {
 			true, // Continue on error
 		).
 
-		// List and update repositories
+		// List repositories
 		AddRepoListStep(true).
-
-		// Recipe validation and execution
-		AddParallelRunStep(targetRecipes, &autopkg.ParallelRunOptions{
-			MaxConcurrent: 4, // Max concurrent parallel packaging Runs
-			VerboseLevel:  5, // Keep verbosity high for debugging
-		}, false).
-
-		// Cleanup
-		AddCleanupStep(nil, true)
+		AddAuditStep(targetRecipes, &autopkg.AuditOptions{
+			PrefsPath: "~/Library/Preferences/com.github.autopkg.plist",
+			// No need for PlistOutput as we want to see the output directly
+		}, false)
 
 	// Execute the workflow
 	result, err := orchestrator.Execute()

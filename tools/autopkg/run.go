@@ -634,6 +634,7 @@ func FilterRecipes(options *RecipeFilterCriteria, prefsPath string) (*FilterReci
 		}
 
 		// If trust info verification is required, check it
+		// If trust info verification is required, check it
 		if options.TrustInfoRequired || options.VerifiedTrustOnly {
 			if isOverride {
 				// Just check a single recipe
@@ -641,8 +642,18 @@ func FilterRecipes(options *RecipeFilterCriteria, prefsPath string) (*FilterReci
 					PrefsPath: prefsPath,
 				}
 
-				success, failedRecipes, _ := VerifyTrustInfoForRecipes([]string{name}, verifyOptions)
-				trustVerified := success && len(failedRecipes) == 0
+				success, failedRecipes, verifyOutput, verifyErr := VerifyTrustInfoForRecipes([]string{name}, verifyOptions)
+
+				// Consider the trust verified only if both the verification process succeeded and no recipes failed
+				trustVerified := verifyErr == nil && success && len(failedRecipes) == 0
+
+				// Log debug output for failed verifications
+				if !trustVerified {
+					if verifyErr != nil {
+						logger.Logger(fmt.Sprintf("⚠️ Trust verification error for %s: %v", name, verifyErr), logger.LogWarning)
+					}
+					logger.Logger(fmt.Sprintf("🔍 Trust verification output for %s:\n%s", name, verifyOutput), logger.LogDebug)
+				}
 
 				result.TrustStatus[name] = trustVerified
 
@@ -690,9 +701,11 @@ func ImportRecipesFromRepo(repoURL string, options *ImportRecipesFromRepoOptions
 	logger.Logger(fmt.Sprintf("🔄 Importing recipes from repo: %s", repoURL), logger.LogInfo)
 
 	// Add the repo using the AddRepo function
-	if err := AddRepo([]string{repoURL}, options.PrefsPath); err != nil {
+	repoOutput, err := AddRepo([]string{repoURL}, options.PrefsPath)
+	if err != nil {
 		return nil, fmt.Errorf("failed to add recipe repo: %w", err)
 	}
+	logger.Logger(fmt.Sprintf("📦 Repo add output:\n%s", repoOutput), logger.LogDebug)
 
 	// Parse the repo name from the URL
 	repoName := repoURL
@@ -706,17 +719,17 @@ func ImportRecipesFromRepo(repoURL string, options *ImportRecipesFromRepoOptions
 
 	// Compile regex patterns if specified
 	var recipeRegex, ignoreRegex *regexp.Regexp
-	var err error
+	var regexErr error
 	if options.RecipePattern != "" {
-		recipeRegex, err = regexp.Compile(options.RecipePattern)
-		if err != nil {
-			return nil, fmt.Errorf("invalid recipe pattern: %w", err)
+		recipeRegex, regexErr = regexp.Compile(options.RecipePattern)
+		if regexErr != nil {
+			return nil, fmt.Errorf("invalid recipe pattern: %w", regexErr)
 		}
 	}
 	if options.IgnoreRecipePattern != "" {
-		ignoreRegex, err = regexp.Compile(options.IgnoreRecipePattern)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ignore recipe pattern: %w", err)
+		ignoreRegex, regexErr = regexp.Compile(options.IgnoreRecipePattern)
+		if regexErr != nil {
+			return nil, fmt.Errorf("invalid ignore recipe pattern: %w", regexErr)
 		}
 	}
 
@@ -787,12 +800,14 @@ func ImportRecipesFromRepo(repoURL string, options *ImportRecipesFromRepoOptions
 			Force:     true,
 		}
 
-		if err := MakeOverride(recipe, overrideOptions); err != nil {
-			logger.Logger(fmt.Sprintf("⚠️ Failed to make override for %s: %v", recipe, err), logger.LogWarning)
+		overrideOutput, err := MakeOverride(recipe, overrideOptions)
+		if err != nil {
+			logger.Logger(fmt.Sprintf("⚠️ Failed to make override for %s: %v\n%s", recipe, err, overrideOutput), logger.LogWarning)
 			continue
 		}
 
 		logger.Logger(fmt.Sprintf("✅ Created override for recipe: %s", recipe), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("🧾 Override output for %s:\n%s", recipe, overrideOutput), logger.LogDebug)
 
 		// If verify trust is enabled, run verification
 		if options.VerifyTrust {
@@ -801,7 +816,8 @@ func ImportRecipesFromRepo(repoURL string, options *ImportRecipesFromRepoOptions
 				PrefsPath: options.PrefsPath,
 			}
 
-			success, _, err := VerifyTrustInfoForRecipes([]string{recipe + ".override"}, verifyOptions)
+			success, _, verifyOutput, err := VerifyTrustInfoForRecipes([]string{recipe + ".override"}, verifyOptions)
+			logger.Logger(fmt.Sprintf("🔍 Trust verification output for %s:\n%s", recipe, verifyOutput), logger.LogDebug)
 
 			if !success || err != nil {
 				if options.UpdateTrustOnFailure {
@@ -810,15 +826,20 @@ func ImportRecipesFromRepo(repoURL string, options *ImportRecipesFromRepoOptions
 						PrefsPath: options.PrefsPath,
 					}
 
-					if err := UpdateTrustInfoForRecipes([]string{recipe + ".override"}, updateOptions); err != nil {
-						logger.Logger(fmt.Sprintf("⚠️ Failed to update trust info for %s: %v", recipe, err), logger.LogWarning)
+					updateOutput, updateErr := UpdateTrustInfoForRecipes([]string{recipe + ".override"}, updateOptions)
+					logger.Logger(fmt.Sprintf("🔄 Trust update output for %s:\n%s", recipe, updateOutput), logger.LogDebug)
+
+					if updateErr != nil {
+						logger.Logger(fmt.Sprintf("⚠️ Failed to update trust info for %s: %v", recipe, updateErr), logger.LogWarning)
 						continue
 					}
 
 					logger.Logger(fmt.Sprintf("✅ Trust info updated for recipe: %s", recipe), logger.LogSuccess)
 
 					// Verify again after update
-					success, _, verifyErr := VerifyTrustInfoForRecipes([]string{recipe + ".override"}, verifyOptions)
+					success, _, verifyOutput, verifyErr := VerifyTrustInfoForRecipes([]string{recipe + ".override"}, verifyOptions)
+					logger.Logger(fmt.Sprintf("🔍 Second trust verification for %s:\n%s", recipe, verifyOutput), logger.LogDebug)
+
 					if !success || verifyErr != nil {
 						logger.Logger(fmt.Sprintf("⚠️ Failed to verify trust info for %s even after update", recipe), logger.LogWarning)
 						continue
@@ -928,7 +949,9 @@ func ValidateRecipeList(recipes []string, options *ValidateRecipeListOptions) (*
 				OverrideDirs: options.OverrideDirs,
 			}
 
-			success, _, err := VerifyTrustInfoForRecipes([]string{recipe}, verifyOptions)
+			success, _, verifyOutput, err := VerifyTrustInfoForRecipes([]string{recipe}, verifyOptions)
+			logger.Logger(fmt.Sprintf("🔍 Trust verification for %s:\n%s", recipe, verifyOutput), logger.LogDebug)
+
 			if err != nil || !success {
 				if options.UpdateTrustOnFailure {
 					// Try to update trust info
@@ -938,24 +961,28 @@ func ValidateRecipeList(recipes []string, options *ValidateRecipeListOptions) (*
 						OverrideDirs: options.OverrideDirs,
 					}
 
-					updateErr := UpdateTrustInfoForRecipes([]string{recipe}, updateOptions)
+					updateOutput, updateErr := UpdateTrustInfoForRecipes([]string{recipe}, updateOptions)
+					logger.Logger(fmt.Sprintf("🔄 Trust update output for %s:\n%s", recipe, updateOutput), logger.LogDebug)
+
 					if updateErr != nil {
-						logger.Logger(fmt.Sprintf("⚠️ Failed to update trust info for %s: %v", recipe, updateErr), logger.LogWarning)
+						logger.Logger(fmt.Sprintf("⚠️ Failed to update trust info for %s: %v\n%s", recipe, updateErr, updateOutput), logger.LogWarning)
 						result.TrustFailedRecipes = append(result.TrustFailedRecipes, recipe)
 						result.InvalidRecipes = append(result.InvalidRecipes, recipe)
 						continue
 					}
 
 					// Verify again after update
-					success, _, verifyErr := VerifyTrustInfoForRecipes([]string{recipe}, verifyOptions)
+					success, _, secondVerifyOutput, verifyErr := VerifyTrustInfoForRecipes([]string{recipe}, verifyOptions)
+					logger.Logger(fmt.Sprintf("🔍 Second trust verification for %s:\n%s", recipe, secondVerifyOutput), logger.LogDebug)
+
 					if verifyErr != nil || !success {
-						logger.Logger(fmt.Sprintf("⚠️ Failed to verify trust info for %s even after update", recipe), logger.LogWarning)
+						logger.Logger(fmt.Sprintf("⚠️ Failed to verify trust info for %s even after update:\n%s", recipe, secondVerifyOutput), logger.LogWarning)
 						result.TrustFailedRecipes = append(result.TrustFailedRecipes, recipe)
 						result.InvalidRecipes = append(result.InvalidRecipes, recipe)
 						continue
 					}
 				} else {
-					logger.Logger(fmt.Sprintf("⚠️ Trust verification failed for %s", recipe), logger.LogWarning)
+					logger.Logger(fmt.Sprintf("⚠️ Trust verification failed for %s:\n%s", recipe, verifyOutput), logger.LogWarning)
 					result.TrustFailedRecipes = append(result.TrustFailedRecipes, recipe)
 					result.InvalidRecipes = append(result.InvalidRecipes, recipe)
 					continue
