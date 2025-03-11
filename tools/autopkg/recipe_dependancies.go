@@ -87,14 +87,44 @@ func Search(recipeName string, useToken bool, prefsPath string) (string, string,
 		// Convert identifier to recipe name for search
 		// Example: com.github.rtrouton.pkg.microsoftteams -> MicrosoftTeams.pkg.recipe
 		parts := strings.Split(recipeName, ".")
+
+		// Look for recipe type (pkg, download, install, etc.)
+		var recipeType string
+		var appName string
+
+		// Find the app name part (usually the last part)
 		if len(parts) > 0 {
-			lastPart := parts[len(parts)-1]
-			// Convert to title case and add .recipe extension
-			searchTerm = strings.Title(lastPart) + ".recipe"
-			logger.Logger(fmt.Sprintf("🔄 Converting identifier to recipe name: %s -> %s", recipeName, searchTerm), logger.LogDebug)
-		} else {
-			searchTerm = recipeName
+			appName = parts[len(parts)-1]
+
+			// Check for recipe type before the app name
+			if len(parts) > 1 {
+				possibleType := parts[len(parts)-2]
+				// Common recipe types
+				recipeTypes := []string{"pkg", "download", "install", "munki", "jamf"}
+
+				for _, rt := range recipeTypes {
+					if possibleType == rt {
+						recipeType = rt
+						break
+					}
+				}
+			}
 		}
+
+		// Simple camel case conversion for app name
+		titleCaseAppName := appName
+		if len(appName) > 0 {
+			titleCaseAppName = strings.ToUpper(appName[:1]) + appName[1:]
+		}
+
+		// Build the search term
+		if recipeType != "" {
+			searchTerm = titleCaseAppName + "." + recipeType + ".recipe"
+		} else {
+			searchTerm = titleCaseAppName + ".recipe"
+		}
+
+		logger.Logger(fmt.Sprintf("🔄 Converting identifier to recipe name: %s -> %s", recipeName, searchTerm), logger.LogDebug)
 	} else {
 		searchTerm = recipeName
 	}
