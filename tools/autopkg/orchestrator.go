@@ -262,36 +262,11 @@ func (o *AutoPkgOrchestrator) AddRunStep(recipes []string, options *RunOptions, 
 	return o
 }
 
-// AddParallelRunStep adds a parallel recipe run step
-// Uses ParallelRunRecipes under the hood
-func (o *AutoPkgOrchestrator) AddParallelRunStep(recipes []string, options *ParallelRunOptions, continueOnError bool) *AutoPkgOrchestrator {
-	if options == nil {
-		options = &ParallelRunOptions{
-			PrefsPath:     o.options.PrefsPath,
-			MaxConcurrent: o.options.MaxConcurrent,
-			Timeout:       o.options.Timeout,
-			VerboseLevel:  1,
-		}
-	} else if options.Timeout == 0 {
-		options.Timeout = 10 * time.Minute // Ensure a default timeout
-	}
-
-	o.steps = append(o.steps, WorkflowStep{
-		Type:            "parallel-run",
-		Recipes:         recipes,
-		Options:         options,
-		ContinueOnError: continueOnError,
-		Name:            "Parallel Recipe Run",
-		Description:     fmt.Sprintf("Run %d recipes in parallel", len(recipes)),
-	})
-	return o
-}
-
 // AddBatchProcessingStep adds a batch processing step
 // Uses RecipeBatchProcessing under the hood
-func (o *AutoPkgOrchestrator) AddBatchProcessingStep(recipes []string, options *RecipeBatchOptions, continueOnError bool) *AutoPkgOrchestrator {
+func (o *AutoPkgOrchestrator) AddBatchProcessingStep(recipes []string, options *RecipeBatchRunOptions, continueOnError bool) *AutoPkgOrchestrator {
 	if options == nil {
-		options = &RecipeBatchOptions{
+		options = &RecipeBatchRunOptions{
 			PrefsPath:            o.options.PrefsPath,
 			MaxConcurrentRecipes: o.options.MaxConcurrent,
 		}
@@ -764,31 +739,10 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 				result.ProcessedRecipes[recipe] = true
 			}
 
-		case "parallel-run":
-			for _, recipe := range step.Recipes {
-				uniqueCache := fmt.Sprintf("/tmp/autopkg_cache_%s", recipe)
-
-				parallelOptions, ok := step.Options.(*ParallelRunOptions)
-				if !ok {
-					parallelOptions = &ParallelRunOptions{
-						PrefsPath:     o.options.PrefsPath,
-						MaxConcurrent: o.options.MaxConcurrent,
-						Timeout:       10 * time.Minute,
-						VerboseLevel:  3,
-						Variables:     map[string]string{"RECIPE_CACHE_DIR": uniqueCache},
-					}
-				}
-
-				_, err := ParallelRunRecipes([]string{recipe}, parallelOptions)
-				if err != nil {
-					stepErr = fmt.Errorf("parallel run failed for %s: %w", recipe, err)
-				}
-			}
-
-		case "batch":
-			batchOptions, ok := step.Options.(*RecipeBatchOptions)
+		case "run-batch":
+			batchOptions, ok := step.Options.(*RecipeBatchRunOptions)
 			if !ok {
-				batchOptions = &RecipeBatchOptions{
+				batchOptions = &RecipeBatchRunOptions{
 					PrefsPath:            o.options.PrefsPath,
 					MaxConcurrentRecipes: o.options.MaxConcurrent,
 				}

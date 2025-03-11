@@ -87,9 +87,8 @@ func main() {
 		AddRepoListStep(true).
 
 		// Recipe validation and execution
-		AddParallelRunStep(targetRecipes, &autopkg.ParallelRunOptions{
-			MaxConcurrent: 4, // Max concurrent parallel packaging Runs
-			VerboseLevel:  5, // Keep verbosity high for debugging
+		AddBatchProcessingStep(targetRecipes, &autopkg.RecipeBatchRunOptions{
+			VerboseLevel: 5, // Keep verbosity high for debugging
 		}, false).
 
 		// Cleanup

@@ -69,12 +69,12 @@ func main() {
 		// Cleanup
 		AddCleanupStep(nil, true)
 
-	// **Instead of AddParallelRunStep, use RecipeBatchProcessing**
-	batchOptions := &autopkg.RecipeBatchOptions{
+	// **RecipeBatchProcessing**
+	batchOptions := &autopkg.RecipeBatchRunOptions{
 		PrefsPath:            "~/Library/Preferences/com.github.autopkg.plist",
 		MaxConcurrentRecipes: 4, // Max parallel executions
 		StopOnFirstError:     true,
-		Verbose:              true,
+		VerboseLevel:         3,
 		SearchDirs: []string{
 			"~/Library/AutoPkg/RecipeRepos",
 			"~/Library/AutoPkg/RecipeOverrides",

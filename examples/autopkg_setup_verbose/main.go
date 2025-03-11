@@ -165,7 +165,7 @@ func main() {
 			"GoogleChrome.install",
 			"MicrosoftTeams.install",
 		}, nil, true).
-		AddParallelRunStep([]string{
+		AddBatchProcessingStep([]string{
 			"Firefox.install",
 			"GoogleChrome.install",
 			"MicrosoftTeams.install",

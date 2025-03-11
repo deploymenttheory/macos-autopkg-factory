@@ -9,17 +9,15 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
 
-// RecipeBatchOptions contains options for processing a batch of recipes through multiple steps
-type RecipeBatchOptions struct {
+// RecipeBatchRunOptions contains options for processing a batch of recipes through multiple steps
+type RecipeBatchRunOptions struct {
 	PrefsPath            string
 	SearchDirs           []string
 	OverrideDirs         []string
@@ -27,12 +25,23 @@ type RecipeBatchOptions struct {
 	UpdateTrustOnFailure bool
 	IgnoreVerifyFailures bool
 	ReportPlist          string
-	Verbose              bool
+	VerboseLevel         int
 	Variables            map[string]string
 	PreProcessors        []string
 	PostProcessors       []string
 	MaxConcurrentRecipes int
 	StopOnFirstError     bool
+	Notification         NotificationOptions
+}
+
+type NotificationOptions struct {
+	EnableTeams   bool
+	TeamsWebhook  string
+	EnableSlack   bool
+	SlackWebhook  string
+	SlackUsername string
+	SlackChannel  string
+	SlackIcon     string
 }
 
 // RecipeBatchResult contains the results of a batch operation
@@ -47,391 +56,126 @@ type RecipeBatchResult struct {
 	ExecutionError    error
 }
 
-// RecipeBatchProcessing executes a batch of recipes in parallel or sequentially.
-func RecipeBatchProcessing(recipes []string, options *RecipeBatchOptions) (map[string]*RecipeBatchResult, error) {
+func RecipeBatchProcessing(recipes []string, options *RecipeBatchRunOptions) (map[string]*RecipeBatchResult, error) {
 	if options == nil {
-		options = &RecipeBatchOptions{
-			MaxConcurrentRecipes: 1,
-		}
+		options = &RecipeBatchRunOptions{}
 	}
 
-	logger.Logger(fmt.Sprintf("🚀 Running batch of %d recipes", len(recipes)), logger.LogInfo)
+	logger.Logger(fmt.Sprintf("🚀 Running batch of %d recipes sequentially", len(recipes)), logger.LogInfo)
 
-	// Initialize results map
 	results := make(map[string]*RecipeBatchResult)
+	var firstError error
+
 	for _, recipe := range recipes {
-		results[recipe] = &RecipeBatchResult{
-			Recipe: recipe,
-		}
-	}
+		logger.Logger(fmt.Sprintf("🔄 Processing recipe: %s", recipe), logger.LogInfo)
 
-	// Parallel execution if MaxConcurrentRecipes > 1
-	if options.MaxConcurrentRecipes > 1 {
-		var wg sync.WaitGroup
-		recipeChan := make(chan string, len(recipes))
-		resultChan := make(chan *RecipeBatchResult, len(recipes))
+		startTime := time.Now()
+		result := &RecipeBatchResult{Recipe: recipe}
 
-		// Worker function
-		worker := func() {
-			for recipe := range recipeChan {
-				startTime := time.Now()
-				runOptions := &RunOptions{
-					PrefsPath:      options.PrefsPath,
-					PreProcessors:  options.PreProcessors,
-					PostProcessors: options.PostProcessors,
-					Variables:      options.Variables,
-					ReportPlist:    options.ReportPlist,
-					Verbose:        options.Verbose,
-					SearchDirs:     options.SearchDirs,
-					OverrideDirs:   options.OverrideDirs,
-				}
-
-				output, err := RunRecipe(recipe, runOptions)
-
-				resultChan <- &RecipeBatchResult{
-					Recipe:         recipe,
-					Executed:       true,
-					Output:         output,
-					ExecutionError: err,
-				}
-
-				// Log result
-				elapsedTime := time.Since(startTime)
-				if err == nil {
-					logger.Logger(fmt.Sprintf("✅ Recipe %s completed in %s", recipe, elapsedTime), logger.LogSuccess)
-				} else {
-					logger.Logger(fmt.Sprintf("❌ Recipe %s failed after %s: %v", recipe, elapsedTime, err), logger.LogError)
-				}
-			}
-			wg.Done()
-		}
-
-		// Start worker goroutines
-		for i := 0; i < options.MaxConcurrentRecipes; i++ {
-			wg.Add(1)
-			go worker()
-		}
-
-		// Send recipes to the workers
-		for _, recipe := range recipes {
-			recipeChan <- recipe
-		}
-		close(recipeChan)
-
-		// Wait for all workers
-		wg.Wait()
-		close(resultChan)
-
-		// Collect results
-		for result := range resultChan {
-			results[result.Recipe] = result
-			if result.ExecutionError != nil && options.StopOnFirstError {
-				return results, fmt.Errorf("recipe %s execution failed: %w", result.Recipe, result.ExecutionError)
-			}
-		}
-
-	} else {
-		// Sequential execution
-		for _, recipe := range recipes {
-			runOptions := &RunOptions{
-				PrefsPath:      options.PrefsPath,
-				PreProcessors:  options.PreProcessors,
-				PostProcessors: options.PostProcessors,
-				Variables:      options.Variables,
-				ReportPlist:    options.ReportPlist,
-				Verbose:        options.Verbose,
-				SearchDirs:     options.SearchDirs,
-				OverrideDirs:   options.OverrideDirs,
+		// Run trust verification if enabled
+		if options.VerifyTrust {
+			verifyOptions := &VerifyTrustInfoOptions{
+				PrefsPath:    options.PrefsPath,
+				SearchDirs:   options.SearchDirs,
+				OverrideDirs: options.OverrideDirs,
 			}
 
-			output, err := RunRecipe(recipe, runOptions)
-			results[recipe] = &RecipeBatchResult{
-				Recipe:         recipe,
-				Executed:       true,
-				Output:         output,
-				ExecutionError: err,
-			}
-
-			if err != nil && options.StopOnFirstError {
-				return results, fmt.Errorf("recipe %s execution failed: %w", recipe, err)
-			}
-		}
-	}
-
-	logger.Logger(fmt.Sprintf("✅ Batch execution completed for %d recipes", len(recipes)), logger.LogSuccess)
-	return results, nil
-}
-
-// CleanupOptions contains options for cleaning up the AutoPkg cache
-type CleanupOptions struct {
-	PrefsPath         string
-	RemoveDownloads   bool
-	RemoveRecipeCache bool
-	KeepDays          int
-}
-
-// CleanupCache cleans up AutoPkg's cache directories
-func CleanupCache(options *CleanupOptions) error {
-	if options == nil {
-		options = &CleanupOptions{
-			RemoveDownloads:   true,
-			RemoveRecipeCache: true,
-			KeepDays:          0, // 0 means all
-		}
-	}
-
-	logger.Logger("🧹 Cleaning up AutoPkg cache", logger.LogInfo)
-
-	// Determine cache directory
-	cacheDir := ""
-	if options.PrefsPath != "" {
-		// Try to read from preferences for custom cache location
-		prefs, err := GetAutoPkgPreferences(options.PrefsPath)
-		if err == nil && prefs.AdditionalPreferences != nil {
-			if cachePath, ok := prefs.AdditionalPreferences["CACHE_DIR"].(string); ok {
-				cacheDir = cachePath
-			}
-		}
-	}
-
-	if cacheDir == "" {
-		// Use default cache location
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("failed to get user home directory: %w", err)
-		}
-		cacheDir = filepath.Join(homeDir, "Library/AutoPkg/Cache")
-	}
-
-	// Ensure cache directory exists
-	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
-		return fmt.Errorf("cache directory does not exist: %s", cacheDir)
-	}
-
-	// Get current time for age comparison
-	now := time.Now()
-
-	// Function to clean a directory based on age
-	cleanDirectory := func(dir string) error {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return fmt.Errorf("failed to read directory %s: %w", dir, err)
-		}
-
-		for _, entry := range entries {
-			entryPath := filepath.Join(dir, entry.Name())
-			info, err := entry.Info()
-			if err != nil {
-				logger.Logger(fmt.Sprintf("⚠️ Failed to get info for %s: %v", entryPath, err), logger.LogWarning)
-				continue
-			}
-
-			// Check age if keepDays is specified
-			if options.KeepDays > 0 {
-				ageInDays := int(now.Sub(info.ModTime()).Hours() / 24)
-				if ageInDays < options.KeepDays {
-					// Skip files that are newer than the keepDays threshold
-					continue
-				}
-			}
-
-			if err := os.RemoveAll(entryPath); err != nil {
-				logger.Logger(fmt.Sprintf("⚠️ Failed to remove %s: %v", entryPath, err), logger.LogWarning)
-			} else {
-				logger.Logger(fmt.Sprintf("🗑️ Removed %s", entryPath), logger.LogInfo)
-			}
-		}
-		return nil
-	}
-
-	// Clean downloads directory
-	if options.RemoveDownloads {
-		downloadsDir := filepath.Join(cacheDir, "downloads")
-		if _, err := os.Stat(downloadsDir); err == nil {
-			logger.Logger("🧹 Cleaning downloads cache", logger.LogInfo)
-			if err := cleanDirectory(downloadsDir); err != nil {
-				logger.Logger(fmt.Sprintf("⚠️ Failed to clean downloads directory: %v", err), logger.LogWarning)
-			}
-		}
-	}
-
-	// Clean recipe cache directories
-	if options.RemoveRecipeCache {
-		logger.Logger("🧹 Cleaning recipe cache", logger.LogInfo)
-		entries, err := os.ReadDir(cacheDir)
-		if err != nil {
-			return fmt.Errorf("failed to read cache directory: %w", err)
-		}
-
-		for _, entry := range entries {
-			if entry.IsDir() && entry.Name() != "downloads" {
-				recipeCacheDir := filepath.Join(cacheDir, entry.Name())
-				if err := cleanDirectory(recipeCacheDir); err != nil {
-					logger.Logger(fmt.Sprintf("⚠️ Failed to clean recipe cache %s: %v", entry.Name(), err), logger.LogWarning)
-				}
-			}
-		}
-	}
-
-	logger.Logger("✅ AutoPkg cache cleanup completed", logger.LogSuccess)
-	return nil
-}
-
-// ParallelRunOptions contains options for running recipes in parallel
-type ParallelRunOptions struct {
-	PrefsPath        string
-	MaxConcurrent    int
-	Timeout          time.Duration
-	StopOnFirstError bool
-	ReportPlist      string
-	Verbose          bool
-	SearchDirs       []string
-	OverrideDirs     []string
-	Variables        map[string]string
-	PreProcessors    []string
-	PostProcessors   []string
-	VerboseLevel     int
-}
-
-// ParallelRunResult contains the result of a parallel recipe run
-type ParallelRunResult struct {
-	Recipe      string
-	Success     bool
-	Output      string
-	Error       error
-	ElapsedTime time.Duration
-}
-
-// ParallelRunRecipes runs multiple recipes in parallel with configurable concurrency
-func ParallelRunRecipes(recipes []string, options *ParallelRunOptions) (map[string]*ParallelRunResult, error) {
-	if options == nil {
-		options = &ParallelRunOptions{
-			MaxConcurrent: 4,
-			Timeout:       30 * time.Minute,
-		}
-	}
-
-	if options.MaxConcurrent < 1 {
-		options.MaxConcurrent = 1
-	}
-
-	logger.Logger(fmt.Sprintf("⚡ Running %d recipes in parallel (max %d concurrent)", len(recipes), options.MaxConcurrent), logger.LogInfo)
-
-	results := make(map[string]*ParallelRunResult)
-	var resultsMutex sync.Mutex
-
-	// Set up worker pool
-	var wg sync.WaitGroup
-	recipeChannel := make(chan string, len(recipes))
-	errorChan := make(chan error, 1)
-	var stopWorkers bool
-	var stopWorkersMutex sync.Mutex
-
-	// Function to check if workers should stop
-	shouldStop := func() bool {
-		stopWorkersMutex.Lock()
-		defer stopWorkersMutex.Unlock()
-		return stopWorkers
-	}
-
-	// Start worker goroutines
-	for i := 0; i < options.MaxConcurrent; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for recipe := range recipeChannel {
-				// Check if we should stop
-				if shouldStop() {
-					break
-				}
-
-				startTime := time.Now()
-
-				// Prepare run options
-				runOptions := &RunOptions{
-					PrefsPath:      options.PrefsPath,
-					PreProcessors:  options.PreProcessors,
-					PostProcessors: options.PostProcessors,
-					Variables:      options.Variables,
-					ReportPlist:    options.ReportPlist,
-					Verbose:        options.Verbose,
-					SearchDirs:     options.SearchDirs,
-					OverrideDirs:   options.OverrideDirs,
-				}
-
-				// Run the recipe
-				output, err := RunRecipe(recipe, runOptions)
-				elapsedTime := time.Since(startTime)
-
-				// Store the result
-				result := &ParallelRunResult{
-					Recipe:      recipe,
-					Success:     err == nil,
-					Output:      output,
-					Error:       err,
-					ElapsedTime: elapsedTime,
-				}
-
-				resultsMutex.Lock()
-				results[recipe] = result
-				resultsMutex.Unlock()
-
-				// Log result
-				if err == nil {
-					logger.Logger(fmt.Sprintf("✅ Recipe %s completed in %s", recipe, elapsedTime), logger.LogSuccess)
-				} else {
-					logger.Logger(fmt.Sprintf("❌ Recipe %s failed after %s: %v", recipe, elapsedTime, err), logger.LogError)
-					if options.StopOnFirstError {
-						stopWorkersMutex.Lock()
-						stopWorkers = true
-						stopWorkersMutex.Unlock()
-						errorChan <- fmt.Errorf("recipe %s failed: %w", recipe, err)
-						break
+			success, _, _, err := VerifyTrustInfoForRecipes([]string{recipe}, verifyOptions)
+			if err != nil || !success {
+				logger.Logger(fmt.Sprintf("⚠️ Trust verification failed for %s", recipe), logger.LogWarning)
+				result.TrustVerified = false
+				result.VerificationError = err
+				if options.UpdateTrustOnFailure {
+					updateOptions := &UpdateTrustInfoOptions{
+						PrefsPath:    options.PrefsPath,
+						SearchDirs:   options.SearchDirs,
+						OverrideDirs: options.OverrideDirs,
 					}
+
+					_, err := UpdateTrustInfoForRecipes([]string{recipe}, updateOptions)
+					if err != nil {
+						logger.Logger(fmt.Sprintf("❌ Failed to update trust info for %s: %v", recipe, err), logger.LogError)
+						continue
+					}
+					result.TrustUpdated = true
 				}
 			}
-		}()
-	}
+		}
 
-	// Queue recipes for execution
-	for _, recipe := range recipes {
-		recipeChannel <- recipe
-	}
-	close(recipeChannel)
+		// Prepare RunOptions
+		runOptions := &RunOptions{
+			PrefsPath:      options.PrefsPath,
+			PreProcessors:  options.PreProcessors,
+			PostProcessors: options.PostProcessors,
+			Variables:      options.Variables,
+			ReportPlist:    options.ReportPlist,
+			VerboseLevel:   options.VerboseLevel,
+			SearchDirs:     options.SearchDirs,
+			OverrideDirs:   options.OverrideDirs,
+		}
 
-	// Wait for all workers with a timeout or error
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
+		// Run the recipe
+		output, err := RunRecipe(recipe, runOptions)
+		result.Output = output
+		result.Executed = true
+		result.ExecutionError = err
 
-	// Wait for either completion, timeout, or error
-	var runErr error
-	select {
-	case <-done:
-		// All workers completed normally
-	case <-time.After(options.Timeout):
-		stopWorkersMutex.Lock()
-		stopWorkers = true
-		stopWorkersMutex.Unlock()
-		runErr = fmt.Errorf("parallel run timed out after %s", options.Timeout)
-	case err := <-errorChan:
-		runErr = err
-	}
-
-	// Count successes and failures
-	var successes, failures int
-	for _, result := range results {
-		if result.Success {
-			successes++
+		elapsedTime := time.Since(startTime)
+		if err == nil {
+			logger.Logger(fmt.Sprintf("✅ Recipe %s completed successfully in %s", recipe, elapsedTime), logger.LogSuccess)
 		} else {
-			failures++
+			logger.Logger(fmt.Sprintf("❌ Recipe %s failed after %s: %v", recipe, elapsedTime, err), logger.LogError)
+			if firstError == nil {
+				firstError = err
+			}
+			if options.StopOnFirstError {
+				break
+			}
+		}
+
+		results[recipe] = result
+
+		// Send notifications if enabled and verbosity is at the lowest level (e.g., 0 or 1)
+		if options.VerboseLevel <= 1 {
+			if options.Notification.EnableTeams {
+				teamsNotifier := &MSTeamsNotifier{
+					WebhookURL: options.Notification.TeamsWebhook,
+				}
+
+				recipeLifecycle := &RecipeLifecycle{
+					Name:     result.Recipe,
+					Error:    result.ExecutionError != nil,
+					Updated:  result.TrustUpdated,
+					Verified: &result.TrustVerified,
+					Results:  map[string]interface{}{}, // Populate if necessary
+				}
+
+				teamsNotifier.NotifyTeams(recipeLifecycle, options)
+			}
+
+			if options.Notification.EnableSlack {
+				slackNotifier := &SlackNotifier{
+					WebhookURL: options.Notification.SlackWebhook,
+					Username:   options.Notification.SlackUsername,
+					Channel:    options.Notification.SlackChannel,
+					IconEmoji:  options.Notification.SlackIcon,
+				}
+
+				recipeLifecycle := &RecipeLifecycle{
+					Name:     result.Recipe,
+					Error:    result.ExecutionError != nil,
+					Updated:  result.TrustUpdated,
+					Verified: &result.TrustVerified,
+					Results:  map[string]interface{}{}, // Populate if necessary
+				}
+
+				slackNotifier.NotifySlack(recipeLifecycle)
+			}
 		}
 	}
 
-	logger.Logger(fmt.Sprintf("⚡ Parallel run completed: %d successes, %d failures", successes, failures), logger.LogInfo)
-	return results, runErr
+	logger.Logger("✅ Batch processing complete", logger.LogSuccess)
+	return results, firstError
 }
 
 // RecipeFilterCriteria defines the criteria for filtering recipes
@@ -633,7 +377,6 @@ func FilterRecipes(options *RecipeFilterCriteria, prefsPath string) (*FilterReci
 			}
 		}
 
-		// If trust info verification is required, check it
 		// If trust info verification is required, check it
 		if options.TrustInfoRequired || options.VerifiedTrustOnly {
 			if isOverride {

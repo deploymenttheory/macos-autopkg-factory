@@ -716,6 +716,37 @@ type RunOptions struct {
 }
 
 // RunRecipe runs a recipe and captures the output
+//
+//	--prefs=FILE_PATH
+//	--pre=PREPROCESSOR, --preprocessor=PREPROCESSOR
+//	                      Name of a processor to run before each recipe. Can be
+//	                      repeated to run multiple preprocessors.
+//	--post=POSTPROCESSOR, --postprocessor=POSTPROCESSOR
+//	                      Name of a processor to run after each recipe. Can be
+//	                      repeated to run multiple postprocessors.
+//	--check               Only check for new/changed downloads.
+//	--ignore-parent-trust-verification-errors
+//	                      Run recipes even if they fail parent trust
+//	                      verification.
+//	--key=KEY=VALUE
+//	                      Provide key/value pairs for recipe input. Caution:
+//	                      values specified here will be applied to all recipes.
+//	--recipe-list=TEXT_FILE
+//	                      Path to a text file with a list of recipes to run.
+//	--pkg=PKG_OR_DMG
+//	                      Path to a pkg or dmg to provide to a recipe.
+//	                      Downloading will be skipped.
+//	--report-plist=OUTPUT_PATH
+//	                      File path to save run report plist.
+//	--verbose         Verbose output.
+//	--quiet           Don't offer to search Github if a recipe can't be
+//	                      found.
+//	--search-dir=DIRECTORY
+//	                      Directory to search for recipes. Can be specified
+//	                      multiple times.
+//	--override-dir=DIRECTORY
+//	                      Directory to search for recipe overrides. Can be
+//	                      specified multiple times.
 func RunRecipe(recipe string, options *RunOptions) (string, error) {
 	if options == nil {
 		options = &RunOptions{}
@@ -746,7 +777,7 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 	}
 
 	for key, value := range options.Variables {
-		args = append(args, "-k", fmt.Sprintf("%s=%s", key, value))
+		args = append(args, "-key", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	if options.RecipeList != "" {
@@ -761,11 +792,8 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 		args = append(args, "--report-plist", options.ReportPlist)
 	}
 
-	// Handle verbosity levels
 	if options.VerboseLevel > 0 {
-		for i := 0; i < options.VerboseLevel; i++ {
-			args = append(args, "-v")
-		}
+		args = append(args, fmt.Sprintf("-%s", strings.Repeat("v", options.VerboseLevel)))
 	}
 
 	if options.Quiet {
@@ -909,9 +937,7 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 
 	// Handle verbosity levels
 	if options.VerboseLevel > 0 {
-		for i := 0; i < options.VerboseLevel; i++ {
-			args = append(args, "-v")
-		}
+		args = append(args, fmt.Sprintf("-%s", strings.Repeat("v", options.VerboseLevel)))
 	}
 
 	for _, dir := range options.SearchDirs {
