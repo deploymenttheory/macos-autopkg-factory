@@ -13,10 +13,7 @@ import (
 )
 
 func main() {
-	// Define log level flag (CLI override)
-	logLevelFlag := flag.String("log-level", "", "Set log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)")
-	flag.Parse()
-	logLevel := getLogLevel(*logLevelFlag)
+	logLevel := getLogLevel(os.Getenv("LOG_LEVEL"))
 	logger.SetLogLevel(logLevel)
 
 	// Define root command
