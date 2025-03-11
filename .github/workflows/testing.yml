@@ -77,19 +77,17 @@ jobs:
       #       --repos="recipes,grahampugh/jamf-upload,microsoft/msft-autopkg-recipes" \
             
 
-      - name: Analyze Recipe Dependencies
+      - name: Resolve Recipe Repo Dependencies
         run: |
           # Parse and format recipes list correctly
           RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
-          
-          RECIPES_ARR=(${RECIPES//,/ })
-      
-          # Run recipe-repo-deps
+
+          # Run recipe-repo-deps to resolve dependencies
           autopkgctl recipe-repo-deps \
             --prefs="$AUTOPKG_PREFS_PATH" \
-            --add-repos \
-            --include-parents \
-            --recipes "${RECIPES_ARR[@]}"
+            --use-token true \
+            --recipes "$RECIPES"
+
           
             
       
