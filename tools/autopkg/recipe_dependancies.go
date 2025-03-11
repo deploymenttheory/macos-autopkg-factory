@@ -21,41 +21,73 @@ type RecipeRepo struct {
 	IsParent         bool
 }
 
+// RecipeMatch represents a single match found for a recipe.
+type RecipeMatch struct {
+	Repo string
+	Path string
+}
+
 var recipeRegex = regexp.MustCompile(`(?i)^.*\.recipe(?:\.yaml|\.plist)?$`)
 
 // ResolveRecipeDependencies resolves all repository dependencies for a recipe.
+// Now handles multiple matches for a recipe.
 func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string) ([]RecipeRepo, error) {
 	logger.Logger(fmt.Sprintf("🔍 Resolving dependencies for: %s", recipeName), logger.LogDebug)
 
-	repo, path, err := Search(recipeName, useToken, prefsPath)
+	// Search for all matching recipes
+	matches, err := Search(recipeName, useToken, prefsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if !VerifyRepoExists(repo) {
-		return nil, fmt.Errorf("repository %s does not exist", repo)
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no matches found for recipe: %s", recipeName)
 	}
 
-	identifier, dependencies, err := ParseRecipeFile(repo, path, useToken, prefsPath)
-	if err != nil {
-		return nil, err
+	// Track all dependencies across all matches
+	allDependencies := make(map[string]RecipeRepo)
+
+	// Process each match to find its dependencies
+	for _, match := range matches {
+		// Skip if repository doesn't exist
+		if !VerifyRepoExists(match.Repo) {
+			logger.Logger(fmt.Sprintf("⚠️ Repository %s does not exist, skipping", match.Repo), logger.LogWarning)
+			continue
+		}
+
+		// Parse the recipe file to find dependencies
+		identifier, dependencies, err := ParseRecipeFile(match.Repo, match.Path, useToken, prefsPath)
+		if err != nil {
+			logger.Logger(fmt.Sprintf("⚠️ Error parsing recipe file for %s: %v, continuing with other matches", match.Path, err), logger.LogWarning)
+			continue
+		}
+
+		// Add this recipe to dependencies
+		allDependencies[identifier] = RecipeRepo{
+			RecipeIdentifier: identifier,
+			RepoName:         match.Repo,
+			RepoURL:          fmt.Sprintf("https://github.com/autopkg/%s", match.Repo),
+			IsParent:         false,
+		}
+
+		// Add all parent dependencies
+		for _, dep := range dependencies {
+			allDependencies[dep.RecipeIdentifier] = dep
+		}
 	}
 
 	logger.Logger("✅ Dependencies resolved", logger.LogDebug)
 
-	allDependencies := map[string]RecipeRepo{
-		identifier: {RecipeIdentifier: identifier, RepoName: repo, RepoURL: fmt.Sprintf("https://github.com/autopkg/%s", repo), IsParent: false},
-	}
-
-	for _, dep := range dependencies {
-		allDependencies[dep.RecipeIdentifier] = dep
+	if len(allDependencies) == 0 {
+		return nil, fmt.Errorf("no valid dependencies found for recipe: %s", recipeName)
 	}
 
 	return mapToSlice(allDependencies), nil
 }
 
 // Search searches for a recipe using autopkg search command.
-func Search(recipeName string, useToken bool, prefsPath string) (string, string, error) {
+// Now returns all matches instead of just the first one.
+func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, error) {
 	logger.Logger(fmt.Sprintf("🔍 Searching for recipe: %s", recipeName), logger.LogDebug)
 
 	// Check if the input is a recipe identifier or a recipe filename
@@ -65,7 +97,7 @@ func Search(recipeName string, useToken bool, prefsPath string) (string, string,
 	// If it's neither a recipe file nor an identifier, it's invalid
 	if !isRecipeFile && !isRecipeIdentifier {
 		logger.Logger("❌ Invalid recipe name format", logger.LogError)
-		return "", "", fmt.Errorf("invalid recipe name: %s", recipeName)
+		return nil, fmt.Errorf("invalid recipe name: %s", recipeName)
 	}
 
 	// Handle tilde expansion in prefsPath
@@ -133,53 +165,123 @@ func Search(recipeName string, useToken bool, prefsPath string) (string, string,
 	if err != nil {
 		logger.Logger(fmt.Sprintf("❌ autopkg search command failed: %v", err), logger.LogError)
 		logger.Logger(fmt.Sprintf("Output: %s", outputStr), logger.LogDebug)
-		return "", "", fmt.Errorf("autopkg search failed: %w", err)
+		return nil, fmt.Errorf("autopkg search failed: %w", err)
 	}
 
-	// Parse the output
-	lines := strings.Split(outputStr, "\n")
+	// Parse the output to find all matches
+	matches, err := parseSearchOutput(outputStr)
+	if err != nil {
+		logger.Logger(fmt.Sprintf("❌ Failed to parse search output: %v", err), logger.LogError)
+		return nil, err
+	}
 
-	// Skip header lines and look for the first valid result
-	foundHeader := false
-	for _, line := range lines {
-		// Check for header line
-		if !foundHeader {
-			if strings.Contains(line, "Name") && strings.Contains(line, "Repo") && strings.Contains(line, "Path") {
-				foundHeader = true
-				continue
-			}
+	if len(matches) == 0 {
+		logger.Logger("⚠️ No valid recipes found", logger.LogWarning)
+		logger.Logger(fmt.Sprintf("Search output: %s", outputStr), logger.LogDebug)
+		return nil, fmt.Errorf("no valid recipes found for %s", recipeName)
+	}
+
+	// Log all matches
+	for i, match := range matches {
+		logger.Logger(fmt.Sprintf("✅ Recipe found (%d/%d): Repo=%s, Path=%s",
+			i+1, len(matches), match.Repo, match.Path), logger.LogDebug)
+	}
+
+	return matches, nil
+}
+
+// parseSearchOutput parses the output of autopkg search command to extract all matches.
+func parseSearchOutput(output string) ([]RecipeMatch, error) {
+	lines := strings.Split(output, "\n")
+	var matches []RecipeMatch
+
+	// Find the header line
+	headerIndex := -1
+	for i, line := range lines {
+		if strings.Contains(line, "Name") && strings.Contains(line, "Repo") && strings.Contains(line, "Path") {
+			headerIndex = i
+			break
 		}
+	}
 
-		// Skip separator line or empty lines
-		if strings.HasPrefix(line, "----") || strings.TrimSpace(line) == "" {
+	if headerIndex == -1 {
+		return nil, fmt.Errorf("could not find header in search output")
+	}
+
+	// Find the separator line
+	sepIndex := -1
+	for i := headerIndex + 1; i < len(lines); i++ {
+		if strings.Contains(lines[i], "----") {
+			sepIndex = i
+			break
+		}
+	}
+
+	if sepIndex == -1 {
+		return nil, fmt.Errorf("could not find separator in search output")
+	}
+
+	// Analyze the header line to determine column positions
+	headerLine := lines[headerIndex]
+
+	// Find starting positions of each column
+	namePos := strings.Index(headerLine, "Name")
+	repoPos := strings.Index(headerLine, "Repo")
+	pathPos := strings.Index(headerLine, "Path")
+
+	if namePos == -1 || repoPos == -1 || pathPos == -1 {
+		return nil, fmt.Errorf("invalid header format")
+	}
+
+	// Process each line after the separator
+	for i := sepIndex + 1; i < len(lines); i++ {
+		line := lines[i]
+
+		// Skip empty lines or lines with "To add a new recipe repo"
+		if strings.TrimSpace(line) == "" || strings.Contains(line, "To add a new recipe repo") {
 			continue
 		}
 
-		// Only process lines after the header
-		if foundHeader {
-			// Split the line into fields
-			fields := strings.Fields(line)
-			if len(fields) >= 3 {
-				// Fields should be Name, Repo, Path
-				// But the name might contain spaces, so we need to be careful
+		// Make sure line is long enough
+		if len(line) < pathPos {
+			continue
+		}
 
-				// Find the repo column - it's typically the second-to-last column
-				repoIndex := len(fields) - 2
-				pathIndex := len(fields) - 1
+		// Extract repo and path based on column positions
+		// We need to handle the case where the content of a column might be shorter than the column width
+		var repo, path string
 
-				if repoIndex >= 0 && pathIndex > repoIndex {
-					repo := fields[repoIndex]
-					path := fields[pathIndex]
-					logger.Logger(fmt.Sprintf("✅ Recipe found: Repo=%s, Path=%s", repo, path), logger.LogDebug)
-					return repo, path, nil
-				}
-			}
+		// Extract repo
+		repoStart := repoPos
+		repoEnd := pathPos
+		if repoStart < len(line) {
+			repoStr := line[repoStart:min(repoEnd, len(line))]
+			repo = strings.TrimSpace(repoStr)
+		}
+
+		// Extract path
+		if pathPos < len(line) {
+			path = strings.TrimSpace(line[pathPos:])
+		}
+
+		// Only add valid matches
+		if repo != "" && path != "" {
+			matches = append(matches, RecipeMatch{
+				Repo: repo,
+				Path: path,
+			})
 		}
 	}
 
-	logger.Logger("⚠️ No valid recipe found", logger.LogWarning)
-	logger.Logger(fmt.Sprintf("Search output: %s", outputStr), logger.LogDebug)
-	return "", "", fmt.Errorf("no valid recipe found for %s", recipeName)
+	return matches, nil
+}
+
+// helper function for min (Go < 1.21)
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // VerifyRepoExists checks if a repository exists on GitHub.
@@ -232,8 +334,10 @@ func ParseRecipeFile(repo, path string, useToken bool, prefsPath string) (string
 	deps := []RecipeRepo{}
 	if parent != "" {
 		logger.Logger(fmt.Sprintf("🧩 Found parent recipe: %s", parent), logger.LogDebug)
-		parentRepo, parentPath, err := Search(parent, useToken, prefsPath)
-		if err != nil {
+
+		// Search for parent recipe(s)
+		parentMatches, err := Search(parent, useToken, prefsPath)
+		if err != nil || len(parentMatches) == 0 {
 			logger.Logger(fmt.Sprintf("⚠️ Could not find parent recipe: %s, error: %v", parent, err), logger.LogWarning)
 			// Add the parent as a dependency even if we can't resolve it further
 			// This preserves the dependency information
@@ -244,18 +348,21 @@ func ParseRecipeFile(repo, path string, useToken bool, prefsPath string) (string
 				IsParent:         true,
 			})
 		} else {
-			deps = append(deps, RecipeRepo{
-				RecipeIdentifier: parent,
-				RepoName:         parentRepo,
-				RepoURL:          fmt.Sprintf("https://github.com/autopkg/%s", parentRepo),
-				IsParent:         true,
-			})
+			// Add all found parent recipes
+			for _, parentMatch := range parentMatches {
+				if VerifyRepoExists(parentMatch.Repo) {
+					deps = append(deps, RecipeRepo{
+						RecipeIdentifier: parent,
+						RepoName:         parentMatch.Repo,
+						RepoURL:          fmt.Sprintf("https://github.com/autopkg/%s", parentMatch.Repo),
+						IsParent:         true,
+					})
 
-			// Recursively resolve parent dependencies if needed
-			if parentRepo != "" && VerifyRepoExists(parentRepo) {
-				parentIdentifier, parentDeps, err := ParseRecipeFile(parentRepo, parentPath, useToken, prefsPath)
-				if err == nil && parentIdentifier != "" {
-					deps = append(deps, parentDeps...)
+					// Recursively resolve this parent's dependencies
+					parentIdentifier, parentDeps, err := ParseRecipeFile(parentMatch.Repo, parentMatch.Path, useToken, prefsPath)
+					if err == nil && parentIdentifier != "" {
+						deps = append(deps, parentDeps...)
+					}
 				}
 			}
 		}
