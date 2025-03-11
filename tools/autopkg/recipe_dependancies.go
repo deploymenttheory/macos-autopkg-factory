@@ -146,7 +146,7 @@ func VerifyRepoExists(repoName string) bool {
 
 // ParseRecipeFile parses a recipe file (YAML or plist) and extracts details.
 func ParseRecipeFile(repo, path string) (string, []RecipeRepo, error) {
-	repoURL := fmt.Sprintf("https://github.com/autopkg/%s/blob/master/%s", repo, path)
+	repoURL := fmt.Sprintf("https://raw.githubusercontent.com/autopkg/%s/refs/heads/master/%s", repo, path)
 	logger.Logger(fmt.Sprintf("🔍 Fetching recipe file: %s", repoURL), logger.LogDebug)
 
 	cmd := exec.Command("curl", "-sL", repoURL)
