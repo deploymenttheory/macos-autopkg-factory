@@ -79,16 +79,18 @@ jobs:
 
       - name: Analyze Recipe Dependencies
         run: |
-          # Parse and format recipes list
+          # Parse and format recipes list correctly
           RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
-          RECIPES="${RECIPES//,/ }"
           
-          # Analyze dependencies and add required repos
-          autopkgctl analyze-deps \
+          RECIPES_ARR=(${RECIPES//,/ })
+      
+          # Run recipe-repo-deps
+          autopkgctl recipe-repo-deps \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --add-repos \
             --include-parents \
-            --recipes="$RECIPES" \
+            --recipes "${RECIPES_ARR[@]}"
+          
             
       
       - name: Verify Trust Info

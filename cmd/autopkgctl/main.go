@@ -98,18 +98,21 @@ func main() {
 		fmt.Println("✅ Repositories added successfully")
 		fmt.Println(output)
 
-	case "analyze-deps":
-		// Define analyze-deps flags
+	case "recipe-repo-deps":
 		prefsPathAnalyze := analyzeDepsCmd.String("prefs", "", "Path to AutoPkg preferences file")
-		recipesStr := analyzeDepsCmd.String("recipes", "", "Space-separated list of recipes to analyze")
+		recipesStr := analyzeDepsCmd.String("recipes", "", "Comma-separated list of recipes to analyze")
 		includeParents := analyzeDepsCmd.Bool("include-parents", true, "Include parent recipes in analysis")
 		addRepos := analyzeDepsCmd.Bool("add-repos", false, "Add discovered repositories")
 
 		analyzeDepsCmd.Parse(os.Args[2:])
 		prefsPath = *prefsPathAnalyze
 
-		// Parse recipes
-		recipes := strings.Fields(*recipesStr)
+		var recipes []string
+		if recipesStr != nil && *recipesStr != "" {
+			recipes = strings.Split(*recipesStr, ",")
+		}
+
+		logger.Logger(fmt.Sprintf("📋 Parsed Recipes: %v", recipes), logger.LogDebug)
 
 		// Analyze dependencies
 		options := &autopkg.RecipeRepoAnalysisOptions{
