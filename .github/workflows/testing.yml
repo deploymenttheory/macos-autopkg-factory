@@ -73,17 +73,11 @@ jobs:
           # Parse and format recipes list correctly
           RECIPES="${{ github.event.inputs.recipes }}"
       
-          # Convert commas to space-separated values
-          RECIPES=(${RECIPES//,/ })
-      
-          # Debug log
-          echo "Parsed recipes: ${RECIPES[@]}"
-      
           # Run recipe-repo-deps to resolve dependencies
           autopkgctl recipe-repo-deps \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --use-token true \
-            --recipes "${RECIPES[@]}"
+            --recipes "${{ github.event.inputs.recipes }}"
 
       - name: Verify Trust Info
         if: ${{ github.event.inputs.verify_trust != 'false' }}
