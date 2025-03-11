@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/autopkg"
@@ -42,6 +44,17 @@ var (
 	removeDownloads   bool
 	removeRecipeCache bool
 	keepDays          int
+
+	// Configure command flags
+	gitHubToken      string
+	jssURL           string
+	apiUsername      string
+	apiPassword      string
+	clientID         string
+	clientSecret     string
+	tenantID         string
+	teamsWebhookUrl  string
+	failWithoutTrust bool
 )
 
 func main() {
@@ -82,6 +95,27 @@ func main() {
 	setupCmd.Flags().BoolVar(&useBeta, "use-beta", false, "Use beta version of AutoPkg")
 	setupCmd.Flags().BoolVar(&checkGit, "check-git", true, "Check if Git is installed")
 	setupCmd.Flags().BoolVar(&checkRoot, "check-root", true, "Check if running as root")
+
+	// Configure command
+	configureCmd := &cobra.Command{
+		Use:   "configure",
+		Short: "Configure AutoPkg settings",
+		Long:  "Configure AutoPkg settings including GitHub token, Jamf credentials, and other preferences",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigure(cmd)
+		},
+	}
+
+	// Configure command flags
+	configureCmd.Flags().StringVar(&gitHubToken, "github-token", "", "GitHub token for API access")
+	configureCmd.Flags().StringVar(&jssURL, "jss-url", "", "Jamf Pro server URL")
+	configureCmd.Flags().StringVar(&apiUsername, "api-username", "", "API username for Jamf Pro")
+	configureCmd.Flags().StringVar(&apiPassword, "api-password", "", "API password for Jamf Pro")
+	configureCmd.Flags().StringVar(&clientID, "client-id", "", "Client ID for Jamf Pro API")
+	configureCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Client secret for Jamf Pro API")
+	configureCmd.Flags().StringVar(&tenantID, "tenant-id", "", "Tenant ID for Microsoft services")
+	configureCmd.Flags().StringVar(&teamsWebhookUrl, "teams-webhook", "", "Microsoft Teams webhook URL")
+	configureCmd.Flags().BoolVar(&failWithoutTrust, "fail-without-trust", false, "Fail recipes without trust info")
 
 	// Repo-add command
 	repoAddCmd := &cobra.Command{
@@ -147,6 +181,7 @@ func main() {
 
 	// Add commands to root
 	rootCmd.AddCommand(setupCmd)
+	rootCmd.AddCommand(configureCmd)
 	rootCmd.AddCommand(repoAddCmd)
 	rootCmd.AddCommand(recipeDepsCmd)
 	rootCmd.AddCommand(verifyTrustCmd)
@@ -189,6 +224,172 @@ func runSetup() error {
 		return err
 	}
 	fmt.Printf("✅ AutoPkg %s installed successfully\n", version)
+
+	return nil
+}
+
+func runConfigure(cmd *cobra.Command) error {
+	logger.Logger("🔧 Configuring AutoPkg settings", logger.LogInfo)
+
+	// Apply tilde expansion to prefsPath if needed
+	expandedPrefsPath := prefsPath
+	if strings.HasPrefix(prefsPath, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			expandedPrefsPath = filepath.Join(homeDir, prefsPath[2:])
+		}
+	}
+
+	// Create preferences directory if it doesn't exist
+	prefsDir := filepath.Dir(expandedPrefsPath)
+	if err := os.MkdirAll(prefsDir, 0755); err != nil {
+		logger.Logger(fmt.Sprintf("❌ Failed to create preferences directory: %v", err), logger.LogError)
+		return err
+	}
+
+	// Try to read existing preferences
+	var prefs *autopkg.PreferencesData
+	existingPrefs, err := autopkg.GetAutoPkgPreferences(expandedPrefsPath)
+	if err != nil {
+		// If file doesn't exist, create a new preferences struct
+		logger.Logger("ℹ️ Creating new preferences file", logger.LogInfo)
+		prefs = &autopkg.PreferencesData{
+			RECIPE_REPOS:       make(map[string]interface{}),
+			RECIPE_SEARCH_DIRS: []string{},
+		}
+	} else {
+		prefs = existingPrefs
+	}
+
+	// Update preferences with provided flags (if any)
+	updated := false
+
+	// GitHub token
+	if gitHubToken != "" {
+		// Save token to the autopkg token file as well
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			tokenPath := filepath.Join(homeDir, ".autopkg_gh_token")
+			if err := os.WriteFile(tokenPath, []byte(gitHubToken), 0600); err == nil {
+				logger.Logger(fmt.Sprintf("✅ Wrote GitHub token to %s", tokenPath), logger.LogSuccess)
+				prefs.GITHUB_TOKEN_PATH = tokenPath
+				updated = true
+			} else {
+				logger.Logger(fmt.Sprintf("❌ Failed to write GitHub token file: %v", err), logger.LogError)
+			}
+		}
+	}
+
+	// Jamf Pro settings
+	if jssURL != "" {
+		prefs.JSS_URL = jssURL
+		updated = true
+	}
+	if apiUsername != "" {
+		prefs.API_USERNAME = apiUsername
+		updated = true
+	}
+	if apiPassword != "" {
+		prefs.API_PASSWORD = apiPassword
+		updated = true
+	}
+	if clientID != "" {
+		prefs.CLIENT_ID = clientID
+		updated = true
+	}
+	if clientSecret != "" {
+		prefs.CLIENT_SECRET = clientSecret
+		updated = true
+	}
+	if tenantID != "" {
+		prefs.TENANT_ID = tenantID
+		updated = true
+	}
+
+	// Microsoft Teams webhook
+	if teamsWebhookUrl != "" {
+		if prefs.AdditionalPreferences == nil {
+			prefs.AdditionalPreferences = make(map[string]interface{})
+		}
+		prefs.AdditionalPreferences["TEAMS_WEBHOOK"] = teamsWebhookUrl
+		updated = true
+	}
+
+	// Trust settings
+	if cmd.Flags().Changed("fail-without-trust") {
+		prefs.FAIL_RECIPES_WITHOUT_TRUST_INFO = failWithoutTrust
+		updated = true
+	}
+
+	// Check environment variables if flags weren't provided
+	if gitHubToken == "" && os.Getenv("GITHUB_TOKEN") != "" {
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			tokenPath := filepath.Join(homeDir, ".autopkg_gh_token")
+			if err := os.WriteFile(tokenPath, []byte(os.Getenv("GITHUB_TOKEN")), 0600); err == nil {
+				logger.Logger(fmt.Sprintf("✅ Wrote GitHub token from environment to %s", tokenPath), logger.LogSuccess)
+				prefs.GITHUB_TOKEN_PATH = tokenPath
+				updated = true
+			}
+		}
+	}
+
+	if jssURL == "" && os.Getenv("JSS_URL") != "" {
+		prefs.JSS_URL = os.Getenv("JSS_URL")
+		updated = true
+	}
+	if apiUsername == "" && os.Getenv("API_USERNAME") != "" {
+		prefs.API_USERNAME = os.Getenv("API_USERNAME")
+		updated = true
+	}
+	if apiPassword == "" && os.Getenv("API_PASSWORD") != "" {
+		prefs.API_PASSWORD = os.Getenv("API_PASSWORD")
+		updated = true
+	}
+	if clientID == "" && os.Getenv("CLIENT_ID") != "" {
+		prefs.CLIENT_ID = os.Getenv("CLIENT_ID")
+		updated = true
+	}
+	if clientSecret == "" && os.Getenv("CLIENT_SECRET") != "" {
+		prefs.CLIENT_SECRET = os.Getenv("CLIENT_SECRET")
+		updated = true
+	}
+	if tenantID == "" && os.Getenv("TENANT_ID") != "" {
+		prefs.TENANT_ID = os.Getenv("TENANT_ID")
+		updated = true
+	}
+	if teamsWebhookUrl == "" && os.Getenv("TEAMS_WEBHOOK") != "" {
+		if prefs.AdditionalPreferences == nil {
+			prefs.AdditionalPreferences = make(map[string]interface{})
+		}
+		prefs.AdditionalPreferences["TEAMS_WEBHOOK"] = os.Getenv("TEAMS_WEBHOOK")
+		updated = true
+	}
+
+	// If any settings were updated, write the preferences file
+	if updated {
+		if err := autopkg.SetAutoPkgPreferences(expandedPrefsPath, prefs); err != nil {
+			logger.Logger(fmt.Sprintf("❌ Failed to write preferences: %v", err), logger.LogError)
+			return err
+		}
+		logger.Logger("✅ AutoPkg preferences updated successfully", logger.LogSuccess)
+	} else {
+		logger.Logger("ℹ️ No changes to preferences", logger.LogInfo)
+	}
+
+	// Verify the configuration by running autopkg repo-list
+	cmdExec := exec.Command("autopkg", "repo-list")
+	if prefsPath != "" {
+		cmdExec.Args = append(cmdExec.Args, "--prefs", expandedPrefsPath)
+	}
+	output, err := cmdExec.CombinedOutput()
+	if err != nil {
+		logger.Logger(fmt.Sprintf("⚠️ Failed to verify configuration: %v", err), logger.LogWarning)
+		logger.Logger(fmt.Sprintf("Output: %s", string(output)), logger.LogDebug)
+	} else {
+		logger.Logger("✅ Configuration verified successfully", logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("Repository list:\n%s", string(output)), logger.LogInfo)
+	}
 
 	return nil
 }

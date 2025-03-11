@@ -67,6 +67,14 @@ jobs:
             --use-beta=false \
             --check-git \
             --check-root
+      
+      - name: Configure AutoPkg
+        run: |
+          # Configure AutoPkg with credentials and settings
+          # Note: Environment variables are automatically used
+          autopkgctl configure \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --fail-without-trust=true
             
       - name: Resolve Recipe Repo Dependencies
         run: |
@@ -79,13 +87,11 @@ jobs:
       - name: Verify Trust Info
         if: ${{ github.event.inputs.verify_trust != 'false' }}
         run: |
-          
           # Verify trust info
           autopkgctl verify-trust \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --update=${{ github.event.inputs.update_trust || 'true' }} \
             --recipes="${{ github.event.inputs.recipes }}"
-            
       
       - name: Run AutoPkg Recipes
         run: |
@@ -96,7 +102,6 @@ jobs:
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
             --recipes="${{ github.event.inputs.recipes }}"
-            
       
       - name: Cleanup Cache
         if: always()
@@ -105,8 +110,7 @@ jobs:
           autopkgctl cleanup \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --remove-downloads \
-            --remove-recipe-cache \
-            
+            --remove-recipe-cache
       
       - name: Upload Run Report
         if: always()
