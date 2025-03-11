@@ -13,7 +13,10 @@ import (
 )
 
 func main() {
-	logLevel := getLogLevel(os.Getenv("LOG_LEVEL"))
+	// Define log level flag (CLI override)
+	logLevelFlag := flag.String("log-level", "", "Set log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)")
+	flag.Parse()
+	logLevel := getLogLevel(*logLevelFlag)
 	logger.SetLogLevel(logLevel)
 
 	// Define root command
@@ -96,35 +99,26 @@ func main() {
 		fmt.Println(output)
 
 	case "recipe-repo-deps":
-		// Print all arguments to see what's being received
-		logger.Logger("Command-line arguments:", logger.LogDebug)
-		for i, arg := range os.Args {
-			logger.Logger(fmt.Sprintf("Arg[%d]: '%s'", i, arg), logger.LogDebug)
-		}
-
+		// Define flags
 		prefsPathAnalyze := analyzeDepsCmd.String("prefs", "", "Path to AutoPkg preferences file")
 		recipesStr := analyzeDepsCmd.String("recipes", "", "Comma-separated list of recipes to analyze")
 		useToken := analyzeDepsCmd.Bool("use-token", true, "Use GitHub token for authentication")
-		analyzeDepsCmd.Parse(os.Args[2:])
+
+		// Extract all arguments after 'recipe-repo-deps'
+		cmdArgs := os.Args[2:]
+
+		// Parse the flags
+		analyzeDepsCmd.Parse(cmdArgs)
 		prefsPath = *prefsPathAnalyze
 
-		// Print all arguments to see what's being received
-		logger.Logger("Command-line arguments:", logger.LogDebug)
-		for i, arg := range os.Args {
-			logger.Logger(fmt.Sprintf("Arg[%d]: '%s'", i, arg), logger.LogDebug)
-		}
+		// Debug output after parsing
+		logger.Logger(fmt.Sprintf("After parsing, recipes flag value: '%s'", *recipesStr), logger.LogDebug)
 
-		// Debug the raw input string
-		logger.Logger(fmt.Sprintf("🔄 Raw recipes string: '%s'", *recipesStr), logger.LogDebug)
-
+		// Parse recipe list
 		var recipes []string
 		if recipesStr != nil && *recipesStr != "" {
-			// Trim the string and split more robustly
-			trimmedStr := strings.TrimSpace(*recipesStr)
-			rawRecipes := strings.Split(trimmedStr, ",")
-
-			// Process each recipe name
-			for _, r := range rawRecipes {
+			// Split by comma and trim whitespace
+			for _, r := range strings.Split(*recipesStr, ",") {
 				r = strings.TrimSpace(r)
 				if r != "" {
 					recipes = append(recipes, r)
