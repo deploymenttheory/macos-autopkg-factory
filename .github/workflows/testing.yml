@@ -7,11 +7,11 @@ on:
     inputs:
       recipes:
         description: 'Comma-separated list of recipes to run'
-        required: false
+        required: true
         default: 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe'
       verify_trust:
         description: 'Verify trust info for recipes'
-        required: false
+        required: true
         default: true
         type: boolean
       update_trust:
@@ -72,6 +72,8 @@ jobs:
         run: |
           # Parse and format recipes list correctly
           RECIPES="${{ github.event.inputs.recipes }}"
+
+          RECIPES="${RECIPES//,/ }"
 
           # Run recipe-repo-deps to resolve dependencies
           autopkgctl recipe-repo-deps \
