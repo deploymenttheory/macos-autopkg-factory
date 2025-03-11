@@ -67,7 +67,7 @@ jobs:
             --use-beta=false \
             --check-git \
             --check-root \
-            --log-level="${{ env.LOG_LEVEL }}"
+            
       
       - name: Add Required Repositories
         run: |
@@ -75,7 +75,7 @@ jobs:
           autopkgctl repo-add \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --repos="recipes,grahampugh/jamf-upload,microsoft/msft-autopkg-recipes" \
-            --log-level="${{ env.LOG_LEVEL }}"
+            
 
       - name: Analyze Recipe Dependencies
         run: |
@@ -89,7 +89,7 @@ jobs:
             --add-repos \
             --include-parents \
             --recipes="$RECIPES" \
-            --log-level="${{ env.LOG_LEVEL }}"
+            
       
       - name: Verify Trust Info
         if: ${{ github.event.inputs.verify_trust != 'false' }}
@@ -103,7 +103,7 @@ jobs:
             --prefs="$AUTOPKG_PREFS_PATH" \
             --update=${{ github.event.inputs.update_trust || 'true' }} \
             --recipes="$RECIPES" \
-            --log-level="${{ env.LOG_LEVEL }}"
+            
       
       - name: Run AutoPkg Recipes
         run: |
@@ -118,7 +118,7 @@ jobs:
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
             --recipes="$RECIPES" \
-            --log-level="${{ env.LOG_LEVEL }}"
+            
       
       - name: Cleanup Cache
         if: always()
@@ -128,7 +128,7 @@ jobs:
             --prefs="$AUTOPKG_PREFS_PATH" \
             --remove-downloads \
             --remove-recipe-cache \
-            --log-level="${{ env.LOG_LEVEL }}"
+            
       
       - name: Upload Run Report
         if: always()
