@@ -13,8 +13,11 @@ import (
 )
 
 func main() {
-	// Set up logger
-	logger.SetLogLevel(logger.LogInfo)
+	// Define log level flag (CLI override)
+	logLevelFlag := flag.String("log-level", "", "Set log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)")
+	flag.Parse()
+	logLevel := getLogLevel(*logLevelFlag)
+	logger.SetLogLevel(logLevel)
 
 	// Define root command
 	setupCmd := flag.NewFlagSet("setup", flag.ExitOnError)
@@ -298,5 +301,28 @@ func main() {
 	default:
 		fmt.Printf("Unknown subcommand: %s\n", os.Args[1])
 		os.Exit(1)
+	}
+}
+
+func getLogLevel(cliLogLevel string) int {
+	// Use CLI flag if set, otherwise check the environment variable
+	level := cliLogLevel
+	if level == "" {
+		level = os.Getenv("LOG_LEVEL") // Fallback to environment variable
+	}
+
+	switch strings.ToUpper(level) {
+	case "DEBUG":
+		return logger.LogDebug
+	case "INFO":
+		return logger.LogInfo
+	case "WARNING":
+		return logger.LogWarning
+	case "ERROR":
+		return logger.LogError
+	case "SUCCESS":
+		return logger.LogSuccess
+	default:
+		return logger.LogInfo // Default to INFO if invalid or unset
 	}
 }
