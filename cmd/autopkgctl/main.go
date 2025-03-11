@@ -105,9 +105,22 @@ func main() {
 		analyzeDepsCmd.Parse(os.Args[2:])
 		prefsPath = *prefsPathAnalyze
 
+		// Debug the raw input string
+		logger.Logger(fmt.Sprintf("🔄 Raw recipes string: '%s'", *recipesStr), logger.LogDebug)
+
 		var recipes []string
 		if recipesStr != nil && *recipesStr != "" {
-			recipes = strings.Split(*recipesStr, ",")
+			// Trim the string and split more robustly
+			trimmedStr := strings.TrimSpace(*recipesStr)
+			rawRecipes := strings.Split(trimmedStr, ",")
+
+			// Process each recipe name
+			for _, r := range rawRecipes {
+				r = strings.TrimSpace(r)
+				if r != "" {
+					recipes = append(recipes, r)
+				}
+			}
 		}
 
 		logger.Logger(fmt.Sprintf("📋 Parsed Recipes: %v", recipes), logger.LogDebug)

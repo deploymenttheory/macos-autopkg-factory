@@ -82,15 +82,12 @@ jobs:
       - name: Verify Trust Info
         if: ${{ github.event.inputs.verify_trust != 'false' }}
         run: |
-          # Parse and format recipes list
-          RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
-          RECIPES="${RECIPES//,/ }"
           
           # Verify trust info
           autopkgctl verify-trust \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --update=${{ github.event.inputs.update_trust || 'true' }} \
-            --recipes="$RECIPES" \
+            --recipes="${{ github.event.inputs.recipes }}"
             
       
       - name: Run AutoPkg Recipes
