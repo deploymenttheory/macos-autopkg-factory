@@ -43,7 +43,7 @@ jobs:
         run: |
           # Build the CLI tool that will execute the workflow
           cd cmd/autopkgctl
-          go build -o $GITHUB_WORKSPACE/autopkgctl
+          go build -o $GITHUB_WORKSPACE/examples/autopkgctl
           chmod +x $GITHUB_WORKSPACE/autopkgctl
           echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
       
