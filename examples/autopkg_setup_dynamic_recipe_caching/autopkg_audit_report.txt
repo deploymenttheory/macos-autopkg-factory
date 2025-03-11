@@ -1,0 +1,16 @@
+AutoPkg Workflow Report
+=====================
+
+Start time: 2025-03-11T15:55:09Z
+End time: 2025-03-11T15:55:29Z
+Elapsed time: 19.378999458s
+
+Success: false
+Completed steps: 7
+Failed steps: 1
+Skipped steps: 0
+Processed recipes: 1
+
+Failed Steps:
+- Create Overrides: make override for BBEdit.jamf.recipe failed: recipe audit failed: exit status 255
+

@@ -671,7 +671,7 @@ func SearchRecipes(term string, options *SearchOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe search failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil

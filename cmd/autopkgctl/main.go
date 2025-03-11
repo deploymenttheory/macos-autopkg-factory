@@ -22,7 +22,7 @@ func main() {
 	// Define root command
 	setupCmd := flag.NewFlagSet("setup", flag.ExitOnError)
 	repoAddCmd := flag.NewFlagSet("repo-add", flag.ExitOnError)
-	analyzeDepsCmd := flag.NewFlagSet("analyze-deps", flag.ExitOnError)
+	analyzeDepsCmd := flag.NewFlagSet("recipe-repo-deps", flag.ExitOnError)
 	verifyTrustCmd := flag.NewFlagSet("verify-trust", flag.ExitOnError)
 	runCmd := flag.NewFlagSet("run", flag.ExitOnError)
 	cleanupCmd := flag.NewFlagSet("cleanup", flag.ExitOnError)
