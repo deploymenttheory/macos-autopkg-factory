@@ -73,7 +73,7 @@ jobs:
           # Run recipe-repo-deps to resolve dependencies
           autopkgctl recipe-repo-deps \
             --prefs="$AUTOPKG_PREFS_PATH" \
-            --use-token true \
+            --use-token \
             --recipes "${{ github.event.inputs.recipes }}"
 
       - name: Verify Trust Info
