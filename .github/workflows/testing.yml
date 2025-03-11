@@ -23,9 +23,13 @@ on:
 env:
   AUTOPKG_PREFS_PATH: ~/Library/Preferences/com.github.autopkg.plist
   TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
-  JAMFPRO_URL: ${{ secrets.JAMFPRO_URL }}
+  JSS_URL: ${{ secrets.JSS_URL }}
   API_USERNAME: ${{ secrets.API_USERNAME }}
   API_PASSWORD: ${{ secrets.API_PASSWORD }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CLIENT_ID: ${{ secrets.JAMFPRO_CLIENT_ID }}
+  CLIENT_SECRET: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
+  TENANT_ID: ${{ secrets.TENANT_ID }}
 
 jobs:
   autopkg-run:
