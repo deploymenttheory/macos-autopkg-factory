@@ -70,9 +70,6 @@ jobs:
             
       - name: Resolve Recipe Repo Dependencies
         run: |
-          # Parse and format recipes list correctly
-          RECIPES="${{ github.event.inputs.recipes }}"
-      
           # Run recipe-repo-deps to resolve dependencies
           autopkgctl recipe-repo-deps \
             --prefs="$AUTOPKG_PREFS_PATH" \
@@ -92,17 +89,13 @@ jobs:
       
       - name: Run AutoPkg Recipes
         run: |
-          # Parse and format recipes list
-          RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
-          RECIPES="${RECIPES//,/ }"
-          
           # Run recipes
           autopkgctl run \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --report="/tmp/autopkg-run-report.json" \
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
-            --recipes="$RECIPES" \
+            --recipes="${{ github.event.inputs.recipes }}"
             
       
       - name: Cleanup Cache
