@@ -56,7 +56,7 @@ func AuditRecipe(recipes []string, options *AuditOptions) (string, error) {
 
 	logger.Logger("🔍 Auditing recipes...", logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -115,7 +115,7 @@ func GetRecipeInfo(recipe string, options *InfoOptions) (string, error) {
 
 	logger.Logger(fmt.Sprintf("ℹ️ Getting info for recipe: %s", recipe), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -213,7 +213,7 @@ func InstallRecipe(recipes []string, options *InstallOptions) (string, error) {
 
 	logger.Logger(fmt.Sprintf("📦 Installing recipes: %s", strings.Join(recipes, ", ")), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -239,7 +239,7 @@ func ListProcessors(prefsPath string) (string, error) {
 
 	logger.Logger("📋 Listing available processors...", logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -304,7 +304,7 @@ func ListRecipes(options *ListRecipeOptions) (string, error) {
 
 	logger.Logger("📋 Listing available recipes...", logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -329,7 +329,7 @@ func ListRepos(prefsPath string) (string, error) {
 
 	logger.Logger("📋 Listing installed recipe repositories...", logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -402,7 +402,7 @@ func MakeOverride(recipe string, options *MakeOverrideOptions) (string, error) {
 
 	logger.Logger(fmt.Sprintf("🔧 Creating override for recipe: %s", recipe), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -456,7 +456,7 @@ func NewRecipeFile(recipePath string, options *NewRecipeOptions) (string, error)
 
 	logger.Logger(fmt.Sprintf("🔧 Creating new recipe template: %s", recipePath), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -510,7 +510,7 @@ func GetProcessorInfo(processor string, options *ProcessorInfoOptions) (string, 
 
 	logger.Logger(fmt.Sprintf("ℹ️ Getting info for processor: %s", processor), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -537,7 +537,7 @@ func AddRepo(repoURLs []string, prefsPath string) (string, error) {
 			args = append(args, "--prefs", prefsPath)
 		}
 
-		logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+		logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 		cmd := exec.Command("autopkg", args...)
 
@@ -573,7 +573,7 @@ func DeleteRepo(repoName string, prefsPath string) (string, error) {
 
 	logger.Logger(fmt.Sprintf("🗑️ Deleting recipe repository: %s", repoName), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -604,7 +604,7 @@ func UpdateRepo(repos []string, prefsPath string) (string, error) {
 
 	logger.Logger(fmt.Sprintf("🔄 Updating %s", repoDesc), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -662,7 +662,7 @@ func SearchRecipes(term string, options *SearchOptions) (string, error) {
 
 	logger.Logger(fmt.Sprintf("🔍 Searching for recipes matching: %s", term), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
@@ -926,7 +926,7 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 
 	logger.Logger("🔒 Verifying trust info for recipes", logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	// Run the AutoPkg command
 	cmd := exec.Command("autopkg", args...)
@@ -1022,7 +1022,7 @@ func UpdateTrustInfoForRecipes(recipes []string, options *UpdateTrustInfoOptions
 
 	logger.Logger("🔒 Updating trust info for recipes", logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
+	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
