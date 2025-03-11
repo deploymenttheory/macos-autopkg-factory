@@ -4,7 +4,6 @@ package autopkg
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -60,11 +59,8 @@ func AuditRecipe(recipes []string, options *AuditOptions) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
 		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
@@ -120,14 +116,11 @@ func GetRecipeInfo(recipe string, options *InfoOptions) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("get recipe info failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -219,14 +212,11 @@ func InstallRecipe(recipes []string, options *InstallOptions) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe installation failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	logger.Logger("✅ Recipe installation completed", logger.LogSuccess)
@@ -245,14 +235,11 @@ func ListProcessors(prefsPath string) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("list processors failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -311,14 +298,11 @@ func ListRecipes(options *ListRecipeOptions) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("list recipes failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -336,14 +320,11 @@ func ListRepos(prefsPath string) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("list repos failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -410,14 +391,11 @@ func MakeOverride(recipe string, options *MakeOverrideOptions) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("make override failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Created override for recipe: %s", recipe), logger.LogSuccess)
@@ -465,14 +443,11 @@ func NewRecipeFile(recipePath string, options *NewRecipeOptions) (string, error)
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("new recipe creation failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Created new recipe template: %s", recipePath), logger.LogSuccess)
@@ -520,14 +495,11 @@ func GetProcessorInfo(processor string, options *ProcessorInfoOptions) (string, 
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("get processor info failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -548,11 +520,8 @@ func AddRepo(repoURLs []string, prefsPath string) (string, error) {
 		cmd := exec.Command("autopkg", args...)
 
 		var outputBuffer bytes.Buffer
-		outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-		errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-		cmd.Stdout = outWriter
-		cmd.Stderr = errWriter
+		cmd.Stdout = &outputBuffer
+		cmd.Stderr = &outputBuffer
 
 		if err := cmd.Run(); err != nil {
 			msg := fmt.Sprintf("⚠️ Failed to add repo %s: %v", repoURL, err)
@@ -585,14 +554,11 @@ func DeleteRepo(repoName string, prefsPath string) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("delete repo failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Deleted repository: %s", repoName), logger.LogSuccess)
@@ -617,14 +583,11 @@ func UpdateRepo(repos []string, prefsPath string) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("update repo failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Updated %s", repoDesc), logger.LogSuccess)
@@ -676,14 +639,11 @@ func SearchRecipes(term string, options *SearchOptions) (string, error) {
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("search recipes failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -696,112 +656,16 @@ func GetVersion() (string, error) {
 	cmd := exec.Command("autopkg", "version")
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("get version failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	version := strings.TrimSpace(outputBuffer.String())
 	logger.Logger(fmt.Sprintf("📦 AutoPkg version: %s", version), logger.LogInfo)
 	return version, nil
-}
-
-// RunRecipes runs one or more recipes with extended options
-func RunRecipes(recipes []string, options *RunOptions) (string, error) {
-	if options == nil {
-		options = &RunOptions{}
-	}
-
-	if len(recipes) == 0 {
-		return "", fmt.Errorf("at least one recipe name is required")
-	}
-
-	logger.Logger(fmt.Sprintf("🚀 Running recipes: %s", strings.Join(recipes, ", ")), logger.LogInfo)
-
-	// Build base arguments
-	args := []string{"run"}
-
-	// Add options
-	if options.PrefsPath != "" {
-		args = append(args, "--prefs", options.PrefsPath)
-	}
-
-	for _, processor := range options.PreProcessors {
-		args = append(args, "--pre", processor)
-	}
-
-	for _, processor := range options.PostProcessors {
-		args = append(args, "--post", processor)
-	}
-
-	if options.CheckOnly {
-		args = append(args, "--check")
-	}
-
-	if options.IgnoreParentVerification {
-		args = append(args, "--ignore-parent-trust-verification-errors")
-	}
-
-	for key, value := range options.Variables {
-		args = append(args, "-k", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	if options.RecipeList != "" {
-		args = append(args, "--recipe-list", options.RecipeList)
-	}
-
-	if options.PkgOrDmgPath != "" {
-		args = append(args, "--pkg", options.PkgOrDmgPath)
-	}
-
-	if options.ReportPlist != "" {
-		args = append(args, "--report-plist", options.ReportPlist)
-	}
-
-	if options.Verbose {
-		args = append(args, "--verbose")
-	}
-
-	if options.Quiet {
-		args = append(args, "--quiet")
-	}
-
-	for _, dir := range options.SearchDirs {
-		args = append(args, "--search-dir", dir)
-	}
-
-	for _, dir := range options.OverrideDirs {
-		args = append(args, "--override-dir", dir)
-	}
-
-	if options.UpdateTrust {
-		args = append(args, "--update-trust-info")
-	}
-
-	// Add recipes
-	args = append(args, recipes...)
-
-	// Execute the command
-	cmd := exec.Command("autopkg", args...)
-
-	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
-
-	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe run failed: %w", err)
-	}
-
-	logger.Logger("✅ Recipe run completed", logger.LogSuccess)
-	return outputBuffer.String(), nil
 }
 
 // RunOptions holds extended options for running a recipe
@@ -823,70 +687,8 @@ type RunOptions struct {
 	VerboseLevel             int
 }
 
-// BatchRunRecipes runs multiple recipes with the same options
-func BatchRunRecipes(recipes []string, options *RunOptions) (string, error) {
-	if len(recipes) == 0 {
-		return "", fmt.Errorf("at least one recipe name is required")
-	}
-
-	logger.Logger(fmt.Sprintf("🚀 Batch running %d recipes", len(recipes)), logger.LogInfo)
-
-	// Run the recipes with the provided options
-	output, err := RunRecipes(recipes, options)
-	if err != nil {
-		return output, fmt.Errorf("batch run failed: %w", err)
-	}
-
-	logger.Logger("✅ Batch recipe run completed", logger.LogSuccess)
-	return output, nil
-}
-
-// CreateLocalRepository creates a new local repository
-func CreateLocalRepository(repoName, repoPath string) (string, error) {
-	if repoName == "" || repoPath == "" {
-		return "", fmt.Errorf("repository name and path are required")
-	}
-
-	var outputBuffer bytes.Buffer
-
-	// Ensure directory exists
-	if err := os.MkdirAll(repoPath, 0755); err != nil {
-		return outputBuffer.String(), fmt.Errorf("failed to create repository directory: %w", err)
-	}
-
-	// Initialize git repository
-	cmd := exec.Command("git", "-C", repoPath, "init")
-	gitOutput, err := cmd.CombinedOutput()
-	outputBuffer.Write(gitOutput)
-
-	if err != nil {
-		return outputBuffer.String(), fmt.Errorf("failed to initialize git repository: %w", err)
-	}
-
-	// Create standard directories
-	for _, dir := range []string{"Recipes", "RecipeRepos"} {
-		path := filepath.Join(repoPath, dir)
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return outputBuffer.String(), fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-	}
-
-	// Create README.md
-	readmePath := filepath.Join(repoPath, "README.md")
-	readmeContent := fmt.Sprintf("# %s\n\nAutomatic package repository for MacOS software. Created with autopkg.\n", repoName)
-	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
-		return outputBuffer.String(), fmt.Errorf("failed to create README.md: %w", err)
-	}
-
-	msg := fmt.Sprintf("✅ Created local repository %s at %s", repoName, repoPath)
-	logger.Logger(msg, logger.LogSuccess)
-	outputBuffer.WriteString(msg + "\n")
-
-	return outputBuffer.String(), nil
-}
-
-// RunRecipeWithOutput runs a recipe and captures the output
-func RunRecipeWithOutput(recipe string, options *RunOptions) (string, error) {
+// RunRecipe runs a recipe and captures the output
+func RunRecipe(recipe string, options *RunOptions) (string, error) {
 	if options == nil {
 		options = &RunOptions{}
 	}
@@ -959,22 +761,84 @@ func RunRecipeWithOutput(recipe string, options *RunOptions) (string, error) {
 
 	logger.Logger(fmt.Sprintf("🚀 Running recipe and capturing output: %s", recipe), logger.LogInfo)
 
-	logger.Logger(fmt.Sprintf("[DEBUG] Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
-
-	var outputBuffer bytes.Buffer
+	logger.Logger(fmt.Sprintf("Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
 
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
+	var outputBuffer bytes.Buffer
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
-
-	err := cmd.Run()
-	if err != nil {
-		return outputBuffer.String(), fmt.Errorf("run recipe failed: %w", err)
+	if err := cmd.Run(); err != nil {
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
+
+	return outputBuffer.String(), nil
+}
+
+// RunRecipes runs multiple recipes by calling RunRecipe for each one
+func RunRecipes(recipes []string, options *RunOptions) (string, error) {
+	if len(recipes) == 0 {
+		return "", fmt.Errorf("at least one recipe name is required")
+	}
+
+	logger.Logger(fmt.Sprintf("🚀 Running %d recipes: %s", len(recipes), strings.Join(recipes, ", ")), logger.LogInfo)
+
+	var combinedOutput bytes.Buffer
+
+	for _, recipe := range recipes {
+		output, err := RunRecipe(recipe, options)
+		combinedOutput.WriteString(output)
+
+		if err != nil {
+			return combinedOutput.String(), err
+		}
+	}
+
+	logger.Logger("✅ All recipes completed successfully", logger.LogSuccess)
+	return combinedOutput.String(), nil
+}
+
+// CreateLocalRepository creates a new local repository
+func CreateLocalRepository(repoName, repoPath string) (string, error) {
+	if repoName == "" || repoPath == "" {
+		return "", fmt.Errorf("repository name and path are required")
+	}
+
+	var outputBuffer bytes.Buffer
+
+	// Ensure directory exists
+	if err := os.MkdirAll(repoPath, 0755); err != nil {
+		return outputBuffer.String(), fmt.Errorf("failed to create repository directory: %w", err)
+	}
+
+	// Initialize git repository
+	cmd := exec.Command("git", "-C", repoPath, "init")
+	gitOutput, err := cmd.CombinedOutput()
+	outputBuffer.Write(gitOutput)
+
+	if err != nil {
+		return outputBuffer.String(), fmt.Errorf("failed to initialize git repository: %w", err)
+	}
+
+	// Create standard directories
+	for _, dir := range []string{"Recipes", "RecipeRepos"} {
+		path := filepath.Join(repoPath, dir)
+		if err := os.MkdirAll(path, 0755); err != nil {
+			return outputBuffer.String(), fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
+	// Create README.md
+	readmePath := filepath.Join(repoPath, "README.md")
+	readmeContent := fmt.Sprintf("# %s\n\nAutomatic package repository for MacOS software. Created with autopkg.\n", repoName)
+	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
+		return outputBuffer.String(), fmt.Errorf("failed to create README.md: %w", err)
+	}
+
+	msg := fmt.Sprintf("✅ Created local repository %s at %s", repoName, repoPath)
+	logger.Logger(msg, logger.LogSuccess)
+	outputBuffer.WriteString(msg + "\n")
 
 	return outputBuffer.String(), nil
 }
@@ -1038,11 +902,8 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	execErr := cmd.Run()
 	outputStr := outputBuffer.String()
@@ -1134,14 +995,11 @@ func UpdateTrustInfoForRecipes(recipes []string, options *UpdateTrustInfoOptions
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
-	outWriter := io.MultiWriter(os.Stdout, &outputBuffer)
-	errWriter := io.MultiWriter(os.Stderr, &outputBuffer)
-
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("update trust info failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	logger.Logger("✅ Trust info updated for all recipes", logger.LogSuccess)

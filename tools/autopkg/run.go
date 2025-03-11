@@ -86,7 +86,7 @@ func RecipeBatchProcessing(recipes []string, options *RecipeBatchOptions) (map[s
 					OverrideDirs:   options.OverrideDirs,
 				}
 
-				output, err := RunRecipeWithOutput(recipe, runOptions)
+				output, err := RunRecipe(recipe, runOptions)
 
 				resultChan <- &RecipeBatchResult{
 					Recipe:         recipe,
@@ -144,7 +144,7 @@ func RecipeBatchProcessing(recipes []string, options *RecipeBatchOptions) (map[s
 				OverrideDirs:   options.OverrideDirs,
 			}
 
-			output, err := RunRecipeWithOutput(recipe, runOptions)
+			output, err := RunRecipe(recipe, runOptions)
 			results[recipe] = &RecipeBatchResult{
 				Recipe:         recipe,
 				Executed:       true,
@@ -360,7 +360,7 @@ func ParallelRunRecipes(recipes []string, options *ParallelRunOptions) (map[stri
 				}
 
 				// Run the recipe
-				output, err := RunRecipeWithOutput(recipe, runOptions)
+				output, err := RunRecipe(recipe, runOptions)
 				elapsedTime := time.Since(startTime)
 
 				// Store the result

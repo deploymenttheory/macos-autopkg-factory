@@ -60,7 +60,7 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 
 		deps, err := analyzeRecipeFile(recipePath, options, processedIdentifiers, 0)
 		if err != nil {
-			logger.Logger(fmt.Sprintf("⚠️ Error analyzing recipe file %s: %v", recipePath, err), logger.LogWarning)
+			logger.Logger(fmt.Sprintf("⚠️ Error analyzing recipe file %s: %v", recipePath, err), logger.LogError)
 			continue
 		}
 		dependencies = append(dependencies, deps...)
@@ -78,7 +78,7 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 			// Use the search method for simple names
 			searchDeps, err := findRecipeByNameAndExtractRepo(recipeIdentifier, options.PrefsPath)
 			if err != nil {
-				logger.Logger(fmt.Sprintf("⚠️ Search failed for recipe %s: %v", recipeIdentifier, err), logger.LogWarning)
+				logger.Logger(fmt.Sprintf("⚠️ Search failed for recipe %s: %v", recipeIdentifier, err), logger.LogError)
 				continue
 			}
 
@@ -102,7 +102,7 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 
 		deps, err := analyzeRecipeFile(recipePath, options, processedIdentifiers, 0)
 		if err != nil {
-			logger.Logger(fmt.Sprintf("⚠️ Error analyzing recipe for identifier %s: %v", recipeIdentifier, err), logger.LogWarning)
+			logger.Logger(fmt.Sprintf("⚠️ Error analyzing recipe for identifier %s: %v", recipeIdentifier, err), logger.LogError)
 			continue
 		}
 		dependencies = append(dependencies, deps...)
@@ -150,7 +150,7 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 		for _, dep := range dependencies {
 			exists, err := verifyRepoExists(dep.RepoURL)
 			if err != nil {
-				logger.Logger(fmt.Sprintf("⚠️ Error verifying repo %s: %v", dep.RepoURL, err), logger.LogWarning)
+				logger.Logger(fmt.Sprintf("⚠️ Error verifying repo %s: %v", dep.RepoURL, err), logger.LogError)
 				continue
 			}
 
