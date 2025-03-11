@@ -101,9 +101,7 @@ func main() {
 	case "recipe-repo-deps":
 		prefsPathAnalyze := analyzeDepsCmd.String("prefs", "", "Path to AutoPkg preferences file")
 		recipesStr := analyzeDepsCmd.String("recipes", "", "Comma-separated list of recipes to analyze")
-		includeParents := analyzeDepsCmd.Bool("include-parents", true, "Include parent recipes in analysis")
-		addRepos := analyzeDepsCmd.Bool("add-repos", false, "Add discovered repositories")
-
+		useToken := analyzeDepsCmd.Bool("use-token", true, "Use GitHub token for authentication")
 		analyzeDepsCmd.Parse(os.Args[2:])
 		prefsPath = *prefsPathAnalyze
 
@@ -114,52 +112,19 @@ func main() {
 
 		logger.Logger(fmt.Sprintf("📋 Parsed Recipes: %v", recipes), logger.LogDebug)
 
-		// Analyze dependencies
-		options := &autopkg.RecipeRepoAnalysisOptions{
-			RecipeIdentifiers: recipes,
-			IncludeParents:    *includeParents,
-			MaxDepth:          5,
-			VerifyRepoExists:  true,
-			PrefsPath:         prefsPath,
-			IncludeBase:       true,
-		}
+		// Resolve dependencies using the updated function
+		for _, recipe := range recipes {
+			logger.Logger(fmt.Sprintf("🔄 Resolving dependencies for: %s", recipe), logger.LogInfo)
 
-		dependencies, err := autopkg.AnalyzeRecipeRepoDependencies(options)
-		if err != nil {
-			fmt.Printf("❌ Recipe dependency analysis failed: %v\n", err)
-			os.Exit(1)
-		}
+			dependencies, err := autopkg.ResolveRecipeDependencies(recipe, *useToken, prefsPath)
+			if err != nil {
+				logger.Logger(fmt.Sprintf("❌ Failed to resolve dependencies for %s: %v", recipe, err), logger.LogError)
+				continue
+			}
 
-		fmt.Printf("✅ Found %d repository dependencies\n", len(dependencies))
-
-		// Add repositories if requested
-		if *addRepos && len(dependencies) > 0 {
-			var repoURLs []string
+			logger.Logger(fmt.Sprintf("✅ Found %d dependencies for %s", len(dependencies), recipe), logger.LogSuccess)
 			for _, dep := range dependencies {
 				fmt.Printf("- %s: %s\n", dep.RecipeIdentifier, dep.RepoURL)
-				repoURLs = append(repoURLs, dep.RepoURL)
-			}
-
-			// Remove duplicates
-			uniqueURLs := make(map[string]bool)
-			var filteredURLs []string
-			for _, url := range repoURLs {
-				if !uniqueURLs[url] {
-					uniqueURLs[url] = true
-					filteredURLs = append(filteredURLs, url)
-				}
-			}
-
-			if len(filteredURLs) > 0 {
-				fmt.Printf("Adding %d unique repositories...\n", len(filteredURLs))
-				output, err := autopkg.AddRepo(filteredURLs, prefsPath)
-				if err != nil {
-					fmt.Printf("⚠️ Some repositories couldn't be added: %v\n", err)
-					fmt.Println(output)
-				} else {
-					fmt.Println("✅ All repositories added successfully")
-					fmt.Println(output)
-				}
 			}
 		}
 
