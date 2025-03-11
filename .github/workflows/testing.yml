@@ -19,6 +19,11 @@ on:
         required: false
         default: true
         type: boolean
+      log_level:
+        description: 'Log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)'
+        required: false
+        default: 'INFO'
+        type: string
 
 env:
   AUTOPKG_PREFS_PATH: ~/Library/Preferences/com.github.autopkg.plist
@@ -30,6 +35,7 @@ env:
   CLIENT_ID: ${{ secrets.JAMFPRO_CLIENT_ID }}
   CLIENT_SECRET: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
   TENANT_ID: ${{ secrets.TENANT_ID }}
+  LOG_LEVEL: ${{ github.event.inputs.log_level || 'INFO' }}
 
 jobs:
   autopkg-run:
@@ -60,15 +66,17 @@ jobs:
             --force-update=false \
             --use-beta=false \
             --check-git \
-            --check-root
+            --check-root \
+            --log-level="${{ env.LOG_LEVEL }}"
       
       - name: Add Required Repositories
         run: |
           # Add base repositories
           autopkgctl repo-add \
             --prefs="$AUTOPKG_PREFS_PATH" \
-            --repos="recipes,grahampugh/jamf-upload,microsoft/msft-autopkg-recipes"
-      
+            --repos="recipes,grahampugh/jamf-upload,microsoft/msft-autopkg-recipes" \
+            --log-level="${{ env.LOG_LEVEL }}"
+
       - name: Analyze Recipe Dependencies
         run: |
           # Parse and format recipes list
@@ -80,7 +88,8 @@ jobs:
             --prefs="$AUTOPKG_PREFS_PATH" \
             --add-repos \
             --include-parents \
-            --recipes="$RECIPES"
+            --recipes="$RECIPES" \
+            --log-level="${{ env.LOG_LEVEL }}"
       
       - name: Verify Trust Info
         if: ${{ github.event.inputs.verify_trust != 'false' }}
@@ -93,7 +102,8 @@ jobs:
           autopkgctl verify-trust \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --update=${{ github.event.inputs.update_trust || 'true' }} \
-            --recipes="$RECIPES"
+            --recipes="$RECIPES" \
+            --log-level="${{ env.LOG_LEVEL }}"
       
       - name: Run AutoPkg Recipes
         run: |
@@ -107,7 +117,8 @@ jobs:
             --report="/tmp/autopkg-run-report.json" \
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
-            --recipes="$RECIPES"
+            --recipes="$RECIPES" \
+            --log-level="${{ env.LOG_LEVEL }}"
       
       - name: Cleanup Cache
         if: always()
@@ -116,7 +127,8 @@ jobs:
           autopkgctl cleanup \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --remove-downloads \
-            --remove-recipe-cache
+            --remove-recipe-cache \
+            --log-level="${{ env.LOG_LEVEL }}"
       
       - name: Upload Run Report
         if: always()
