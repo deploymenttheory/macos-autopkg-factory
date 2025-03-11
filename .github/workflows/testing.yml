@@ -116,7 +116,7 @@ jobs:
       
       - name: Upload Run Report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.6.1
         with:
           name: autopkg-run-report
           path: /tmp/autopkg-run-report.json
