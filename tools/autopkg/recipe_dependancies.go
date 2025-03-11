@@ -38,6 +38,8 @@ type RecipeRepoDependency struct {
 // AnalyzeRecipeRepoDependencies analyzes recipes to determine required repositories
 // This function identifies the repositories needed by the specified recipes and their
 // parent recipes, helping to dynamically determine which repositories to add.
+
+// AnalyzeRecipeRepoDependencies analyzes recipes to determine required repositories
 func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]RecipeRepoDependency, error) {
 	if options == nil {
 		options = &RecipeRepoAnalysisOptions{
@@ -48,14 +50,12 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 		}
 	}
 
-	logger.Logger("🔍 Analyzing recipe repository dependencies", logger.LogInfo)
+	logger.Logger("🔍 Starting analysis of recipe repository dependencies", logger.LogInfo)
 
-	// Result set
 	var dependencies []RecipeRepoDependency
 
-	// Process recipe paths first
 	for _, recipePath := range options.RecipePaths {
-		// Set of already processed identifiers to avoid duplicates and circular references
+		logger.Logger(fmt.Sprintf("📄 Processing recipe file: %s", recipePath), logger.LogDebug)
 		processedIdentifiers := make(map[string]bool)
 
 		deps, err := analyzeRecipeFile(recipePath, options, processedIdentifiers, 0)
@@ -66,16 +66,13 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 		dependencies = append(dependencies, deps...)
 	}
 
-	// Process recipe identifiers
 	for _, recipeIdentifier := range options.RecipeIdentifiers {
-		// A more robust approach using regex
-		isFullIdentifier := regexp.MustCompile(`^com\.github\.[^.]+\.[^.]+\..+$`).MatchString(recipeIdentifier)
-		hasRecipeExtension := regexp.MustCompile(`\.[a-zA-Z0-9_-]+\.recipe(?:\.yaml|\.plist)?$`).MatchString(recipeIdentifier)
-
+		logger.Logger(fmt.Sprintf("🔍 Processing recipe identifier: %s", recipeIdentifier), logger.LogDebug)
+		isFullIdentifier := regexp.MustCompile(`^com\\.github\\.[^.]+\\.[^.]+\\..+$`).MatchString(recipeIdentifier)
+		hasRecipeExtension := regexp.MustCompile(`\\.[a-zA-Z0-9_-]+\\.recipe(?:\\.yaml|\\.plist)?$`).MatchString(recipeIdentifier)
 		isSimpleName := !isFullIdentifier && (hasRecipeExtension || !strings.Contains(recipeIdentifier, "."))
 
 		if isSimpleName {
-			// Use the search method for simple names
 			searchDeps, err := findRecipeByNameAndExtractRepo(recipeIdentifier, options.PrefsPath)
 			if err != nil {
 				logger.Logger(fmt.Sprintf("⚠️ Search failed for recipe %s: %v", recipeIdentifier, err), logger.LogError)
@@ -89,16 +86,14 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 			}
 		}
 
-		// Try the traditional method with full identifiers
-		// Set of already processed identifiers to avoid duplicates and circular references
 		processedIdentifiers := make(map[string]bool)
-
-		// Find the recipe file for this identifier
 		recipePath, err := findRecipeByIdentifier(recipeIdentifier, options.SearchDirs, options.PrefsPath)
 		if err != nil {
 			logger.Logger(fmt.Sprintf("⚠️ Could not find recipe for identifier %s: %v", recipeIdentifier, err), logger.LogWarning)
 			continue
 		}
+
+		logger.Logger(fmt.Sprintf("📄 Found recipe path: %s for identifier: %s", recipePath, recipeIdentifier), logger.LogDebug)
 
 		deps, err := analyzeRecipeFile(recipePath, options, processedIdentifiers, 0)
 		if err != nil {
@@ -108,8 +103,8 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 		dependencies = append(dependencies, deps...)
 	}
 
-	// Add autopkg base repo if requested
 	if options.IncludeBase {
+		logger.Logger("➕ Including base autopkg repository", logger.LogDebug)
 		baseDep := RecipeRepoDependency{
 			RecipeIdentifier: "com.github.autopkg.recipes",
 			RepoOwner:        "autopkg",
@@ -118,8 +113,6 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 			IsParent:         false,
 			Source:           "base",
 		}
-
-		// Check if it's already in the dependencies
 		found := false
 		for _, dep := range dependencies {
 			if dep.RepoURL == baseDep.RepoURL {
@@ -127,13 +120,11 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 				break
 			}
 		}
-
 		if !found {
 			dependencies = append(dependencies, baseDep)
 		}
 	}
 
-	// Remove duplicates based on repository URL
 	uniqueDeps := make(map[string]RecipeRepoDependency)
 	for _, dep := range dependencies {
 		uniqueDeps[dep.RepoURL] = dep
@@ -144,16 +135,15 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 		dependencies = append(dependencies, dep)
 	}
 
-	// Verify repositories if requested
 	if options.VerifyRepoExists {
 		var verifiedDeps []RecipeRepoDependency
 		for _, dep := range dependencies {
+			logger.Logger(fmt.Sprintf("🔍 Verifying repository existence: %s", dep.RepoURL), logger.LogDebug)
 			exists, err := verifyRepoExists(dep.RepoURL)
 			if err != nil {
 				logger.Logger(fmt.Sprintf("⚠️ Error verifying repo %s: %v", dep.RepoURL, err), logger.LogError)
 				continue
 			}
-
 			if exists {
 				verifiedDeps = append(verifiedDeps, dep)
 			} else {
@@ -163,7 +153,7 @@ func AnalyzeRecipeRepoDependencies(options *RecipeRepoAnalysisOptions) ([]Recipe
 		dependencies = verifiedDeps
 	}
 
-	logger.Logger(fmt.Sprintf("✅ Found %d repository dependencies", len(dependencies)), logger.LogSuccess)
+	logger.Logger(fmt.Sprintf("✅ Final count of repository dependencies: %d", len(dependencies)), logger.LogSuccess)
 	return dependencies, nil
 }
 
