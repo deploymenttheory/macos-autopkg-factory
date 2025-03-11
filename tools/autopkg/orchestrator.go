@@ -22,14 +22,25 @@ type WorkflowStep struct {
 
 // WorkflowOptions contains options for the entire workflow
 type WorkflowOptions struct {
-	PrefsPath          string
-	MaxConcurrent      int
-	Timeout            time.Duration
-	StopOnFirstError   bool
-	ReportFile         string
-	NotifyOnCompletion bool
-	NotifyOnError      bool
-	WebhookURL         string
+	PrefsPath            string
+	MaxConcurrent        int
+	Timeout              time.Duration
+	StopOnFirstError     bool
+	ReportFile           string
+	NotifyOnCompletion   bool
+	NotifyOnError        bool
+	WebhookURL           string
+	SearchDirs           []string
+	OverrideDirs         []string
+	VerifyTrust          bool
+	UpdateTrustOnFailure bool
+	IgnoreVerifyFailures bool
+	ReportPlist          string
+	VerboseLevel         int
+	Variables            map[string]string
+	PreProcessors        []string
+	PostProcessors       []string
+	Notification         NotificationOptions
 }
 
 // WorkflowResult contains the results of the workflow execution
@@ -744,7 +755,19 @@ func (o *AutoPkgOrchestrator) Execute() (*WorkflowResult, error) {
 			if !ok {
 				batchOptions = &RecipeBatchRunOptions{
 					PrefsPath:            o.options.PrefsPath,
+					SearchDirs:           o.options.SearchDirs,
+					OverrideDirs:         o.options.OverrideDirs,
+					VerifyTrust:          o.options.VerifyTrust,
+					UpdateTrustOnFailure: o.options.UpdateTrustOnFailure,
+					IgnoreVerifyFailures: o.options.IgnoreVerifyFailures,
+					ReportPlist:          o.options.ReportPlist,
+					VerboseLevel:         o.options.VerboseLevel,
+					Variables:            o.options.Variables,
+					PreProcessors:        o.options.PreProcessors,
+					PostProcessors:       o.options.PostProcessors,
 					MaxConcurrentRecipes: o.options.MaxConcurrent,
+					StopOnFirstError:     o.options.StopOnFirstError,
+					Notification:         o.options.Notification,
 				}
 			}
 

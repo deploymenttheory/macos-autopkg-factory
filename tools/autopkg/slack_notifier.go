@@ -48,7 +48,7 @@ type SlackAttachment struct {
 // Notify sends a notification to Slack.
 func (s *SlackNotifier) Notify(title, message, color string) error {
 	if s.WebhookURL == "" {
-		return fmt.Errorf("Slack webhook URL not provided")
+		return fmt.Errorf("slack webhook URL not provided")
 	}
 
 	payload := SlackMessage{
@@ -78,7 +78,7 @@ func (s *SlackNotifier) Notify(title, message, color string) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Slack notification failed with status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("slack notification failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	return nil

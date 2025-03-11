@@ -1,0 +1,122 @@
+name: AutoPkg Software Deployment Pipeline
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2 AM
+  workflow_dispatch:     # Allow manual triggering
+    inputs:
+      recipes:
+        description: 'Comma-separated list of recipes to run'
+        required: false
+        default: 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe'
+      verify_trust:
+        description: 'Verify trust info for recipes'
+        required: false
+        default: true
+        type: boolean
+      update_trust:
+        description: 'Update trust info if verification fails'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  AUTOPKG_PREFS_PATH: ~/Library/Preferences/com.github.autopkg.plist
+  TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
+  JAMFPRO_URL: ${{ secrets.JAMFPRO_URL }}
+  API_USERNAME: ${{ secrets.API_USERNAME }}
+  API_PASSWORD: ${{ secrets.API_PASSWORD }}
+
+jobs:
+  autopkg-run:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.19'
+      
+      - name: Build AutoPkg CLI Tool
+        run: |
+          # Build the CLI tool that will execute the workflow
+          cd cmd/autopkgctl
+          go build -o $GITHUB_WORKSPACE/autopkgctl
+          chmod +x $GITHUB_WORKSPACE/autopkgctl
+          echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+      
+      - name: Setup AutoPkg Environment
+        id: setup
+        run: |
+          # Initialize AutoPkg environment
+          autopkgctl setup \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --force-update=false \
+            --use-beta=false \
+            --check-git \
+            --check-root
+      
+      - name: Add Required Repositories
+        run: |
+          # Add base repositories
+          autopkgctl repo-add \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --repos="recipes,grahampugh/jamf-upload,microsoft/msft-autopkg-recipes"
+      
+      - name: Analyze Recipe Dependencies
+        run: |
+          # Parse and format recipes list
+          RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
+          RECIPES="${RECIPES//,/ }"
+          
+          # Analyze dependencies and add required repos
+          autopkgctl analyze-deps \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --add-repos \
+            --include-parents \
+            --recipes="$RECIPES"
+      
+      - name: Verify Trust Info
+        if: ${{ github.event.inputs.verify_trust != 'false' }}
+        run: |
+          # Parse and format recipes list
+          RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
+          RECIPES="${RECIPES//,/ }"
+          
+          # Verify trust info
+          autopkgctl verify-trust \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --update=${{ github.event.inputs.update_trust || 'true' }} \
+            --recipes="$RECIPES"
+      
+      - name: Run AutoPkg Recipes
+        run: |
+          # Parse and format recipes list
+          RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
+          RECIPES="${RECIPES//,/ }"
+          
+          # Run recipes
+          autopkgctl run \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --report="/tmp/autopkg-run-report.json" \
+            --concurrency=4 \
+            --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
+            --recipes="$RECIPES"
+      
+      - name: Cleanup Cache
+        if: always()
+        run: |
+          # Clean up cache
+          autopkgctl cleanup \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --remove-downloads \
+            --remove-recipe-cache
+      
+      - name: Upload Run Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: autopkg-run-report
+          path: /tmp/autopkg-run-report.json
