@@ -68,19 +68,10 @@ jobs:
             --check-git \
             --check-root \
             
-      
-      # - name: Add Required Repositories
-      #   run: |
-      #     # Add base repositories
-      #     autopkgctl repo-add \
-      #       --prefs="$AUTOPKG_PREFS_PATH" \
-      #       --repos="recipes,grahampugh/jamf-upload,microsoft/msft-autopkg-recipes" \
-            
-
       - name: Resolve Recipe Repo Dependencies
         run: |
           # Parse and format recipes list correctly
-          RECIPES="${{ github.event.inputs.recipes || 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe' }}"
+          RECIPES="${{ github.event.inputs.recipes }}"
 
           # Run recipe-repo-deps to resolve dependencies
           autopkgctl recipe-repo-deps \
