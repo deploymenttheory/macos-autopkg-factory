@@ -36,7 +36,7 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 		return nil, fmt.Errorf("repository %s does not exist", repo)
 	}
 
-	identifier, dependencies, err := ParseRecipeFile(repo, path)
+	identifier, dependencies, err := ParseRecipeFile(repo, path, useToken, prefsPath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,12 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 func Search(recipeName string, useToken bool, prefsPath string) (string, string, error) {
 	logger.Logger(fmt.Sprintf("🔍 Searching for recipe: %s", recipeName), logger.LogDebug)
 
-	if !recipeRegex.MatchString(recipeName) {
+	// Check if the input is a recipe identifier or a recipe filename
+	isRecipeFile := recipeRegex.MatchString(recipeName)
+	isRecipeIdentifier := strings.Contains(recipeName, ".")
+
+	// If it's neither a recipe file nor an identifier, it's invalid
+	if !isRecipeFile && !isRecipeIdentifier {
 		logger.Logger("❌ Invalid recipe name format", logger.LogError)
 		return "", "", fmt.Errorf("invalid recipe name: %s", recipeName)
 	}
@@ -77,7 +82,24 @@ func Search(recipeName string, useToken bool, prefsPath string) (string, string,
 		UseToken:  useToken,
 	}
 
-	outputStr, err := SearchRecipes(recipeName, searchOptions)
+	var searchTerm string
+	if isRecipeIdentifier && !isRecipeFile {
+		// Convert identifier to recipe name for search
+		// Example: com.github.rtrouton.pkg.microsoftteams -> MicrosoftTeams.pkg.recipe
+		parts := strings.Split(recipeName, ".")
+		if len(parts) > 0 {
+			lastPart := parts[len(parts)-1]
+			// Convert to title case and add .recipe extension
+			searchTerm = strings.Title(lastPart) + ".recipe"
+			logger.Logger(fmt.Sprintf("🔄 Converting identifier to recipe name: %s -> %s", recipeName, searchTerm), logger.LogDebug)
+		} else {
+			searchTerm = recipeName
+		}
+	} else {
+		searchTerm = recipeName
+	}
+
+	outputStr, err := SearchRecipes(searchTerm, searchOptions)
 	if err != nil {
 		logger.Logger(fmt.Sprintf("❌ autopkg search command failed: %v", err), logger.LogError)
 		logger.Logger(fmt.Sprintf("Output: %s", outputStr), logger.LogDebug)
@@ -145,8 +167,9 @@ func VerifyRepoExists(repoName string) bool {
 }
 
 // ParseRecipeFile parses a recipe file (YAML or plist) and extracts details.
-func ParseRecipeFile(repo, path string) (string, []RecipeRepo, error) {
-	repoURL := fmt.Sprintf("https://raw.githubusercontent.com/autopkg/%s/refs/heads/master/%s", repo, path)
+func ParseRecipeFile(repo, path string, useToken bool, prefsPath string) (string, []RecipeRepo, error) {
+	// Build the raw URL for GitHub content (not blob view)
+	repoURL := fmt.Sprintf("https://raw.githubusercontent.com/autopkg/%s/master/%s", repo, path)
 	logger.Logger(fmt.Sprintf("🔍 Fetching recipe file: %s", repoURL), logger.LogDebug)
 
 	cmd := exec.Command("curl", "-sL", repoURL)
@@ -179,14 +202,32 @@ func ParseRecipeFile(repo, path string) (string, []RecipeRepo, error) {
 	deps := []RecipeRepo{}
 	if parent != "" {
 		logger.Logger(fmt.Sprintf("🧩 Found parent recipe: %s", parent), logger.LogDebug)
-		parentRepo, _, err := Search(parent, true, "")
-		if err == nil {
+		parentRepo, parentPath, err := Search(parent, useToken, prefsPath)
+		if err != nil {
+			logger.Logger(fmt.Sprintf("⚠️ Could not find parent recipe: %s, error: %v", parent, err), logger.LogWarning)
+			// Add the parent as a dependency even if we can't resolve it further
+			// This preserves the dependency information
+			deps = append(deps, RecipeRepo{
+				RecipeIdentifier: parent,
+				RepoName:         "unknown",
+				RepoURL:          "",
+				IsParent:         true,
+			})
+		} else {
 			deps = append(deps, RecipeRepo{
 				RecipeIdentifier: parent,
 				RepoName:         parentRepo,
 				RepoURL:          fmt.Sprintf("https://github.com/autopkg/%s", parentRepo),
 				IsParent:         true,
 			})
+
+			// Recursively resolve parent dependencies if needed
+			if parentRepo != "" && VerifyRepoExists(parentRepo) {
+				parentIdentifier, parentDeps, err := ParseRecipeFile(parentRepo, parentPath, useToken, prefsPath)
+				if err == nil && parentIdentifier != "" {
+					deps = append(deps, parentDeps...)
+				}
+			}
 		}
 	}
 	return identifier, deps, nil
