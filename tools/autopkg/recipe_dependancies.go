@@ -3,6 +3,7 @@ package autopkg
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -320,8 +321,11 @@ func VerifyRepoExists(repoName string) bool {
 
 // ParseRecipeFile parses a recipe file (YAML or plist) and extracts details.
 func ParseRecipeFile(repo, path string, useToken bool, prefsPath string) (string, []RecipeRepo, error) {
+	// URL encode the path using URL encoding
+	encodedPath := url.PathEscape(path)
+
 	// Build the raw URL for GitHub content (not blob view)
-	repoURL := fmt.Sprintf("https://raw.githubusercontent.com/autopkg/%s/master/%s", repo, path)
+	repoURL := fmt.Sprintf("https://raw.githubusercontent.com/autopkg/%s/master/%s", repo, encodedPath)
 	logger.Logger(fmt.Sprintf("🔍 Fetching recipe file: %s", repoURL), logger.LogDebug)
 
 	cmd := exec.Command("curl", "-sL", repoURL)
