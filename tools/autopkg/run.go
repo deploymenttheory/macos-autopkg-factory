@@ -2,11 +2,8 @@
 package autopkg
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
@@ -886,32 +883,4 @@ func GenerateReportFromRun(results map[string]*RecipeBatchResult, format string)
 	default:
 		return "", fmt.Errorf("unsupported report format: %s", format)
 	}
-}
-
-// Helper function to send webhook notifications
-func sendWebhookNotification(webhookURL string, message string) error {
-	// Create payload
-	payload := map[string]interface{}{
-		"text":      message,
-		"timestamp": time.Now().Unix(),
-	}
-
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal webhook payload: %w", err)
-	}
-
-	// Send request
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		return fmt.Errorf("failed to send webhook request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("webhook request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	return nil
 }

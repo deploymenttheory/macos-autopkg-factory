@@ -350,6 +350,24 @@ type MakeOverrideOptions struct {
 }
 
 // MakeOverride creates a recipe override
+// Options:
+//
+//	--prefs=FILE_PATH
+//	--search-dir=DIRECTORY
+//	                      Directory to search for recipes. Can be specified
+//	                      multiple times.
+//	--override-dir=DIRECTORY
+//	                      Directory to search for recipe overrides. Can be
+//	                      specified multiple times.
+//	--name=FILENAME
+//	                      Name for override file.
+//	--force               Force overwrite an override file.
+//	--pull                Pull the parent repos if they can't be found in the
+//	                      search path. Implies agreement to search GitHub.
+//	--ignore-deprecation  Make an override even if the specified recipe or one
+//	                      of its parents is deprecated.
+//	--format=FORMAT       The format of the recipe override to be created. Valid
+//	                      options include: 'plist' (default) or 'yaml'
 func MakeOverride(recipe string, options *MakeOverrideOptions) (string, error) {
 	if options == nil {
 		options = &MakeOverrideOptions{}

@@ -57,6 +57,15 @@ var (
 	tenantID         string
 	teamsWebhookUrl  string
 	failWithoutTrust bool
+
+	// Make-override command flags
+	overrideSearchDirs   []string
+	overrideDirs         []string
+	overrideName         string
+	overrideForce        bool
+	overridePull         bool
+	overrideIgnoreDeprec bool
+	overrideFormat       string
 )
 
 func main() {
@@ -156,6 +165,46 @@ func main() {
 	verifyTrustCmd.Flags().BoolVar(&updateTrust, "update", true, "Update trust info if verification fails")
 	verifyTrustCmd.Flags().StringVar(&recipesStr, "recipes", "", "Comma-separated list of recipes to verify")
 
+	// Make-override command
+	makeOverrideCmd := &cobra.Command{
+		Use:   "make-override [recipe]",
+		Short: "Create an AutoPkg recipe override",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			recipe := args[0]
+			logger.Logger(fmt.Sprintf("🔧 Creating override for recipe: %s", recipe), logger.LogInfo)
+
+			options := &autopkg.MakeOverrideOptions{
+				PrefsPath:         prefsPath, // Uses existing global prefsPath
+				SearchDirs:        overrideSearchDirs,
+				OverrideDirs:      overrideDirs,
+				Name:              overrideName,
+				Force:             overrideForce,
+				Pull:              overridePull,
+				IgnoreDeprecation: overrideIgnoreDeprec,
+				Format:            overrideFormat,
+			}
+
+			output, err := autopkg.MakeOverride(recipe, options)
+			if err != nil {
+				logger.Logger(fmt.Sprintf("❌ Failed to create override: %v", err), logger.LogError)
+				fmt.Fprintln(os.Stderr, output)
+				return err
+			}
+
+			fmt.Println(output)
+			return nil
+		},
+	}
+
+	makeOverrideCmd.Flags().StringSliceVar(&overrideSearchDirs, "search-dir", []string{}, "Directories to search for recipes (can be specified multiple times)")
+	makeOverrideCmd.Flags().StringSliceVar(&overrideDirs, "override-dir", []string{}, "Directories to search for recipe overrides (can be specified multiple times)")
+	makeOverrideCmd.Flags().StringVar(&overrideName, "name", "", "Name for the override file")
+	makeOverrideCmd.Flags().BoolVar(&overrideForce, "force", false, "Force overwrite an existing override file")
+	makeOverrideCmd.Flags().BoolVar(&overridePull, "pull", false, "Pull the parent repos if they are missing")
+	makeOverrideCmd.Flags().BoolVar(&overrideIgnoreDeprec, "ignore-deprecation", false, "Ignore deprecation warnings and create the override")
+	makeOverrideCmd.Flags().StringVar(&overrideFormat, "format", "plist", "Format of the override file (default: plist, options: plist, yaml)")
+
 	// Run command
 	runCmd := &cobra.Command{
 		Use:   "run",
@@ -191,6 +240,7 @@ func main() {
 	rootCmd.AddCommand(verifyTrustCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(cleanupCmd)
+	rootCmd.AddCommand(makeOverrideCmd)
 
 	// Execute
 	if err := rootCmd.Execute(); err != nil {

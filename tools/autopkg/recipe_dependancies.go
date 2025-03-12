@@ -54,7 +54,6 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 
 	// Process each match to find its dependencies
 	for _, match := range matches {
-		// Skip if repository doesn't exist
 		if !VerifyRepoExists(match.Repo) {
 			logger.Logger(fmt.Sprintf("⚠️ Repository %s does not exist, skipping", match.Repo), logger.LogWarning)
 			continue
@@ -99,13 +98,11 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 
 	// If not in dry run mode, add the repositories
 	if !dryRun && len(reposToAdd) > 0 {
-		// Convert map to slice
 		var repoNames []string
 		for _, repoName := range reposToAdd {
 			repoNames = append(repoNames, repoName)
 		}
 
-		// Add repositories
 		logger.Logger(fmt.Sprintf("📦 Adding %d repositories for recipe %s", len(repoNames), recipeName), logger.LogInfo)
 		_, err := AddRepo(repoNames, prefsPath)
 		if err != nil {
@@ -122,7 +119,6 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, error) {
 	logger.Logger(fmt.Sprintf("🔍 Searching for recipe: %s", recipeName), logger.LogDebug)
 
-	// Check if the input is a recipe identifier or a recipe filename
 	isRecipeFile := recipeRegex.MatchString(recipeName)
 	isRecipeIdentifier := strings.Contains(recipeName, ".")
 
@@ -132,7 +128,6 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		return nil, fmt.Errorf("invalid recipe name: %s", recipeName)
 	}
 
-	// Handle tilde expansion in prefsPath
 	if strings.HasPrefix(prefsPath, "~/") {
 		homeDir, err := os.UserHomeDir()
 		if err == nil {
@@ -140,7 +135,6 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		}
 	}
 
-	// Use the existing SearchRecipes function
 	searchOptions := &SearchOptions{
 		PrefsPath: prefsPath,
 		UseToken:  useToken,
@@ -181,7 +175,6 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 			titleCaseAppName = strings.ToUpper(appName[:1]) + appName[1:]
 		}
 
-		// Build the search term
 		if recipeType != "" {
 			searchTerm = titleCaseAppName + "." + recipeType + ".recipe"
 		} else {
@@ -200,7 +193,6 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		return nil, fmt.Errorf("autopkg search failed: %w", err)
 	}
 
-	// Parse the output to find all matches
 	matches, err := parseSearchOutput(outputStr)
 	if err != nil {
 		logger.Logger(fmt.Sprintf("❌ Failed to parse search output: %v", err), logger.LogError)
@@ -213,7 +205,6 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		return nil, fmt.Errorf("no valid recipes found for %s", recipeName)
 	}
 
-	// Log all matches
 	for i, match := range matches {
 		logger.Logger(fmt.Sprintf("✅ Recipe found (%d/%d): Repo=%s, Path=%s",
 			i+1, len(matches), match.Repo, match.Path), logger.LogDebug)
@@ -227,7 +218,6 @@ func parseSearchOutput(output string) ([]RecipeMatch, error) {
 	lines := strings.Split(output, "\n")
 	var matches []RecipeMatch
 
-	// Find the header line
 	headerIndex := -1
 	for i, line := range lines {
 		if strings.Contains(line, "Name") && strings.Contains(line, "Repo") && strings.Contains(line, "Path") {
@@ -240,7 +230,6 @@ func parseSearchOutput(output string) ([]RecipeMatch, error) {
 		return nil, fmt.Errorf("could not find header in search output")
 	}
 
-	// Find the separator line
 	sepIndex := -1
 	for i := headerIndex + 1; i < len(lines); i++ {
 		if strings.Contains(lines[i], "----") {
@@ -274,7 +263,6 @@ func parseSearchOutput(output string) ([]RecipeMatch, error) {
 			continue
 		}
 
-		// Make sure line is long enough
 		if len(line) < pathPos {
 			continue
 		}
@@ -308,7 +296,7 @@ func parseSearchOutput(output string) ([]RecipeMatch, error) {
 	return matches, nil
 }
 
-// helper function for min (Go < 1.21)
+// helper function for min
 func min(a, b int) int {
 	if a < b {
 		return a

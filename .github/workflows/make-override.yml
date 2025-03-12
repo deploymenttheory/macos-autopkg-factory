@@ -24,6 +24,22 @@ on:
         required: false
         default: 'INFO'
         type: string
+      override_name:
+        description: 'Name for the override file'
+        required: false
+        default: ''
+        type: string
+      override_format:
+        description: 'Format of the override file (plist or yaml)'
+        required: false
+        default: 'yaml'
+        type: string
+      override_force:
+        description: 'Force overwrite an existing override file'
+        required: false
+        default: false
+        type: boolean
+
 
 env:
   AUTOPKG_PREFS_PATH: ~/Library/Preferences/com.github.autopkg.plist
@@ -84,37 +100,15 @@ jobs:
             --use-token \
             --recipes "${{ github.event.inputs.recipes }}"
 
-      - name: Verify Trust Info
-        if: ${{ github.event.inputs.verify_trust != 'false' }}
+      - name: Create Recipe Override
         run: |
-          # Verify trust info
-          autopkgctl verify-trust \
-            --prefs="$AUTOPKG_PREFS_PATH" \
-            --update=${{ github.event.inputs.update_trust || 'true' }} \
-            --recipes="${{ github.event.inputs.recipes }}"
-      
-      - name: Run AutoPkg Recipes
-        run: |
-          # Run recipes
-          autopkgctl run \
-            --prefs="$AUTOPKG_PREFS_PATH" \
-            --report="/tmp/autopkg-run-report.json" \
-            --concurrency=4 \
-            --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
-            --recipes="${{ github.event.inputs.recipes }}"
-      
-      - name: Cleanup Cache
-        if: always()
-        run: |
-          # Clean up cache
-          autopkgctl cleanup \
-            --prefs="$AUTOPKG_PREFS_PATH" \
-            --remove-downloads \
-            --remove-recipe-cache
-      
-      - name: Upload Run Report
-        if: always()
-        uses: actions/upload-artifact@v4.6.1
-        with:
-          name: autopkg-run-report
-          path: /tmp/autopkg-run-report.json
+          # Split the recipes list and call make-override for each recipe
+          IFS=',' read -ra RECIPES <<< "${{ github.event.inputs.recipes }}"
+          for recipe in "${RECIPES[@]}"; do
+            echo "Creating override for $recipe"
+            autopkgctl make-override "$recipe" \
+              --prefs="$AUTOPKG_PREFS_PATH" \
+              --name="${{ github.event.inputs.override_name }}" \
+              --force="${{ github.event.inputs.override_force }}" \
+              --format="${{ github.event.inputs.override_format }}"
+          done
