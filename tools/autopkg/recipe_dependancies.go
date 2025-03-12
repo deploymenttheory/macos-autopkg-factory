@@ -116,7 +116,7 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 }
 
 // Search searches for a recipe using autopkg search command.
-// Now returns all matches instead of just the first one.
+// Properly handles recipe identifiers with spaces.
 func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, error) {
 	logger.Logger(fmt.Sprintf("🔍 Searching for recipe: %s", recipeName), logger.LogDebug)
 
@@ -143,51 +143,45 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 
 	var searchTerm string
 	if isRecipeIdentifier && !isRecipeFile {
-		// Convert identifier to recipe name for search
-		// Example: com.github.rtrouton.pkg.microsoftteams -> MicrosoftTeams.pkg.recipe
-		parts := strings.Split(recipeName, ".")
-
-		// Look for recipe type (pkg, download, install, etc.)
-		var recipeType string
-		var appName string
-
-		// Find the app name part (usually the last part)
-		if len(parts) > 0 {
-			appName = parts[len(parts)-1]
-
-			// Check for recipe type before the app name
-			if len(parts) > 1 {
-				possibleType := parts[len(parts)-2]
-				// Common recipe types
-				recipeTypes := []string{"pkg", "download", "install", "munki", "jamf", "intune"}
-
-				for _, rt := range recipeTypes {
-					if possibleType == rt {
-						recipeType = rt
-						break
-					}
-				}
-			}
-		}
-
-		// Simple camel case conversion for app name
-		titleCaseAppName := appName
-		if len(appName) > 0 {
-			titleCaseAppName = strings.ToUpper(appName[:1]) + appName[1:]
-		}
-
-		if recipeType != "" {
-			searchTerm = titleCaseAppName + "." + recipeType + ".recipe"
-		} else {
-			searchTerm = titleCaseAppName + ".recipe"
-		}
-
+		searchTerm = ConvertRecipeIdentifierToName(recipeName)
 		logger.Logger(fmt.Sprintf("🔄 Converting identifier to recipe name: %s -> %s", recipeName, searchTerm), logger.LogDebug)
 	} else {
 		searchTerm = recipeName
 	}
 
+	// Try to search with the exact term
 	outputStr, err := SearchRecipes(searchTerm, searchOptions)
+
+	// If the search failed and there are spaces in the search term,
+	// try an alternative approach
+	if err != nil && strings.Contains(searchTerm, " ") {
+		// First try searching with quotes around the term
+		logger.Logger(fmt.Sprintf("⚠️ Search failed, trying with quotes: \"%s\"", searchTerm), logger.LogWarning)
+
+		// Try using the app name part only for the search
+		appNamePart := searchTerm
+		if lastDot := strings.LastIndex(searchTerm, "."); lastDot > 0 {
+			appNamePart = searchTerm[:lastDot]
+		}
+
+		// If app name has spaces, try searching using just the app name
+		if strings.Contains(appNamePart, " ") {
+			logger.Logger(fmt.Sprintf("⚠️ Trying alternative search with app name only: %s", appNamePart), logger.LogWarning)
+			outputStr, err = SearchRecipes(appNamePart, searchOptions)
+		}
+
+		// If that failed too and it's an identifier, try searching with the original app name part
+		if err != nil && isRecipeIdentifier {
+			// Extract the app name from the identifier
+			parts := strings.Split(recipeName, ".")
+			if len(parts) > 0 {
+				originalAppName := parts[len(parts)-1]
+				logger.Logger(fmt.Sprintf("⚠️ Trying search with original app name: %s", originalAppName), logger.LogWarning)
+				outputStr, err = SearchRecipes(originalAppName, searchOptions)
+			}
+		}
+	}
+
 	if err != nil {
 		logger.Logger(fmt.Sprintf("❌ autopkg search command failed: %v", err), logger.LogError)
 		logger.Logger(fmt.Sprintf("Output: %s", outputStr), logger.LogDebug)
@@ -206,12 +200,96 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		return nil, fmt.Errorf("no valid recipes found for %s", recipeName)
 	}
 
+	// If we're looking for a specific recipe that has spaces in the name,
+	// further filter the results to find the best match
+	if strings.Contains(searchTerm, " ") && isRecipeIdentifier {
+		// Extract parts from the identifier to help with matching
+		identifierParts := strings.Split(recipeName, ".")
+		recipeTypePart := ""
+		appNamePart := ""
+
+		if len(identifierParts) >= 2 {
+			appNamePart = identifierParts[len(identifierParts)-1]
+			recipeTypePart = identifierParts[len(identifierParts)-2]
+		}
+
+		// Look for the most specific match in the results
+		var bestMatches []RecipeMatch
+		for _, match := range matches {
+			// Check if the path contains both the app name and recipe type
+			pathLower := strings.ToLower(match.Path)
+			appNameLower := strings.ToLower(appNamePart)
+
+			if strings.Contains(pathLower, appNameLower) &&
+				(recipeTypePart == "" || strings.Contains(pathLower, recipeTypePart)) {
+				bestMatches = append(bestMatches, match)
+			}
+		}
+
+		// If we found specific matches, use those instead
+		if len(bestMatches) > 0 {
+			matches = bestMatches
+		}
+	}
+
 	for i, match := range matches {
 		logger.Logger(fmt.Sprintf("✅ Recipe found (%d/%d): Repo=%s, Path=%s",
 			i+1, len(matches), match.Repo, match.Path), logger.LogDebug)
 	}
 
 	return matches, nil
+}
+
+// ConvertRecipeIdentifierToName converts a recipe identifier to a recipe name
+// Handles recipe identifiers with spaces in the app name
+func ConvertRecipeIdentifierToName(identifier string) string {
+	parts := strings.Split(identifier, ".")
+
+	// Find the recipe type and app name parts
+	var recipeType string
+	var appName string
+
+	// Check if we have enough parts
+	if len(parts) < 2 {
+		return identifier
+	}
+
+	// The app name is the last part
+	appName = parts[len(parts)-1]
+
+	// Look for recipe type before the app name
+	if len(parts) > 1 {
+		possibleType := parts[len(parts)-2]
+		// Common recipe types
+		recipeTypes := []string{"pkg", "download", "install", "munki", "jamf", "intune"}
+
+		for _, rt := range recipeTypes {
+			if possibleType == rt {
+				recipeType = rt
+				break
+			}
+		}
+	}
+
+	// For app names with spaces, we need to keep them as-is
+	// Just capitalize the first letter of each word
+	words := strings.Split(appName, " ")
+	for i, word := range words {
+		if len(word) > 0 {
+			words[i] = strings.ToUpper(word[:1]) + word[1:]
+		}
+	}
+	titleCaseAppName := strings.Join(words, " ")
+
+	// Build the recipe name
+	var recipeName string
+	if recipeType != "" {
+		recipeName = titleCaseAppName + "." + recipeType + ".recipe"
+	} else {
+		recipeName = titleCaseAppName + ".recipe"
+	}
+
+	return recipeName
 }
 
 // parseSearchOutput parses the output of autopkg search command to extract all matches.
