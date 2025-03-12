@@ -102,14 +102,7 @@ jobs:
 
       - name: Create Recipe Override
         run: |
-          # Create the directory with verbose output
           mkdir -p $GITHUB_WORKSPACE/recipe_overrides
-          echo "Created directory at: $GITHUB_WORKSPACE/recipe_overrides"
-          
-          # List the directory to confirm it exists
-          ls -la $GITHUB_WORKSPACE/recipe_overrides
-          
-          # Process recipe overrides
           IFS=',' read -ra RECIPES <<< "${{ github.event.inputs.recipes }}"
           for recipe in "${RECIPES[@]}"; do
             echo "Creating override for $recipe"
@@ -119,36 +112,30 @@ jobs:
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}"
       
-            # Check if override file was created
+            # Move override file to the repository
             OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.recipe.${{ github.event.inputs.override_format }}"
-            echo "Checking for override file at: $OVERRIDE_FILE"
-            if [ -f "$OVERRIDE_FILE" ]; then
-              echo "Override file exists, moving to $GITHUB_WORKSPACE/recipe_overrides/"
-              mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
-            else
-              echo "ERROR: Override file not created at $OVERRIDE_FILE"
-              ls -la "$HOME/Library/AutoPkg/RecipeOverrides/"
-            fi
+            mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
           done
           
-          # Check the contents of the repository directory again
-          echo "Contents of recipe_overrides directory after processing:"
-          ls -la $GITHUB_WORKSPACE/recipe_overrides
-  
-      - name: Commit and Push Changes
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: 'recipe_overrides'
-          default_author: github_actions
-          message: '📌 AutoPkg Override Update: ${{ github.event.inputs.recipes }}'
-          new_branch: autopkg-overrides-${{ github.run_id }}
-          push: true
+          # Create a timestamp file for uniqueness
+          TIMESTAMP=$(date -u +"%Y-%m-%d-%H:%M:%S")
+          echo "# AutoPkg Override Run - $TIMESTAMP" > $GITHUB_WORKSPACE/recipe_overrides/timestamp.md
+          echo "Recipes processed: ${{ github.event.inputs.recipes }}" >> $GITHUB_WORKSPACE/recipe_overrides/timestamp.md
+          
+          # List all files created
+          echo "FILES<<EOF" >> $GITHUB_ENV
+          find $GITHUB_WORKSPACE/recipe_overrides -type f -name "*.recipe.*" -o -name "timestamp.md" | sort | sed 's/^/- /' >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
       
       - name: Create Pull Request
+        id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "📌 AutoPkg Override Update: ${{ github.event.inputs.recipes }}"
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           branch: autopkg-overrides-${{ github.run_id }}
-          base: main
+          delete-branch: false
           title: "📌 AutoPkg Override Updates"
           body: |
             This PR contains the latest AutoPkg recipe override updates.
@@ -159,9 +146,13 @@ jobs:
             ```
             
             ### Override Files Created:
-            ```
-            $(find recipe_overrides -type f -name "*.recipe.*" | sort)
-            ```
+            ${{ env.FILES }}
             
             Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           labels: "autopkg, automation"
+      
+      - name: Check Pull Request Output
+        if: steps.cpr.outputs.pull-request-number
+        run: |
+          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
