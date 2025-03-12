@@ -1,3 +1,4 @@
+// recipe_dependancies.go
 package autopkg
 
 import (
@@ -31,7 +32,8 @@ var recipeRegex = regexp.MustCompile(`(?i)^.*\.recipe(?:\.yaml|\.plist)?$`)
 
 // ResolveRecipeDependencies resolves all repository dependencies for a recipe.
 // Now handles multiple matches for a recipe.
-func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string) ([]RecipeRepo, error) {
+// ResolveRecipeDependencies resolves all repository dependencies for a recipe and optionally adds them.
+func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string, dryRun bool) ([]RecipeRepo, error) {
 	logger.Logger(fmt.Sprintf("🔍 Resolving dependencies for: %s", recipeName), logger.LogDebug)
 
 	// Search for all matching recipes
@@ -47,6 +49,9 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 	// Track all dependencies across all matches
 	allDependencies := make(map[string]RecipeRepo)
 
+	// Track repositories that need to be added
+	reposToAdd := make(map[string]string) // map[repoName]repoUrl (as expected by AddRepo)
+
 	// Process each match to find its dependencies
 	for _, match := range matches {
 		// Skip if repository doesn't exist
@@ -54,6 +59,11 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 			logger.Logger(fmt.Sprintf("⚠️ Repository %s does not exist, skipping", match.Repo), logger.LogWarning)
 			continue
 		}
+
+		// Add this repo to the list that needs to be added
+		// Just add the repo name itself, not the full URL
+		// The AddRepo function will format it correctly
+		reposToAdd[match.Repo] = match.Repo
 
 		// Parse the recipe file to find dependencies
 		identifier, dependencies, err := ParseRecipeFile(match.Repo, match.Path, useToken, prefsPath)
@@ -73,6 +83,11 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 		// Add all parent dependencies
 		for _, dep := range dependencies {
 			allDependencies[dep.RecipeIdentifier] = dep
+
+			// Add parent repo to the list that needs to be added
+			if dep.RepoName != "" && dep.RepoName != "unknown" {
+				reposToAdd[dep.RepoName] = dep.RepoName
+			}
 		}
 	}
 
@@ -80,6 +95,23 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 
 	if len(allDependencies) == 0 {
 		return nil, fmt.Errorf("no valid dependencies found for recipe: %s", recipeName)
+	}
+
+	// If not in dry run mode, add the repositories
+	if !dryRun && len(reposToAdd) > 0 {
+		// Convert map to slice
+		var repoNames []string
+		for _, repoName := range reposToAdd {
+			repoNames = append(repoNames, repoName)
+		}
+
+		// Add repositories
+		logger.Logger(fmt.Sprintf("📦 Adding %d repositories for recipe %s", len(repoNames), recipeName), logger.LogInfo)
+		_, err := AddRepo(repoNames, prefsPath)
+		if err != nil {
+			logger.Logger(fmt.Sprintf("⚠️ Error adding repositories: %v", err), logger.LogWarning)
+			// Continue anyway to return the dependencies
+		}
 	}
 
 	return mapToSlice(allDependencies), nil
@@ -132,7 +164,7 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 			if len(parts) > 1 {
 				possibleType := parts[len(parts)-2]
 				// Common recipe types
-				recipeTypes := []string{"pkg", "download", "install", "munki", "jamf"}
+				recipeTypes := []string{"pkg", "download", "install", "munki", "jamf", "intune"}
 
 				for _, rt := range recipeTypes {
 					if possibleType == rt {

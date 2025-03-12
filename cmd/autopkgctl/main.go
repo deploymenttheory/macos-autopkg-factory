@@ -29,8 +29,10 @@ var (
 	reposStr string
 
 	// Recipe-repo-deps command flags
-	recipesStr string
-	useToken   bool
+	recipesStr   string
+	useToken     bool
+	skipExisting bool
+	dryRun       bool
 
 	// Verify-trust command flags
 	updateTrust bool

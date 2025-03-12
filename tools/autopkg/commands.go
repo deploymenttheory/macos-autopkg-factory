@@ -30,7 +30,6 @@ func AuditRecipe(recipes []string, options *AuditOptions) (string, error) {
 
 	args := []string{"audit"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -51,7 +50,6 @@ func AuditRecipe(recipes []string, options *AuditOptions) (string, error) {
 		args = append(args, "--plist")
 	}
 
-	// Add recipes
 	args = append(args, recipes...)
 
 	logger.Logger("🔍 Auditing recipes...", logger.LogInfo)
@@ -89,7 +87,6 @@ func GetRecipeInfo(recipe string, options *InfoOptions) (string, error) {
 
 	args := []string{"info"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -110,7 +107,6 @@ func GetRecipeInfo(recipe string, options *InfoOptions) (string, error) {
 		args = append(args, "--pull")
 	}
 
-	// Add recipe
 	args = append(args, recipe)
 
 	logger.Logger(fmt.Sprintf("ℹ️ Getting info for recipe: %s", recipe), logger.LogInfo)
@@ -155,7 +151,6 @@ func InstallRecipe(recipes []string, options *InstallOptions) (string, error) {
 
 	args := []string{"install"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -208,7 +203,6 @@ func InstallRecipe(recipes []string, options *InstallOptions) (string, error) {
 		args = append(args, "--override-dir", dir)
 	}
 
-	// Add recipes
 	args = append(args, recipes...)
 
 	logger.Logger(fmt.Sprintf("📦 Installing recipes: %s", strings.Join(recipes, ", ")), logger.LogInfo)
@@ -273,7 +267,6 @@ func ListRecipes(options *ListRecipeOptions) (string, error) {
 
 	args := []string{"list-recipes"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -364,7 +357,6 @@ func MakeOverride(recipe string, options *MakeOverrideOptions) (string, error) {
 
 	args := []string{"make-override"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -397,7 +389,6 @@ func MakeOverride(recipe string, options *MakeOverrideOptions) (string, error) {
 		args = append(args, "--format", options.Format)
 	}
 
-	// Add recipe
 	args = append(args, recipe)
 
 	logger.Logger(fmt.Sprintf("🔧 Creating override for recipe: %s", recipe), logger.LogInfo)
@@ -434,7 +425,6 @@ func NewRecipeFile(recipePath string, options *NewRecipeOptions) (string, error)
 
 	args := []string{"new-recipe"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -451,7 +441,6 @@ func NewRecipeFile(recipePath string, options *NewRecipeOptions) (string, error)
 		args = append(args, "--format", options.Format)
 	}
 
-	// Add recipe path
 	args = append(args, recipePath)
 
 	logger.Logger(fmt.Sprintf("🔧 Creating new recipe template: %s", recipePath), logger.LogInfo)
@@ -488,7 +477,6 @@ func GetProcessorInfo(processor string, options *ProcessorInfoOptions) (string, 
 
 	args := []string{"processor-info"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -505,7 +493,6 @@ func GetProcessorInfo(processor string, options *ProcessorInfoOptions) (string, 
 		args = append(args, "--override-dir", dir)
 	}
 
-	// Add processor name
 	args = append(args, processor)
 
 	logger.Logger(fmt.Sprintf("ℹ️ Getting info for processor: %s", processor), logger.LogInfo)
@@ -640,7 +627,6 @@ func SearchRecipes(term string, options *SearchOptions) (string, error) {
 
 	args := []string{"search"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -657,7 +643,6 @@ func SearchRecipes(term string, options *SearchOptions) (string, error) {
 		args = append(args, "--use-token")
 	}
 
-	// Add search term
 	args = append(args, term)
 
 	logger.Logger(fmt.Sprintf("🔍 Searching for recipes matching: %s", term), logger.LogInfo)
@@ -752,10 +737,8 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 		options = &RunOptions{}
 	}
 
-	// Build base arguments
 	args := []string{"run"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -812,7 +795,6 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 		args = append(args, "--update-trust-info")
 	}
 
-	// Add recipe
 	args = append(args, recipe)
 
 	logger.Logger(fmt.Sprintf("🚀 Running recipe: %s", recipe), logger.LogInfo)
@@ -885,7 +867,6 @@ func CreateLocalRepository(repoName, repoPath string) (string, error) {
 		}
 	}
 
-	// Create README.md
 	readmePath := filepath.Join(repoPath, "README.md")
 	readmeContent := fmt.Sprintf("# %s\n\nAutomatic package repository for MacOS software. Created with autopkg.\n", repoName)
 	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
@@ -927,7 +908,6 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 
 	args := []string{"verify-trust-info"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -935,7 +915,6 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 		args = append(args, "--recipe-list", options.RecipeList)
 	}
 
-	// Handle verbosity levels
 	if options.VerboseLevel > 0 {
 		args = append(args, fmt.Sprintf("-%s", strings.Repeat("v", options.VerboseLevel)))
 	}
@@ -947,14 +926,12 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 		args = append(args, "--override-dir", dir)
 	}
 
-	// Add recipes
 	args = append(args, recipes...)
 
 	logger.Logger("🔒 Verifying trust info for recipes", logger.LogInfo)
 
 	logger.Logger(fmt.Sprintf("🖥️  Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
-	// Run the AutoPkg command
 	cmd := exec.Command("autopkg", args...)
 
 	var outputBuffer bytes.Buffer
@@ -964,10 +941,8 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 	execErr := cmd.Run()
 	outputStr := outputBuffer.String()
 
-	// Debug log to check exact output
 	logger.Logger(fmt.Sprintf("DEBUG: verify-trust-info output:\n%s", outputStr), logger.LogDebug)
 
-	// Collect failed recipes and reasons
 	var failedRecipes []string
 	failureReasons := make(map[string][]string)
 	var currentRecipe string
@@ -996,11 +971,8 @@ func VerifyTrustInfoForRecipes(recipes []string, options *VerifyTrustInfoOptions
 		}
 	}
 
-	// Handle error scenario
 	if execErr != nil || len(failedRecipes) > 0 {
 		logger.Logger(fmt.Sprintf("❌ Trust verification failed for %d recipes", len(failedRecipes)), logger.LogError)
-
-		// Log detailed failure reasons
 		for _, recipe := range failedRecipes {
 			logger.Logger(fmt.Sprintf("  - %s:", recipe), logger.LogWarning)
 			for _, reason := range failureReasons[recipe] {
@@ -1030,7 +1002,6 @@ func UpdateTrustInfoForRecipes(recipes []string, options *UpdateTrustInfoOptions
 
 	args := []string{"update-trust-info"}
 
-	// Add options
 	if options.PrefsPath != "" {
 		args = append(args, "--prefs", options.PrefsPath)
 	}
@@ -1043,7 +1014,6 @@ func UpdateTrustInfoForRecipes(recipes []string, options *UpdateTrustInfoOptions
 		args = append(args, "--override-dir", dir)
 	}
 
-	// Add recipes
 	args = append(args, recipes...)
 
 	logger.Logger("🔒 Updating trust info for recipes", logger.LogInfo)
