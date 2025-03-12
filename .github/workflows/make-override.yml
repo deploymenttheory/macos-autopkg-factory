@@ -117,7 +117,7 @@ jobs:
               --format="${{ github.event.inputs.override_format }}"
             
             # Move override file to the repository
-            OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.recipe.${{ github.event.inputs.override_format }}"
+            OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/${override_name}.recipe.${{ github.event.inputs.override_format }}"
             mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
           done
           
