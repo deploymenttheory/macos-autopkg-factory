@@ -102,7 +102,14 @@ jobs:
 
       - name: Create Recipe Override
         run: |
+          # Create the directory with verbose output
           mkdir -p $GITHUB_WORKSPACE/recipe_overrides
+          echo "Created directory at: $GITHUB_WORKSPACE/recipe_overrides"
+          
+          # List the directory to confirm it exists
+          ls -la $GITHUB_WORKSPACE/recipe_overrides
+          
+          # Process recipe overrides
           IFS=',' read -ra RECIPES <<< "${{ github.event.inputs.recipes }}"
           for recipe in "${RECIPES[@]}"; do
             echo "Creating override for $recipe"
@@ -112,19 +119,22 @@ jobs:
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}"
       
-            # Move override file to the repository
+            # Check if override file was created
             OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.recipe.${{ github.event.inputs.override_format }}"
-            mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
+            echo "Checking for override file at: $OVERRIDE_FILE"
+            if [ -f "$OVERRIDE_FILE" ]; then
+              echo "Override file exists, moving to $GITHUB_WORKSPACE/recipe_overrides/"
+              mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
+            else
+              echo "ERROR: Override file not created at $OVERRIDE_FILE"
+              ls -la "$HOME/Library/AutoPkg/RecipeOverrides/"
+            fi
           done
           
-          # Create a summary file with timestamp
-          TIMESTAMP=$(date -u +"%Y-%m-%d-%H:%M:%S")
-          echo "# AutoPkg Overrides - $TIMESTAMP" > recipe_overrides/override_summary.md
-          echo "Generated from: ${{ github.event.inputs.recipes }}" >> recipe_overrides/override_summary.md
-          echo "" >> recipe_overrides/override_summary.md
-          echo "## Files" >> recipe_overrides/override_summary.md
-          find recipe_overrides -type f -name "*.recipe.*" | sort | sed 's/^/- /' >> recipe_overrides/override_summary.md
-      
+          # Check the contents of the repository directory again
+          echo "Contents of recipe_overrides directory after processing:"
+          ls -la $GITHUB_WORKSPACE/recipe_overrides
+  
       - name: Commit and Push Changes
         uses: EndBug/add-and-commit@v9
         with:
