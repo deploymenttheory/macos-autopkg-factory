@@ -1,0 +1,41 @@
+Identifier: local.yaml.recipe.jamf-upload.VisualStudioCode
+Input:
+  JAMF_CATEGORY: Developer Tools
+  JAMF_PKG_INFO: Visual Studio Code is a lightweight but powerful source code editor
+    which runs on your desktop and is available for Windows, macOS and Linux. It comes
+    with built-in support for JavaScript, TypeScript and Node.js and has a rich ecosystem
+    of extensions for other languages (such as C++, C#, Java, Python, PHP, Go) and
+    runtimes (such as .NET and Unity).
+  JAMF_PKG_NAME: '%NAME%'
+  JAMF_PKG_NOTES: Generated and uploaded by AutoPkg
+  JAMF_PKG_OS_REQUIREMENTS: ''
+  JAMF_PKG_PRIORITY: '10'
+  JAMF_PKG_REBOOT_REQUIRED: 'False'
+  JAMF_PKG_REPLACE: 'False'
+  JAMF_PKG_REPLACE_METADATA: 'False'
+  JAMF_PKG_REQUIRED_PROCESSOR: None
+  JAMF_PKG_SEND_NOTIFICATION: 'False'
+  NAME: VisualStudioCode
+  USER_AGENT: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/536.28.10
+    (KHTML, like Gecko) Version/6.0.3 Safari/536.28.10
+ParentRecipe: com.github.davidbpirie.jamf-upload.VisualStudioCode
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPackageUploader.py
+      sha256_hash: 0ca85d733b101e1b48b0e8fb67aff136d50ca347bf3b951238809e3a20120f95
+  parent_recipes:
+    com.github.amsysuk-recipes.pkg.VisualStudioCode:
+      git_hash: 000211528b205f7993b8ce82633583bcb7f7ae29
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.moofit-recipes/Microsoft/VisualStudioCode.pkg.recipe
+      sha256_hash: f74b40bbf846670b97f560f782ba0fc1774ec2a327a3f82df62af8bf3ec3dbd3
+    com.github.davidbpirie.jamf-upload.VisualStudioCode:
+      git_hash: 3fa56b7e3b78c887b0b326162cd3008c589963bf
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.davidbpirie-recipes/VisualStudioCode/VisualStudioCode.jamf-upload.recipe.yaml
+      sha256_hash: 83caba31e6c35be8668976121a1e9d7ef70c5a7ab84bdc08ac8696124a096380
+    com.github.valdore86.download.visualstudiocode:
+      git_hash: 07dab3ff921e348ad764fbaf2af7274d905f2946
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.valdore86-recipes/Visual
+        Studio Code/VisualStudioCode.download.recipe
+      sha256_hash: 0dcf57bf7293ff98a56bc6bf32de4b0e4218aa9fe74c07a163c19f7f87e71351
