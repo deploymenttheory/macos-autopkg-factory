@@ -1,0 +1,31 @@
+Identifier: local.recipe.jamf.MicrosoftTeams
+Input:
+  CATEGORY: Apps
+  NAME: Microsoft Teams
+  PKG_CATEGORY: '%CATEGORY%'
+  SOFTWARETITLE: Teams
+  STOPPROCESSINGIF_PREDICATE: download_changed == FALSE
+  VENDOR: Microsoft
+  VERSIONTYPE: CFBundleShortVersionString
+ParentRecipe: com.github.rtrouton.jamf.microsoftteams
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.grahampugh.jamf-upload.processors/JamfCategoryUploader:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+  parent_recipes:
+    com.github.rtrouton.download.microsoftteams:
+      git_hash: 4dc821461da7d8570eb4a33eb8132cf63400122f
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.rtrouton-recipes/MicrosoftTeams/MicrosoftTeams.download.recipe
+      sha256_hash: 6c769df70a62c7751530dce3c5e6951aa131d76010d4fcc7611fe65be70c9a7f
+    com.github.rtrouton.jamf.microsoftteams:
+      git_hash: 637a3be60909a25c2f20a3dca6dec77324ad8844
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.rtrouton-recipes/Jamf_Upload/MicrosoftTeams.jamf.recipe
+      sha256_hash: 98fd41da60e5a044ee344d17dfe2c1b9e2ade910d467a4a17c57e55c6496ad18
+    com.github.rtrouton.pkg.microsoftteams:
+      git_hash: 4dc821461da7d8570eb4a33eb8132cf63400122f
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.rtrouton-recipes/MicrosoftTeams/MicrosoftTeams.pkg.recipe
+      sha256_hash: 1e4db5a0364f3ea43ba3c0f883bec30e6612e47798052371d0bd41578beeecd3
