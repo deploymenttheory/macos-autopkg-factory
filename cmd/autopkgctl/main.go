@@ -141,6 +141,8 @@ func main() {
 
 	recipeDepsCmd.Flags().StringVar(&recipesStr, "recipes", "", "Comma-separated list of recipes to analyze")
 	recipeDepsCmd.Flags().BoolVar(&useToken, "use-token", true, "Use GitHub token for authentication")
+	recipeDepsCmd.Flags().BoolVar(&skipExisting, "skip-existing", true, "Skip repositories that are already added")
+	recipeDepsCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Only show dependencies without adding them")
 
 	// Verify-trust command
 	verifyTrustCmd := &cobra.Command{
@@ -450,7 +452,7 @@ func runRecipeDeps() error {
 	for _, recipe := range recipes {
 		logger.Logger(fmt.Sprintf("🔄 Resolving dependencies for: %s", recipe), logger.LogInfo)
 
-		dependencies, err := autopkg.ResolveRecipeDependencies(recipe, useToken, prefsPath)
+		dependencies, err := autopkg.ResolveRecipeDependencies(recipe, useToken, prefsPath, dryRun)
 		if err != nil {
 			logger.Logger(fmt.Sprintf("❌ Failed to resolve dependencies for %s: %v", recipe, err), logger.LogError)
 			continue
