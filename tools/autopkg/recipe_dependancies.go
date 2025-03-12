@@ -55,7 +55,7 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 
 	// Process each match to find its dependencies
 	for _, match := range matches {
-		if !VerifyRepoExists(match.Repo) {
+		if !VerifyRepoExists(match.Repo, useToken) {
 			logger.Logger(fmt.Sprintf("⚠️ Repository %s does not exist, skipping", match.Repo), logger.LogWarning)
 			continue
 		}
@@ -431,11 +431,28 @@ func min(a, b int) int {
 }
 
 // VerifyRepoExists checks if a repository exists on GitHub.
-func VerifyRepoExists(repoName string) bool {
+func VerifyRepoExists(repoName string, useToken bool) bool {
 	repoURL := fmt.Sprintf("https://github.com/autopkg/%s", repoName)
 	logger.Logger(fmt.Sprintf("🔍 Verifying repository: %s", repoURL), logger.LogDebug)
 
-	cmd := exec.Command("git", "ls-remote", "--exit-code", repoURL+".git")
+	var cmd *exec.Cmd
+
+	if useToken {
+		// Try to use GITHUB_TOKEN for authentication if available
+		token := os.Getenv("GITHUB_TOKEN")
+		if token != "" {
+			// For git operations with token, we need to format it as https://token@github.com/...
+			authRepoURL := fmt.Sprintf("https://%s@github.com/autopkg/%s", token, repoName)
+			cmd = exec.Command("git", "ls-remote", "--exit-code", authRepoURL+".git")
+			logger.Logger("🔐 Using GitHub token for authentication", logger.LogDebug)
+		} else {
+			logger.Logger("⚠️ GitHub token requested but not found in environment", logger.LogWarning)
+			cmd = exec.Command("git", "ls-remote", "--exit-code", repoURL+".git")
+		}
+	} else {
+		cmd = exec.Command("git", "ls-remote", "--exit-code", repoURL+".git")
+	}
+
 	if err := cmd.Run(); err != nil {
 		logger.Logger(fmt.Sprintf("⚠️ Repository does not exist: %s", repoURL), logger.LogWarning)
 		return false
@@ -513,7 +530,7 @@ func ParseRecipeFile(repo, path string, useToken bool, prefsPath string) (string
 		} else {
 			// Add all found parent recipes
 			for _, parentMatch := range parentMatches {
-				if VerifyRepoExists(parentMatch.Repo) {
+				if VerifyRepoExists(parentMatch.Repo, useToken) {
 					deps = append(deps, RecipeRepo{
 						RecipeIdentifier: parent,
 						RepoName:         parentMatch.Repo,
