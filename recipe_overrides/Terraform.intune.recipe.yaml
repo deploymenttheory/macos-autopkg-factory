@@ -1,0 +1,39 @@
+Identifier: local.intune.Terraform
+Input:
+  ARCH: amd64
+  NAME: Terraform
+  PRODUCT: terraform
+  categories:
+  - Productivity
+  description: "Terraform provides a common configuration to launch infrastructure\
+    \ \u2014 from physical and virtual servers to email and DNS providers. Once launched,\
+    \ Terraform safely and efficiently changes infrastructure as the configuration\
+    \ is evolved. Simple file based configuration gives you a single view of your\
+    \ entire infrastructure."
+  developer: HashiCorp
+  display_name: Terraform
+  icon_path: ''
+ParentRecipe: com.github.almenscorner.intune.Terraform
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.almenscorner.intune-upload.processors/IntuneAppUploader:
+      git_hash: 3490c79b8279cea017c399c16354e27edf040a28
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.almenscorner-recipes/IntuneUploader/IntuneAppUploader.py
+      sha256_hash: 808212feb5e67a3af6fff5cfeec3c2392e6658badaa3b46f924ca8eea8b012c7
+    io.github.hjuutilainen.SharedProcessors/HashiCorpURLProvider:
+      git_hash: eaaafaaeb569c06a0e88be2417632dd87a4e6d4d
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.hjuutilainen-recipes/SharedProcessors/HashiCorpURLProvider.py
+      sha256_hash: bdd17e58d9cf0c0c300372934de40ab77bd2231432d88711de0a1abedfd7e12d
+  parent_recipes:
+    com.github.almenscorner.intune.Terraform:
+      git_hash: 3723390a3ff4af832747d3a348ee926f5732f564
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.almenscorner-recipes/HashiCorp/Terraform.intune.recipe
+      sha256_hash: 82a83f5176365e219f81249b8f8150c228cfcf9d18855016d6dfcf5514e5bb2e
+    com.github.timsutton.download.Terraform:
+      git_hash: cb43727b029ccf59dc2c6596adea8388d0d843f0
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.timsutton-recipes/HashiCorp/Terraform.download.recipe
+      sha256_hash: 99f8d795a8afb8f9206b691d600580bc521d2300d4df8c3a2c3254e41a76d939
+    com.github.timsutton.pkg.Terraform:
+      git_hash: 04f5159f12eae992ca2caa2dc0d140e84e992b9c
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.timsutton-recipes/HashiCorp/Terraform.pkg.recipe
+      sha256_hash: 971729f8f786cf231a19f3f6768f5f7539bae309705d6d8e95adbf94af790bb6
