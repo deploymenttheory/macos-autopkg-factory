@@ -1,0 +1,32 @@
+Identifier: local.recipe.intune.AmazonQ
+Input:
+  NAME: Amazon Q
+  categories:
+  - Productivity
+  description: "Amazon Q \u2013 Generative AI Assistant\n\nThe most capable generative\
+    \ AI\u2013powered assistant for accelerating software development and leveraging\
+    \ companies internal data"
+  developer: AMZN Mobile LLC
+  display_name: Amazon Q
+ParentRecipe: com.github.almenscorner.intune.AmazonQ
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.almenscorner.intune-upload.processors/IntuneAppIconGetter:
+      git_hash: d4b10043288978db1f1168ac3b6c841076c4558b
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.almenscorner-recipes/IntuneUploader/IntuneAppIconGetter.py
+      sha256_hash: e3060bf0e15bd9ad9c5877805c0dcbb7b3732e1891b654ece10c4f35987c7216
+    com.github.almenscorner.intune-upload.processors/IntuneAppUploader:
+      git_hash: 3490c79b8279cea017c399c16354e27edf040a28
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.almenscorner-recipes/IntuneUploader/IntuneAppUploader.py
+      sha256_hash: 808212feb5e67a3af6fff5cfeec3c2392e6658badaa3b46f924ca8eea8b012c7
+  parent_recipes:
+    com.github.almenscorner.intune.AmazonQ:
+      git_hash: 4a218954135706ac5ebae8f0c26cd338b1c5508a
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.almenscorner-recipes/Amazon
+        Q/AmazonQ.intune.recipe
+      sha256_hash: 8353edf2113ae6cca280eee5f83f0198b2af9e83e10c3ea621b5228507c3f347
+    com.github.dataJAR-recipes.download.Amazon Q:
+      git_hash: 8850aec39ce87c56214e402e302982d69801f918
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.dataJAR-recipes/Amazon
+        Q/Amazon Q.download.recipe
+      sha256_hash: 860b2f8a57a53dcf73350359aa4de6104a7d3a68776ecb6a2d0dd920b28c85da
