@@ -8,7 +8,7 @@ on:
       recipes:
         description: 'Comma-separated list of recipes to run'
         required: true
-        default: 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe'
+        default: 'AmazonQ.intune.recipe,AmazonCLI.intune.recipe,Docker.intune.recipe'
       verify_trust:
         description: 'Verify trust info for recipes'
         required: true
@@ -22,7 +22,7 @@ on:
       log_level:
         description: 'Log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)'
         required: false
-        default: 'INFO'
+        default: 'DEBUG'
         type: string
       override_name:
         description: 'Name for the override file'
