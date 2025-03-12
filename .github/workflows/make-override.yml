@@ -133,9 +133,6 @@ jobs:
           echo "Changed files:"
           git status
           
-          # Explicitly exclude the binary and only add override files
-          echo "autopkgctl" > .gitignore
-          
           # Check for changes specifically in recipe_overrides
           if [[ -n "$(find recipe_overrides -type f -name "*.recipe.*" 2>/dev/null)" ]]; then
             echo "Recipe override files found. Committing..."
