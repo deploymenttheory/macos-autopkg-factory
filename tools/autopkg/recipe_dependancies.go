@@ -46,7 +46,6 @@ var recipeIndexCache *RecipeIndex
 var recipeRegex = regexp.MustCompile(`(?i)^.*\.recipe(?:\.yaml|\.plist)?$`)
 
 // ResolveRecipeDependencies resolves all repository dependencies for a recipe using the index
-// ResolveRecipeDependencies resolves all repository dependencies for a recipe using the index
 func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string, dryRun bool) ([]RecipeRepo, error) {
 	logger.Logger(fmt.Sprintf("🔍 Resolving dependencies for: %s", recipeName), logger.LogDebug)
 
@@ -73,12 +72,10 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 	reposToAdd := make(map[string]string)
 
 	// Find the recipe in the index
-	var recipeIdentifier string
 	var matchedRecipes []string
 
 	// Check if recipeName is already an identifier
 	if _, exists := index.Identifiers[recipeName]; exists {
-		recipeIdentifier = recipeName
 		matchedRecipes = []string{recipeName}
 	} else {
 		// Try to find by shortname, filename pattern, or other criteria
@@ -105,11 +102,10 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 
 	// Process the matches
 	if len(matchedRecipes) == 1 {
-		recipeIdentifier = matchedRecipes[0]
-		logger.Logger(fmt.Sprintf("✅ Found single recipe match: %s", recipeIdentifier), logger.LogDebug)
+		logger.Logger(fmt.Sprintf("✅ Found single recipe match: %s", matchedRecipes[0]), logger.LogDebug)
 
 		// Process the single recipe and its dependencies
-		processRecipe(recipeIdentifier, index, allDependencies, reposToAdd, useToken)
+		processRecipe(matchedRecipes[0], index, allDependencies, reposToAdd, useToken)
 	} else if len(matchedRecipes) > 1 {
 		logger.Logger(fmt.Sprintf("⚠️ Multiple matches found for recipe: %s (%d matches)", recipeName, len(matchedRecipes)), logger.LogWarning)
 
@@ -128,9 +124,6 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 			// Process this recipe and add to dependencies
 			processRecipe(id, index, allDependencies, reposToAdd, useToken)
 		}
-
-		// Set recipeIdentifier to the first one just for return purposes
-		recipeIdentifier = matchedRecipes[0]
 	} else {
 		logger.Logger(fmt.Sprintf("❌ No matches found for recipe: %s", recipeName), logger.LogError)
 		return nil, fmt.Errorf("no matches found for recipe: %s", recipeName)
