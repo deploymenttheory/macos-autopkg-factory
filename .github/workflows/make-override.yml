@@ -102,13 +102,49 @@ jobs:
 
       - name: Create Recipe Override
         run: |
-          # Split the recipes list and call make-override for each recipe
+          mkdir -p $GITHUB_WORKSPACE/recipe_overrides
           IFS=',' read -ra RECIPES <<< "${{ github.event.inputs.recipes }}"
           for recipe in "${RECIPES[@]}"; do
             echo "Creating override for $recipe"
             autopkgctl make-override "$recipe" \
               --prefs="$AUTOPKG_PREFS_PATH" \
-              --name="${{ github.event.inputs.override_name }}" \
+              --name="$recipe" \
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}"
+
+            # Move override file to the repository
+            OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.recipe.${{ github.event.inputs.override_format }}"
+            mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
           done
+    
+      - name: Commit and Push Overrides
+        run: |
+          cd $GITHUB_WORKSPACE
+          
+          # Configure Git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create a new branch
+          BRANCH_NAME="autopkg-overrides-${{ github.run_id }}"
+          git checkout -b "$BRANCH_NAME"
+
+          # Check for changes
+          if [[ -n "$(git status --porcelain recipe_overrides)" ]]; then
+            echo "Changes detected. Committing..."
+            
+            git add recipe_overrides
+            git commit -m "📌 AutoPkg Override Update: ${{ github.event.inputs.recipes }}"
+            git push origin "$BRANCH_NAME"
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: autopkg-overrides-${{ github.run_id }}
+          base: main
+          title: "📌 AutoPkg Override Updates"
+          body: "This PR contains the latest AutoPkg recipe override updates."
+          labels: "autopkg, automation"
