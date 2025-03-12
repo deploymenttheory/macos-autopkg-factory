@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 	"gopkg.in/yaml.v2"
@@ -115,10 +116,30 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 	return mapToSlice(allDependencies), nil
 }
 
+// Global variable to track the last time a search was performed
+var lastSearchTime time.Time
+
 // Search searches for a recipe using autopkg search command.
-// Properly handles recipe identifiers with spaces.
+// Properly handles recipe identifiers with spaces and implements rate limiting.
 func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, error) {
 	logger.Logger(fmt.Sprintf("🔍 Searching for recipe: %s", recipeName), logger.LogDebug)
+
+	// Apply rate limiting for GitHub Search API (10 requests per minute for authenticated users)
+	currentTime := time.Now()
+	if !lastSearchTime.IsZero() {
+		// Calculate time elapsed since last search
+		elapsed := currentTime.Sub(lastSearchTime)
+
+		// If less than 6 seconds have passed, wait to maintain rate limit
+		if elapsed < 6*time.Second {
+			waitTime := 6*time.Second - elapsed
+			logger.Logger(fmt.Sprintf("⏱️ Rate limiting GitHub Search API, waiting %v before next search", waitTime), logger.LogDebug)
+			time.Sleep(waitTime)
+		}
+	}
+
+	// Update the last search time after rate limiting
+	lastSearchTime = time.Now()
 
 	isRecipeFile := recipeRegex.MatchString(recipeName)
 	isRecipeIdentifier := strings.Contains(recipeName, ".")
@@ -158,6 +179,10 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		// First try searching with quotes around the term
 		logger.Logger(fmt.Sprintf("⚠️ Search failed, trying with quotes: \"%s\"", searchTerm), logger.LogWarning)
 
+		// Apply rate limiting before the next search attempt
+		time.Sleep(6 * time.Second)
+		lastSearchTime = time.Now()
+
 		// Try using the app name part only for the search
 		appNamePart := searchTerm
 		if lastDot := strings.LastIndex(searchTerm, "."); lastDot > 0 {
@@ -168,6 +193,12 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		if strings.Contains(appNamePart, " ") {
 			logger.Logger(fmt.Sprintf("⚠️ Trying alternative search with app name only: %s", appNamePart), logger.LogWarning)
 			outputStr, err = SearchRecipes(appNamePart, searchOptions)
+
+			// If this search also failed, apply rate limiting before next attempt
+			if err != nil {
+				time.Sleep(6 * time.Second)
+				lastSearchTime = time.Now()
+			}
 		}
 
 		// If that failed too and it's an identifier, try searching with the original app name part
