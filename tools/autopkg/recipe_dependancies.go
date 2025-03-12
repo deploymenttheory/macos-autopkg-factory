@@ -241,38 +241,85 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 }
 
 // ConvertRecipeIdentifierToName converts a recipe identifier to a recipe name
-// Handles recipe identifiers with spaces in the app name
 func ConvertRecipeIdentifierToName(identifier string) string {
 	parts := strings.Split(identifier, ".")
 
-	// Find the recipe type and app name parts
+	// We need to find the app name and recipe type in the identifier
 	var recipeType string
 	var appName string
 
-	// Check if we have enough parts
-	if len(parts) < 2 {
-		return identifier
+	// The recipe type is typically the second-to-last part
+	if len(parts) >= 2 {
+		recipeType = parts[len(parts)-1] // e.g., "download", "pkg", etc.
 	}
 
-	// The app name is the last part
-	appName = parts[len(parts)-1]
+	// The app name is typically the part before the recipe type
+	// But we need to handle different identifier formats:
+	// 1. com.github.username.AppName.recipetype (common)
+	// 2. com.github.username.recipetype.AppName (less common)
+	// 3. com.organization.AppName.recipetype (different domain)
+	// 4. com.organization.recipetype.AppName (different domain, less common)
 
-	// Look for recipe type before the app name
-	if len(parts) > 1 {
-		possibleType := parts[len(parts)-2]
-		// Common recipe types
-		recipeTypes := []string{"pkg", "download", "install", "munki", "jamf", "intune"}
+	// Check if we have enough parts for a full identifier
+	if len(parts) >= 3 {
+		// Try to find the app name by checking known recipe types
+		knownTypes := map[string]bool{
+			"download": true, "pkg": true, "install": true,
+			"munki": true, "jamf": true, "intune": true,
+		}
 
-		for _, rt := range recipeTypes {
-			if possibleType == rt {
-				recipeType = rt
+		// First, look for patterns where the app name is in the middle
+		for i := 1; i < len(parts)-1; i++ {
+			currentPart := parts[i]
+			nextPart := parts[i+1]
+
+			// If currentPart is not a known recipe type, and nextPart is a known type,
+			// then currentPart is likely the app name
+			if !knownTypes[strings.ToLower(currentPart)] &&
+				knownTypes[strings.ToLower(nextPart)] {
+				appName = currentPart
+				break
+			}
+		}
+
+		// If we didn't find an app name and recipeType is a known type,
+		// look at the part before the recipe type
+		if appName == "" && knownTypes[strings.ToLower(recipeType)] && len(parts) >= 3 {
+			potentialAppName := parts[len(parts)-2]
+
+			// Check if it looks like a username (e.g., "username-recipes" or similar)
+			if !strings.Contains(strings.ToLower(potentialAppName), "recipes") &&
+				!strings.Contains(strings.ToLower(potentialAppName), "github") {
+				appName = potentialAppName
+			}
+		}
+
+		// If we still didn't find the app name, use the third-to-last part as a fallback
+		if appName == "" && len(parts) >= 3 {
+			appName = parts[len(parts)-3]
+		}
+	}
+
+	// Fallback: if we couldn't determine the app name, use the part before recipe type
+	if appName == "" && len(parts) >= 2 {
+		appName = parts[len(parts)-2]
+	}
+
+	// Ensure app name doesn't look like a domain component
+	if strings.Contains(appName, "github") || strings.Contains(appName, "com") {
+		// Try to extract an app name from the identifier string itself
+		for _, part := range parts {
+			// Look for parts that start with uppercase (likely app names)
+			if len(part) > 0 && part[0] >= 'A' && part[0] <= 'Z' &&
+				!strings.EqualFold(part, "github") &&
+				!strings.EqualFold(part, "com") {
+				appName = part
 				break
 			}
 		}
 	}
 
-	// For app names with spaces, we need to keep them as-is
-	// Just capitalize the first letter of each word
+	// Handle spaces in app name and capitalize first letter of each word
 	words := strings.Split(appName, " ")
 	for i, word := range words {
 		if len(word) > 0 {
