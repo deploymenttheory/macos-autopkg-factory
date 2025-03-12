@@ -151,5 +151,10 @@ jobs:
           branch: autopkg-overrides-${{ github.run_id }}
           base: main
           title: "📌 AutoPkg Override Updates"
-          body: "This PR contains the latest AutoPkg recipe override updates."
+          body: |
+            This PR contains the latest AutoPkg recipe override updates.
+            
+            ### Recipe Overrides Added:
+            ${{ github.event.inputs.recipes }}
           labels: "autopkg, automation"
+          delete-branch: false # Ensure branch isn't deleted
