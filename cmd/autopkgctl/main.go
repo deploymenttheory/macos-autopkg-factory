@@ -428,10 +428,8 @@ func runRepoAdd() error {
 }
 
 func runRecipeDeps() error {
-	// Debug output
 	logger.Logger(fmt.Sprintf("After parsing, recipes flag value: '%s'", recipesStr), logger.LogDebug)
 
-	// Parse recipe list
 	var recipes []string
 	if recipesStr != "" {
 		for _, r := range strings.Split(recipesStr, ",") {
@@ -448,7 +446,6 @@ func runRecipeDeps() error {
 		return fmt.Errorf("no recipes specified")
 	}
 
-	// Resolve dependencies
 	for _, recipe := range recipes {
 		logger.Logger(fmt.Sprintf("🔄 Resolving dependencies for: %s", recipe), logger.LogInfo)
 
@@ -468,7 +465,6 @@ func runRecipeDeps() error {
 }
 
 func runVerifyTrust() error {
-	// Parse recipes
 	var recipes []string
 	if recipesStr != "" {
 		for _, r := range strings.Split(recipesStr, ",") {
@@ -483,7 +479,6 @@ func runVerifyTrust() error {
 		return fmt.Errorf("no recipes specified")
 	}
 
-	// Verify trust info
 	verifyOptions := &autopkg.VerifyTrustInfoOptions{
 		PrefsPath:    prefsPath,
 		VerboseLevel: 1,
@@ -523,7 +518,6 @@ func runVerifyTrust() error {
 }
 
 func runRecipes() error {
-	// Parse recipes
 	var recipes []string
 	if recipesStr != "" {
 		for _, r := range strings.Split(recipesStr, ",") {
@@ -538,7 +532,6 @@ func runRecipes() error {
 		return fmt.Errorf("no recipes specified")
 	}
 
-	// Run recipes
 	options := &autopkg.RecipeBatchRunOptions{
 		PrefsPath:            prefsPath,
 		MaxConcurrentRecipes: concurrency,
@@ -553,7 +546,6 @@ func runRecipes() error {
 
 	results, err := autopkg.RecipeBatchProcessing(recipes, options)
 
-	// Generate a summary report
 	successCount := 0
 	failCount := 0
 
@@ -572,7 +564,6 @@ func runRecipes() error {
 
 	fmt.Printf("\nSummary: %d successful, %d failed\n", successCount, failCount)
 
-	// Generate JSON report if requested
 	if reportPath != "" {
 		reportData, _ := json.MarshalIndent(results, "", "  ")
 		if err := os.WriteFile(reportPath, reportData, 0644); err != nil {
@@ -591,7 +582,6 @@ func runRecipes() error {
 }
 
 func runCleanup() error {
-	// Clean cache
 	options := &autopkg.CleanupOptions{
 		PrefsPath:         prefsPath,
 		RemoveDownloads:   removeDownloads,
@@ -612,7 +602,7 @@ func getLogLevel(cliLogLevel string) int {
 	// Use CLI flag if set, otherwise check the environment variable
 	level := cliLogLevel
 	if level == "" {
-		level = os.Getenv("LOG_LEVEL") // Fallback to environment variable
+		level = os.Getenv("LOG_LEVEL")
 	}
 
 	switch strings.ToUpper(level) {
@@ -627,6 +617,6 @@ func getLogLevel(cliLogLevel string) int {
 	case "SUCCESS":
 		return logger.LogSuccess
 	default:
-		return logger.LogInfo // Default to INFO if invalid or unset
+		return logger.LogInfo
 	}
 }

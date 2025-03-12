@@ -1,0 +1,120 @@
+name: '🔁 AutoPkg Make Recipe Override'
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2 AM
+  workflow_dispatch:     # Allow manual triggering
+    inputs:
+      recipes:
+        description: 'Comma-separated list of recipes to run'
+        required: true
+        default: 'MicrosoftTeams.install.recipe,MicrosoftTeams.jamf.recipe'
+      verify_trust:
+        description: 'Verify trust info for recipes'
+        required: true
+        default: true
+        type: boolean
+      update_trust:
+        description: 'Update trust info if verification fails'
+        required: false
+        default: true
+        type: boolean
+      log_level:
+        description: 'Log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)'
+        required: false
+        default: 'INFO'
+        type: string
+
+env:
+  AUTOPKG_PREFS_PATH: ~/Library/Preferences/com.github.autopkg.plist
+  TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
+  JSS_URL: ${{ secrets.JSS_URL }}
+  API_USERNAME: ${{ secrets.API_USERNAME }}
+  API_PASSWORD: ${{ secrets.API_PASSWORD }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CLIENT_ID: ${{ secrets.JAMFPRO_CLIENT_ID }}
+  CLIENT_SECRET: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
+  TENANT_ID: ${{ secrets.TENANT_ID }}
+  LOG_LEVEL: ${{ github.event.inputs.log_level || 'INFO' }}
+
+jobs:
+  autopkg-run:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.0
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5.3.0
+        with:
+          go-version: '1.24'
+      
+      - name: Build AutoPkg CLI GHA runner Tool
+        run: |
+          # Build the CLI tool that will execute the workflow
+          cd cmd/autopkgctl
+          go build -o $GITHUB_WORKSPACE/autopkgctl
+          chmod +x $GITHUB_WORKSPACE/autopkgctl
+          echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+      
+      - name: Setup AutoPkg Environment
+        id: setup
+        run: |
+          # Initialize AutoPkg environment
+          autopkgctl setup \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --force-update=false \
+            --use-beta=false \
+            --check-git \
+            --check-root
+      
+      - name: Configure AutoPkg
+        run: |
+          # Configure AutoPkg with credentials and settings
+          # Note: Environment variables are automatically used
+          autopkgctl configure \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --fail-without-trust=true
+            
+      - name: Resolve Recipe Repo Dependencies
+        run: |
+          # Run recipe-repo-deps to resolve dependencies
+          autopkgctl recipe-repo-deps \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --use-token \
+            --recipes "${{ github.event.inputs.recipes }}"
+
+      - name: Verify Trust Info
+        if: ${{ github.event.inputs.verify_trust != 'false' }}
+        run: |
+          # Verify trust info
+          autopkgctl verify-trust \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --update=${{ github.event.inputs.update_trust || 'true' }} \
+            --recipes="${{ github.event.inputs.recipes }}"
+      
+      - name: Run AutoPkg Recipes
+        run: |
+          # Run recipes
+          autopkgctl run \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --report="/tmp/autopkg-run-report.json" \
+            --concurrency=4 \
+            --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
+            --recipes="${{ github.event.inputs.recipes }}"
+      
+      - name: Cleanup Cache
+        if: always()
+        run: |
+          # Clean up cache
+          autopkgctl cleanup \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --remove-downloads \
+            --remove-recipe-cache
+      
+      - name: Upload Run Report
+        if: always()
+        uses: actions/upload-artifact@v4.6.1
+        with:
+          name: autopkg-run-report
+          path: /tmp/autopkg-run-report.json

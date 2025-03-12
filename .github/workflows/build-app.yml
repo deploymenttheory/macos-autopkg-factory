@@ -1,4 +1,4 @@
-name: AutoPkg Software Deployment Pipeline
+name: '🔁 AutoPkg Build Application'
 
 on:
   schedule:
