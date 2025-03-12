@@ -124,20 +124,28 @@ jobs:
           # Configure Git
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
+      
           # Create a new branch
           BRANCH_NAME="autopkg-overrides-${{ github.run_id }}"
           git checkout -b "$BRANCH_NAME"
-
-          # Check for changes
-          if [[ -n "$(git status --porcelain recipe_overrides)" ]]; then
-            echo "Changes detected. Committing..."
+      
+          # Debug - show what files are changed
+          echo "Changed files:"
+          git status
+          
+          # Explicitly exclude the binary and only add override files
+          echo "autopkgctl" > .gitignore
+          
+          # Check for changes specifically in recipe_overrides
+          if [[ -n "$(find recipe_overrides -type f -name "*.recipe.*" 2>/dev/null)" ]]; then
+            echo "Recipe override files found. Committing..."
             
-            git add recipe_overrides
+            git add recipe_overrides/*.recipe.*
             git commit -m "📌 AutoPkg Override Update: ${{ github.event.inputs.recipes }}"
             git push origin "$BRANCH_NAME"
           else
-            echo "No changes to commit."
+            echo "No recipe override files found to commit."
+            ls -la recipe_overrides/
           fi
 
       - name: Create Pull Request
