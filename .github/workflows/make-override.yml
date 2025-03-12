@@ -8,17 +8,7 @@ on:
       recipes:
         description: 'Comma-separated list of recipes to run'
         required: true
-        default: 'AmazonQ.intune.recipe,AmazonCLI.intune.recipe,Docker.intune.recipe,Git.intune.recipe,Terraform.intune.recipe,Vagrant.intune.recipe,Thunderbird.pkg.recipe,Firefox.pkg.recipe,Webex.jamf-upload.recipe.yaml,VisualStudioCode.jamf-upload.recipe.yaml'
-      verify_trust:
-        description: 'Verify trust info for recipes'
-        required: true
-        default: true
-        type: boolean
-      update_trust:
-        description: 'Update trust info if verification fails'
-        required: false
-        default: true
-        type: boolean
+        default: 'AmazonQ.intune.recipe,AmazonCLI.intune.recipe,Docker.intune.recipe,Git.intune.recipe,Terraform.intune.recipe,Vagrant.intune.recipe,Thunderbird.pkg.recipe,Firefox.pkg.recipe,Webex.jamf-upload.recipe,VisualStudioCode.jamf-upload.recipe'
       log_level:
         description: 'Log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)'
         required: false
