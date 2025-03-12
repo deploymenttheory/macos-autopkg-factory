@@ -24,11 +24,6 @@ on:
         required: false
         default: 'DEBUG'
         type: string
-      override_name:
-        description: 'Name for the override file'
-        required: false
-        default: ''
-        type: string
       override_format:
         description: 'Format of the override file (plist or yaml)'
         required: false
@@ -107,17 +102,13 @@ jobs:
           for recipe in "${RECIPES[@]}"; do
             echo "Creating override for $recipe"
             
-            # Remove the ".recipe" extension if it's already present in the input
-            override_name=$(echo "$recipe" | sed 's/\.recipe\(\.yaml\|\.plist\)\?$//')
-            
             autopkgctl make-override "$recipe" \
               --prefs="$AUTOPKG_PREFS_PATH" \
-              --name="$override_name" \
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}"
             
-            # Move override file to the repository
-            OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/${override_name}.recipe.${{ github.event.inputs.override_format }}"
+            # Correctly move the override file without adding extra ".recipe"
+            OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.${{ github.event.inputs.override_format }}"
             mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
           done
           
