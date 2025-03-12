@@ -111,7 +111,7 @@ jobs:
               --name="$recipe" \
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}"
-      
+        
             # Move override file to the repository
             OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.recipe.${{ github.event.inputs.override_format }}"
             mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
@@ -122,9 +122,12 @@ jobs:
           echo "# AutoPkg Override Run - $TIMESTAMP" > $GITHUB_WORKSPACE/recipe_overrides/timestamp.md
           echo "Recipes processed: ${{ github.event.inputs.recipes }}" >> $GITHUB_WORKSPACE/recipe_overrides/timestamp.md
           
-          # List all files created
+          # Store current timestamp for PR description
+          echo "CURRENT_TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+          
+          # List all files created (with relative paths)
           echo "FILES<<EOF" >> $GITHUB_ENV
-          find $GITHUB_WORKSPACE/recipe_overrides -type f -name "*.recipe.*" -o -name "timestamp.md" | sort | sed 's/^/- /' >> $GITHUB_ENV
+          find recipe_overrides -type f -name "*.recipe.*" | sort | sed 's/^/- /' >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       
       - name: Create Pull Request
@@ -140,7 +143,7 @@ jobs:
           body: |
             This PR contains the latest AutoPkg recipe override updates.
             
-            ### Recipe Input:
+            ### Recipe Override Input:
             ```
             ${{ github.event.inputs.recipes }}
             ```
@@ -148,7 +151,7 @@ jobs:
             ### Override Files Created:
             ${{ env.FILES }}
             
-            Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            Generated: ${{ env.CURRENT_TIMESTAMP }}
           labels: "autopkg, automation"
       
       - name: Check Pull Request Output
