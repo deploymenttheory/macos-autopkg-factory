@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 	"gopkg.in/yaml.v2"
@@ -149,8 +150,8 @@ func Search(recipeName string, useToken bool, prefsPath string) ([]RecipeMatch, 
 		searchTerm = recipeName
 	}
 
-	// Try to search with the exact term
-	outputStr, err := SearchRecipes(searchTerm, searchOptions)
+	// try search with retry to account for throttling
+	outputStr, err := RetryableSearch(searchTerm, searchOptions, 3)
 
 	// If the search failed and there are spaces in the search term,
 	// try an alternative approach
@@ -517,6 +518,53 @@ func ParseRecipeFile(repo, path string, useToken bool, prefsPath string) (string
 		}
 	}
 	return identifier, deps, nil
+}
+
+// RetryableSearch wraps SearchRecipes with retry logic for rate limiting
+func RetryableSearch(term string, options *SearchOptions, maxRetries int) (string, error) {
+	var lastErr error
+
+	// Base delay in seconds, will be multiplied by 2^retry
+	baseDelay := 2
+
+	for retry := 0; retry <= maxRetries; retry++ {
+		// If this isn't the first attempt, log that we're retrying
+		if retry > 0 {
+			delay := baseDelay * (1 << (retry - 1)) // Exponential backoff: 2, 4, 8, 16...
+			logger.Logger(fmt.Sprintf("⏱️ Rate limited by GitHub API, waiting %d seconds before retry %d/%d",
+				delay, retry, maxRetries), logger.LogWarning)
+			time.Sleep(time.Duration(delay) * time.Second)
+		}
+
+		// Attempt the search
+		output, err := SearchRecipes(term, options)
+
+		// If successful or not a rate limit error, return immediately
+		if err == nil || !isRateLimitError(err, output) {
+			return output, err
+		}
+
+		// Store the error in case we need to return it after all retries
+		lastErr = err
+	}
+
+	// If we got here, we failed all retries
+	logger.Logger("❌ Exceeded maximum retries for GitHub API rate limiting", logger.LogError)
+	return "", lastErr
+}
+
+// isRateLimitError checks if an error is due to GitHub API rate limiting
+func isRateLimitError(err error, output string) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check error message for rate limit indicators
+	errorStr := err.Error()
+	return strings.Contains(errorStr, "403") &&
+		(strings.Contains(errorStr, "rate limit") ||
+			strings.Contains(errorStr, "rate-limit") ||
+			strings.Contains(output, "API rate limit exceeded"))
 }
 
 func mapToSlice(m map[string]RecipeRepo) []RecipeRepo {
