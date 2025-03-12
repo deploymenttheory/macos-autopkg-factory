@@ -45,6 +45,122 @@ var recipeIndexCache *RecipeIndex
 // Keep the existing regex pattern
 var recipeRegex = regexp.MustCompile(`(?i)^.*\.recipe(?:\.yaml|\.plist)?$`)
 
+// ResolveRecipeDependencies resolves all repository dependencies for a recipe using the index
+// ResolveRecipeDependencies resolves all repository dependencies for a recipe using the index
+func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string, dryRun bool) ([]RecipeRepo, error) {
+	logger.Logger(fmt.Sprintf("🔍 Resolving dependencies for: %s", recipeName), logger.LogDebug)
+
+	// Check if recipeName is a valid recipe format
+	isRecipeFile := recipeRegex.MatchString(recipeName)
+	isRecipeIdentifier := strings.Contains(recipeName, ".")
+
+	// If it's neither a recipe file nor an identifier, it's invalid
+	if !isRecipeFile && !isRecipeIdentifier {
+		logger.Logger("❌ Invalid recipe name format", logger.LogError)
+		return nil, fmt.Errorf("invalid recipe name: %s", recipeName)
+	}
+
+	// Fetch the index
+	index, err := FetchRecipeIndex(useToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch recipe index: %w", err)
+	}
+
+	// Track all dependencies
+	allDependencies := make(map[string]RecipeRepo)
+
+	// Track repositories that need to be added
+	reposToAdd := make(map[string]string)
+
+	// Find the recipe in the index
+	var recipeIdentifier string
+	var matchedRecipes []string
+
+	// Check if recipeName is already an identifier
+	if _, exists := index.Identifiers[recipeName]; exists {
+		recipeIdentifier = recipeName
+		matchedRecipes = []string{recipeName}
+	} else {
+		// Try to find by shortname, filename pattern, or other criteria
+		for id, info := range index.Identifiers {
+			// Match by shortname
+			if info.Shortname == recipeName {
+				matchedRecipes = append(matchedRecipes, id)
+				continue
+			}
+
+			// Match by path/filename
+			if strings.Contains(info.Path, recipeName) {
+				matchedRecipes = append(matchedRecipes, id)
+				continue
+			}
+
+			// Match by name
+			if info.Name != "" && (info.Name == recipeName || strings.EqualFold(info.Name, recipeName)) {
+				matchedRecipes = append(matchedRecipes, id)
+				continue
+			}
+		}
+	}
+
+	// Process the matches
+	if len(matchedRecipes) == 1 {
+		recipeIdentifier = matchedRecipes[0]
+		logger.Logger(fmt.Sprintf("✅ Found single recipe match: %s", recipeIdentifier), logger.LogDebug)
+
+		// Process the single recipe and its dependencies
+		processRecipe(recipeIdentifier, index, allDependencies, reposToAdd, useToken)
+	} else if len(matchedRecipes) > 1 {
+		logger.Logger(fmt.Sprintf("⚠️ Multiple matches found for recipe: %s (%d matches)", recipeName, len(matchedRecipes)), logger.LogWarning)
+
+		// Log details about all matches
+		for i, id := range matchedRecipes {
+			info := index.Identifiers[id]
+			logger.Logger(fmt.Sprintf("  Match %d: %s (from repo: %s)", i+1, id, info.Repo), logger.LogInfo)
+		}
+
+		// Process ALL matching recipes and their dependencies
+		logger.Logger("📦 Adding repositories for all matching recipes and their parents", logger.LogInfo)
+
+		for _, id := range matchedRecipes {
+			logger.Logger(fmt.Sprintf("🔄 Processing dependencies for: %s", id), logger.LogDebug)
+
+			// Process this recipe and add to dependencies
+			processRecipe(id, index, allDependencies, reposToAdd, useToken)
+		}
+
+		// Set recipeIdentifier to the first one just for return purposes
+		recipeIdentifier = matchedRecipes[0]
+	} else {
+		logger.Logger(fmt.Sprintf("❌ No matches found for recipe: %s", recipeName), logger.LogError)
+		return nil, fmt.Errorf("no matches found for recipe: %s", recipeName)
+	}
+
+	if len(allDependencies) == 0 {
+		logger.Logger(fmt.Sprintf("❌ No valid dependencies found for recipe: %s", recipeName), logger.LogError)
+		return nil, fmt.Errorf("no valid dependencies found for recipe: %s", recipeName)
+	}
+
+	// If not in dry run mode, add the repositories
+	if !dryRun && len(reposToAdd) > 0 {
+		var repoNames []string
+		for repoName := range reposToAdd {
+			repoNames = append(repoNames, repoName)
+		}
+
+		logger.Logger(fmt.Sprintf("📦 Adding %d repositories for recipe %s", len(repoNames), recipeName), logger.LogInfo)
+
+		// Use the existing AddRepo function
+		_, err := AddRepo(repoNames, prefsPath)
+		if err != nil {
+			logger.Logger(fmt.Sprintf("⚠️ Error adding repositories: %v", err), logger.LogWarning)
+			// Continue anyway to return the dependencies
+		}
+	}
+
+	return mapToSlice(allDependencies), nil
+}
+
 // FetchRecipeIndex fetches and parses the AutoPkg index.json
 func FetchRecipeIndex(useToken bool) (*RecipeIndex, error) {
 	// Check if we have a recent cache
@@ -106,118 +222,6 @@ func FetchRecipeIndex(useToken bool) (*RecipeIndex, error) {
 	logger.Logger(fmt.Sprintf("✅ Successfully loaded %d recipes from index", len(identifiers)), logger.LogDebug)
 
 	return recipeIndexCache, nil
-}
-
-// ResolveRecipeDependencies resolves all repository dependencies for a recipe using the index
-func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string, dryRun bool) ([]RecipeRepo, error) {
-	logger.Logger(fmt.Sprintf("🔍 Resolving dependencies for: %s", recipeName), logger.LogDebug)
-
-	// Check if recipeName is a valid recipe format
-	isRecipeFile := recipeRegex.MatchString(recipeName)
-	isRecipeIdentifier := strings.Contains(recipeName, ".")
-
-	// If it's neither a recipe file nor an identifier, it's invalid
-	if !isRecipeFile && !isRecipeIdentifier {
-		logger.Logger("❌ Invalid recipe name format", logger.LogError)
-		return nil, fmt.Errorf("invalid recipe name: %s", recipeName)
-	}
-
-	// Fetch the index
-	index, err := FetchRecipeIndex(useToken)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch recipe index: %w", err)
-	}
-
-	// Find the recipe in the index
-	var recipeIdentifier string
-	var matchedRecipes []string
-
-	// Check if recipeName is already an identifier
-	if _, exists := index.Identifiers[recipeName]; exists {
-		recipeIdentifier = recipeName
-		matchedRecipes = []string{recipeName}
-	} else {
-		// Try to find by shortname, filename pattern, or other criteria
-		for id, info := range index.Identifiers {
-			// Match by shortname
-			if info.Shortname == recipeName {
-				matchedRecipes = append(matchedRecipes, id)
-				continue
-			}
-
-			// Match by path/filename
-			if strings.Contains(info.Path, recipeName) {
-				matchedRecipes = append(matchedRecipes, id)
-				continue
-			}
-
-			// Match by name
-			if info.Name != "" && (info.Name == recipeName || strings.EqualFold(info.Name, recipeName)) {
-				matchedRecipes = append(matchedRecipes, id)
-				continue
-			}
-		}
-
-		// If we found exactly one match, use it
-		if len(matchedRecipes) == 1 {
-			recipeIdentifier = matchedRecipes[0]
-		} else if len(matchedRecipes) > 1 {
-			logger.Logger(fmt.Sprintf("⚠️ Multiple matches found for recipe: %s", recipeName), logger.LogWarning)
-
-			// Try to find the best match (prioritize exact matches)
-			for _, id := range matchedRecipes {
-				info := index.Identifiers[id]
-				if info.Shortname == recipeName || info.Path == recipeName || info.Name == recipeName {
-					recipeIdentifier = id
-					break
-				}
-			}
-
-			// If still no exact match, just use the first one
-			if recipeIdentifier == "" {
-				recipeIdentifier = matchedRecipes[0]
-				logger.Logger(fmt.Sprintf("⚠️ Using first match: %s", recipeIdentifier), logger.LogWarning)
-			}
-		}
-	}
-
-	if recipeIdentifier == "" {
-		logger.Logger(fmt.Sprintf("❌ No matches found for recipe: %s", recipeName), logger.LogError)
-		return nil, fmt.Errorf("no matches found for recipe: %s", recipeName)
-	}
-
-	// Track all dependencies
-	allDependencies := make(map[string]RecipeRepo)
-
-	// Track repositories that need to be added
-	reposToAdd := make(map[string]string)
-
-	// Process the recipe and its dependencies
-	processRecipe(recipeIdentifier, index, allDependencies, reposToAdd, useToken)
-
-	if len(allDependencies) == 0 {
-		logger.Logger(fmt.Sprintf("❌ No valid dependencies found for recipe: %s", recipeName), logger.LogError)
-		return nil, fmt.Errorf("no valid dependencies found for recipe: %s", recipeName)
-	}
-
-	// If not in dry run mode, add the repositories
-	if !dryRun && len(reposToAdd) > 0 {
-		var repoNames []string
-		for repoName := range reposToAdd {
-			repoNames = append(repoNames, repoName)
-		}
-
-		logger.Logger(fmt.Sprintf("📦 Adding %d repositories for recipe %s", len(repoNames), recipeName), logger.LogInfo)
-
-		// Use the existing AddRepo function
-		_, err := AddRepo(repoNames, prefsPath)
-		if err != nil {
-			logger.Logger(fmt.Sprintf("⚠️ Error adding repositories: %v", err), logger.LogWarning)
-			// Continue anyway to return the dependencies
-		}
-	}
-
-	return mapToSlice(allDependencies), nil
 }
 
 // processRecipe recursively processes a recipe and its dependencies
