@@ -106,21 +106,20 @@ jobs:
           IFS=',' read -ra RECIPES <<< "${{ github.event.inputs.recipes }}"
           for recipe in "${RECIPES[@]}"; do
             echo "Creating override for $recipe"
+            
+            # Remove the ".recipe" extension if it's already present in the input
+            override_name=$(echo "$recipe" | sed 's/\.recipe\(\.yaml\|\.plist\)\?$//')
+            
             autopkgctl make-override "$recipe" \
               --prefs="$AUTOPKG_PREFS_PATH" \
-              --name="$recipe" \
+              --name="$override_name" \
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}"
-        
+            
             # Move override file to the repository
             OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.recipe.${{ github.event.inputs.override_format }}"
             mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"
           done
-          
-          # Create a timestamp file for uniqueness
-          TIMESTAMP=$(date -u +"%Y-%m-%d-%H:%M:%S")
-          echo "# AutoPkg Override Run - $TIMESTAMP" > $GITHUB_WORKSPACE/recipe_overrides/timestamp.md
-          echo "Recipes processed: ${{ github.event.inputs.recipes }}" >> $GITHUB_WORKSPACE/recipe_overrides/timestamp.md
           
           # Store current timestamp for PR description
           echo "CURRENT_TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
