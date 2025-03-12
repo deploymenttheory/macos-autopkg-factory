@@ -50,6 +50,22 @@ jobs:
         with:
           go-version: '1.24'
       
+        
+      - name: Validate Inputs
+        run: |
+          echo "🔍 Validating input values..."
+
+          # Validate log_level against allowed values
+          VALID_LOG_LEVELS=("DEBUG" "INFO" "WARNING" "ERROR" "SUCCESS")
+          LOG_LEVEL="${{ github.event.inputs.log_level }}"
+          if [[ ! " ${VALID_LOG_LEVELS[@]} " =~ " $LOG_LEVEL " ]]; then
+            echo "❌ ERROR: Invalid log level: $LOG_LEVEL"
+            echo "📝 Allowed values: DEBUG, INFO, WARNING, ERROR, SUCCESS"
+            exit 1
+          fi
+
+          echo "✅ Validation passed!"
+      
       - name: Build AutoPkg CLI GHA runner Tool
         run: |
           # Build the CLI tool that will execute the workflow
