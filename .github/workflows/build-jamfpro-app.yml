@@ -20,6 +20,11 @@ on:
         required: false
         default: 'INFO'
         type: string
+      recipe:
+        description: 'the autopkg recipe to run'
+        required: false
+        default: ''
+        type: string
 
 env:
   # AutoPkg preferences path
@@ -38,6 +43,7 @@ env:
   LOG_LEVEL: ${{ github.event.inputs.log_level || 'INFO' }}
   # Recipe override directory
   RECIPE_OVERRIDE_DIRS: ${{ github.workspace }}/recipe_overrides
+  RUN_RECIPE: ${{ github.event.inputs.recipe }}
 
 jobs:
   autopkg-run:
@@ -112,7 +118,7 @@ jobs:
             --report="$GITHUB_WORKSPACE/autopkg-run-report.json" \
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
-            --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}"
+            --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
             --stop-on-error=true \
             --verbose=3 \
             --verify-trust=true \
