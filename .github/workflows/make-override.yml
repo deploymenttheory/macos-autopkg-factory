@@ -99,6 +99,7 @@ jobs:
             --prefs="$AUTOPKG_PREFS_PATH" \
             --use-token \
             --recipes "${{ github.event.inputs.recipes }}"
+            --repo-list-path="$GITHUB_WORKSPACE/configuration/"
 
       - name: Create Recipe Override
         run: |
@@ -111,8 +112,7 @@ jobs:
               --prefs="$AUTOPKG_PREFS_PATH" \
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}" \
-              --repo-list-path="$GITHUB_WORKSPACE/configuration/"
-            
+              
             # Correctly move the override file without adding extra ".recipe"
             OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.${{ github.event.inputs.override_format }}"
             mv "$OVERRIDE_FILE" "$GITHUB_WORKSPACE/recipe_overrides/"

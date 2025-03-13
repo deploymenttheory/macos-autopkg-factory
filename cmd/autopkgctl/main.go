@@ -177,6 +177,7 @@ func main() {
 	recipeDepsCmd.Flags().BoolVar(&useToken, "use-token", true, "Use GitHub token for authentication")
 	recipeDepsCmd.Flags().BoolVar(&skipExisting, "skip-existing", true, "Skip repositories that are already added")
 	recipeDepsCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Only show dependencies without adding them")
+	recipeDepsCmd.Flags().StringVar(&repoListPath, "repo-list-path", "", "Location to export added repo's to a text file for future autopkg runs")
 
 	// Verify-trust command
 	verifyTrustCmd := &cobra.Command{
@@ -229,7 +230,6 @@ func main() {
 	makeOverrideCmd.Flags().BoolVar(&overridePull, "pull", false, "Pull the parent repos if they are missing")
 	makeOverrideCmd.Flags().BoolVar(&overrideIgnoreDeprec, "ignore-deprecation", false, "Ignore deprecation warnings and create the override")
 	makeOverrideCmd.Flags().StringVar(&overrideFormat, "format", "plist", "Format of the override file (default: plist, options: plist, yaml)")
-	makeOverrideCmd.Flags().StringVar(&repoListPath, "repo-list-path", "", "Location to export added repo's to a text file for future autopkg runs")
 
 	// Run command
 	runCmd := &cobra.Command{
