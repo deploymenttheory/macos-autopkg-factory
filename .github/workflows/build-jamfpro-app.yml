@@ -44,6 +44,21 @@ jobs:
     name: 📦 autopkg-run
     runs-on: macos-latest
     steps:
+      - name: Validate Inputs
+        run: |
+          echo "🔍 Validating input values..."
+
+          # Validate log_level against allowed values
+          VALID_LOG_LEVELS=("DEBUG" "INFO" "WARNING" "ERROR" "SUCCESS")
+          LOG_LEVEL="${{ github.event.inputs.log_level }}"
+          if [[ ! " ${VALID_LOG_LEVELS[@]} " =~ " $LOG_LEVEL " ]]; then
+            echo "❌ ERROR: Invalid log level: $LOG_LEVEL"
+            echo "📝 Allowed values: DEBUG, INFO, WARNING, ERROR, SUCCESS"
+            exit 1
+          fi
+
+          echo "✅ Validation passed!"
+
       - name: Checkout Repository
         uses: actions/checkout@v4.2.0
       
@@ -51,7 +66,7 @@ jobs:
         uses: actions/setup-go@v5.3.0
         with:
           go-version: '1.24'
-      
+
       - name: Build AutoPkg CLI GHA runner Tool
         run: |
           # Build the CLI tool that will execute the workflow
