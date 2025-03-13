@@ -52,11 +52,19 @@ var (
 	jssURL           string
 	apiUsername      string
 	apiPassword      string
+	smbURL           string
+	smbUsername      string
+	smbPassword      string
 	clientID         string
 	clientSecret     string
 	tenantID         string
 	teamsWebhookUrl  string
+	slackUsername    string
+	slackWebhook     string
 	failWithoutTrust bool
+	overrideDir      string
+	cacheDir         string
+	jcds2Mode        bool
 
 	// Make-override command flags
 	overrideSearchDirs   []string
@@ -118,15 +126,31 @@ func main() {
 	}
 
 	// Configure command flags
-	configureCmd.Flags().StringVar(&gitHubToken, "github-token", "", "GitHub token for API access")
-	configureCmd.Flags().StringVar(&jssURL, "jss-url", "", "Jamf Pro server URL")
-	configureCmd.Flags().StringVar(&apiUsername, "api-username", "", "API username for Jamf Pro")
-	configureCmd.Flags().StringVar(&apiPassword, "api-password", "", "API password for Jamf Pro")
-	configureCmd.Flags().StringVar(&clientID, "client-id", "", "Client ID for Jamf Pro API")
-	configureCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Client secret for Jamf Pro API")
-	configureCmd.Flags().StringVar(&tenantID, "tenant-id", "", "Tenant ID for Microsoft services")
-	configureCmd.Flags().StringVar(&teamsWebhookUrl, "teams-webhook", "", "Microsoft Teams webhook URL")
-	configureCmd.Flags().BoolVar(&failWithoutTrust, "fail-without-trust", false, "Fail recipes without trust info")
+
+	// Jamf Pro integration
+	configureCmd.Flags().StringVar(&jssURL, "jss-url", "", "Jamf Pro server URL (e.g., https://jamf.example.com)")
+	configureCmd.Flags().StringVar(&apiUsername, "api-username", "", "API username for Jamf Pro authentication")
+	configureCmd.Flags().StringVar(&apiPassword, "api-password", "", "API password for Jamf Pro authentication")
+	configureCmd.Flags().StringVar(&smbURL, "smb-url", "", "SMB share URL for package distribution (e.g., smb://server/share)")
+	configureCmd.Flags().StringVar(&smbUsername, "smb-username", "", "Username for authenticating to the SMB share")
+	configureCmd.Flags().StringVar(&smbPassword, "smb-password", "", "Password for authenticating to the SMB share")
+	configureCmd.Flags().BoolVar(&jcds2Mode, "jcds2-mode", false, "Enable JCDS2 mode for Jamf Cloud Distribution Service v2")
+
+	// Microsoft Intune/Graph API
+	configureCmd.Flags().StringVar(&clientID, "client-id", "", "Client ID (Application ID) for Microsoft Graph API authentication or Client ID for Jamf Pro API")
+	configureCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Client Secret for Microsoft Graph API authentication or Client secret for Jamf Pro API")
+	configureCmd.Flags().StringVar(&tenantID, "tenant-id", "", "Microsoft Entra Tenant ID for Graph API authentication")
+
+	// Notification services
+	configureCmd.Flags().StringVar(&teamsWebhookUrl, "teams-webhook", "", "Microsoft Teams webhook URL for notifications")
+	configureCmd.Flags().StringVar(&slackUsername, "slack-username", "", "Username to show in Slack notifications")
+	configureCmd.Flags().StringVar(&slackWebhook, "slack-webhook", "", "Slack webhook URL for notifications")
+
+	// AutoPkg behavior settings
+	configureCmd.Flags().BoolVar(&failWithoutTrust, "fail-without-trust", false, "Fail recipes without trust info for improved security")
+	configureCmd.Flags().StringVar(&overrideDir, "override-dir", "", "Directory path for storing recipe overrides")
+	configureCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Custom directory for AutoPkg cache storage")
+	configureCmd.Flags().StringVar(&gitHubToken, "github-token", "", "GitHub API token for accessing private repositories and higher rate limits")
 
 	// Repo-add command
 	repoAddCmd := &cobra.Command{
@@ -301,128 +325,153 @@ func runConfigure(cmd *cobra.Command) error {
 		return err
 	}
 
-	// Try to read existing preferences
-	var prefs *autopkg.PreferencesData
-	existingPrefs, err := autopkg.GetAutoPkgPreferences(expandedPrefsPath)
+	// Get existing preferences or initialize empty map
+	_, err := autopkg.GetAutoPkgPreferences(expandedPrefsPath)
 	if err != nil {
-		// If file doesn't exist, create a new preferences struct
 		logger.Logger("ℹ️ Creating new preferences file", logger.LogInfo)
-		prefs = &autopkg.PreferencesData{
-			RECIPE_REPOS:       make(map[string]interface{}),
-			RECIPE_SEARCH_DIRS: []string{},
-		}
-	} else {
-		prefs = existingPrefs
 	}
 
-	// Update preferences with provided flags (if any)
-	updated := false
+	// Prepare updates to preferences
+	updates := make(map[string]interface{})
 
 	// GitHub token
 	if gitHubToken != "" {
-		// Save token to the autopkg token file as well
+		// Save token to the autopkg token file
 		homeDir, err := os.UserHomeDir()
 		if err == nil {
 			tokenPath := filepath.Join(homeDir, ".autopkg_gh_token")
 			if err := os.WriteFile(tokenPath, []byte(gitHubToken), 0600); err == nil {
 				logger.Logger(fmt.Sprintf("✅ Wrote GitHub token to %s", tokenPath), logger.LogSuccess)
-				prefs.GITHUB_TOKEN_PATH = tokenPath
-				updated = true
+				updates["GITHUB_TOKEN_PATH"] = tokenPath
 			} else {
 				logger.Logger(fmt.Sprintf("❌ Failed to write GitHub token file: %v", err), logger.LogError)
 			}
 		}
 	}
 
-	// Jamf Pro settings
+	// Jamf Pro integration
 	if jssURL != "" {
-		prefs.JSS_URL = jssURL
-		updated = true
+		updates["JSS_URL"] = jssURL
 	}
 	if apiUsername != "" {
-		prefs.API_USERNAME = apiUsername
-		updated = true
+		updates["API_USERNAME"] = apiUsername
 	}
 	if apiPassword != "" {
-		prefs.API_PASSWORD = apiPassword
-		updated = true
+		updates["API_PASSWORD"] = apiPassword
 	}
+	if smbURL != "" {
+		updates["SMB_URL"] = smbURL
+	}
+	if smbUsername != "" {
+		updates["SMB_USERNAME"] = smbUsername
+	}
+	if smbPassword != "" {
+		updates["SMB_PASSWORD"] = smbPassword
+	}
+	if cmd.Flags().Changed("jcds2-mode") {
+		updates["jcds2_mode"] = jcds2Mode
+	}
+
+	// Microsoft Intune/Graph API
 	if clientID != "" {
-		prefs.CLIENT_ID = clientID
-		updated = true
+		updates["CLIENT_ID"] = clientID
 	}
 	if clientSecret != "" {
-		prefs.CLIENT_SECRET = clientSecret
-		updated = true
+		updates["CLIENT_SECRET"] = clientSecret
 	}
 	if tenantID != "" {
-		prefs.TENANT_ID = tenantID
-		updated = true
+		updates["TENANT_ID"] = tenantID
 	}
 
-	// Microsoft Teams webhook
+	// Notification services
 	if teamsWebhookUrl != "" {
-		if prefs.AdditionalPreferences == nil {
-			prefs.AdditionalPreferences = make(map[string]interface{})
-		}
-		prefs.AdditionalPreferences["TEAMS_WEBHOOK"] = teamsWebhookUrl
-		updated = true
+		updates["TEAMS_WEBHOOK"] = teamsWebhookUrl
+	}
+	if slackUsername != "" {
+		updates["SLACK_USERNAME"] = slackUsername
+	}
+	if slackWebhook != "" {
+		updates["SLACK_WEBHOOK"] = slackWebhook
 	}
 
-	// Trust settings
+	// AutoPkg behavior settings
 	if cmd.Flags().Changed("fail-without-trust") {
-		prefs.FAIL_RECIPES_WITHOUT_TRUST_INFO = failWithoutTrust
-		updated = true
+		updates["FAIL_RECIPES_WITHOUT_TRUST_INFO"] = failWithoutTrust
+	}
+	if overrideDir != "" {
+		updates["RECIPE_OVERRIDE_DIRS"] = overrideDir
+	}
+	if cacheDir != "" {
+		updates["CACHE_DIR"] = cacheDir
 	}
 
 	// Check environment variables if flags weren't provided
+	// GitHub token from environment
 	if gitHubToken == "" && os.Getenv("GITHUB_TOKEN") != "" {
 		homeDir, err := os.UserHomeDir()
 		if err == nil {
 			tokenPath := filepath.Join(homeDir, ".autopkg_gh_token")
 			if err := os.WriteFile(tokenPath, []byte(os.Getenv("GITHUB_TOKEN")), 0600); err == nil {
 				logger.Logger(fmt.Sprintf("✅ Wrote GitHub token from environment to %s", tokenPath), logger.LogSuccess)
-				prefs.GITHUB_TOKEN_PATH = tokenPath
-				updated = true
+				updates["GITHUB_TOKEN_PATH"] = tokenPath
 			}
 		}
 	}
 
+	// Jamf Pro environment variables
 	if jssURL == "" && os.Getenv("JSS_URL") != "" {
-		prefs.JSS_URL = os.Getenv("JSS_URL")
-		updated = true
+		updates["JSS_URL"] = os.Getenv("JSS_URL")
 	}
 	if apiUsername == "" && os.Getenv("API_USERNAME") != "" {
-		prefs.API_USERNAME = os.Getenv("API_USERNAME")
-		updated = true
+		updates["API_USERNAME"] = os.Getenv("API_USERNAME")
 	}
 	if apiPassword == "" && os.Getenv("API_PASSWORD") != "" {
-		prefs.API_PASSWORD = os.Getenv("API_PASSWORD")
-		updated = true
+		updates["API_PASSWORD"] = os.Getenv("API_PASSWORD")
 	}
-	if clientID == "" && os.Getenv("CLIENT_ID") != "" {
-		prefs.CLIENT_ID = os.Getenv("CLIENT_ID")
-		updated = true
+	if smbURL == "" && os.Getenv("SMB_URL") != "" {
+		updates["SMB_URL"] = os.Getenv("SMB_URL")
 	}
-	if clientSecret == "" && os.Getenv("CLIENT_SECRET") != "" {
-		prefs.CLIENT_SECRET = os.Getenv("CLIENT_SECRET")
-		updated = true
+	if smbUsername == "" && os.Getenv("SMB_USERNAME") != "" {
+		updates["SMB_USERNAME"] = os.Getenv("SMB_USERNAME")
 	}
-	if tenantID == "" && os.Getenv("TENANT_ID") != "" {
-		prefs.TENANT_ID = os.Getenv("TENANT_ID")
-		updated = true
-	}
-	if teamsWebhookUrl == "" && os.Getenv("TEAMS_WEBHOOK") != "" {
-		if prefs.AdditionalPreferences == nil {
-			prefs.AdditionalPreferences = make(map[string]interface{})
-		}
-		prefs.AdditionalPreferences["TEAMS_WEBHOOK"] = os.Getenv("TEAMS_WEBHOOK")
-		updated = true
+	if smbPassword == "" && os.Getenv("SMB_PASSWORD") != "" {
+		updates["SMB_PASSWORD"] = os.Getenv("SMB_PASSWORD")
 	}
 
-	// If any settings were updated, write the preferences file
-	if updated {
-		if err := autopkg.SetAutoPkgPreferences(expandedPrefsPath, prefs); err != nil {
+	// Microsoft Intune/Graph API environment variables
+	if clientID == "" && os.Getenv("CLIENT_ID") != "" {
+		updates["CLIENT_ID"] = os.Getenv("CLIENT_ID")
+	}
+	if clientSecret == "" && os.Getenv("CLIENT_SECRET") != "" {
+		updates["CLIENT_SECRET"] = os.Getenv("CLIENT_SECRET")
+	}
+	if tenantID == "" && os.Getenv("TENANT_ID") != "" {
+		updates["TENANT_ID"] = os.Getenv("TENANT_ID")
+	}
+
+	// Notification services environment variables
+	if teamsWebhookUrl == "" && os.Getenv("TEAMS_WEBHOOK") != "" {
+		updates["TEAMS_WEBHOOK"] = os.Getenv("TEAMS_WEBHOOK")
+	}
+	if slackUsername == "" && os.Getenv("SLACK_USERNAME") != "" {
+		updates["SLACK_USERNAME"] = os.Getenv("SLACK_USERNAME")
+	}
+	if slackWebhook == "" && os.Getenv("SLACK_WEBHOOK") != "" {
+		updates["SLACK_WEBHOOK"] = os.Getenv("SLACK_WEBHOOK")
+	}
+
+	// AutoPkg behavior environment variables
+	if overrideDir == "" && os.Getenv("RECIPE_OVERRIDE_DIRS") != "" {
+		updates["RECIPE_OVERRIDE_DIRS"] = os.Getenv("RECIPE_OVERRIDE_DIRS")
+	}
+	if cacheDir == "" && os.Getenv("CACHE_DIR") != "" {
+		updates["CACHE_DIR"] = os.Getenv("CACHE_DIR")
+	}
+
+	// Check if we have any updates to make
+	if len(updates) > 0 {
+		// Update preferences
+		if err := autopkg.UpdateAutoPkgPreferences(expandedPrefsPath, updates); err != nil {
 			logger.Logger(fmt.Sprintf("❌ Failed to write preferences: %v", err), logger.LogError)
 			return err
 		}

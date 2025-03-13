@@ -1,4 +1,4 @@
-name: '🔁 AutoPkg Build Application'
+name: '🔁 AutoPkg Jamf Pro Deployment'
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
       recipes:
         description: 'Comma-separated list of recipes to run'
         required: true
-        default: 'AmazonQ.intune.recipe,AmazonCLI.intune.recipe,Docker.intune.recipe,Git.intune.recipe,Terraform.intune.recipe,Vagrant.intune.recipe,Thunderbird.pkg.recipe,Firefox.pkg.recipe,Webex.jamf-upload.recipe,VisualStudioCode.jamf-upload.recipe,AdobeAdminConsole-latest.jamf.recipe,Blender-flush.jamf.recipe'
+        default: 'Firefox.jamf.recipe,GoogleChrome.jamf.recipe,MicrosoftTeams.jamf.recipe,Zoom.jamf.recipe,AdobeAcrobatReaderDC.jamf.recipe,VisualStudioCode.jamf-upload.recipe,Webex.jamf-upload.recipe'
       verify_trust:
         description: 'Verify trust info for recipes'
         required: true
@@ -26,16 +26,22 @@ on:
         type: string
 
 env:
+  # AutoPkg preferences path
   AUTOPKG_PREFS_PATH: ~/Library/Preferences/com.github.autopkg.plist
-  TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
-  JSS_URL: ${{ secrets.JSS_URL }}
-  API_USERNAME: ${{ secrets.API_USERNAME }}
-  API_PASSWORD: ${{ secrets.API_PASSWORD }}
+  # GitHub authentication
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Jamf Pro settings
+  JSS_URL: ${{ secrets.JAMFPRO_URL }}
   CLIENT_ID: ${{ secrets.JAMFPRO_CLIENT_ID }}
   CLIENT_SECRET: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
-  TENANT_ID: ${{ secrets.TENANT_ID }}
+  # Notification services
+  TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
+  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  SLACK_USERNAME: "AutoPkg Bot"
+  # Logging
   LOG_LEVEL: ${{ github.event.inputs.log_level || 'INFO' }}
+  # Recipe override directory
+  RECIPE_OVERRIDE_DIRS: ${{ github.workspace }}/recipe_overrides
 
 jobs:
   autopkg-run:
@@ -71,9 +77,14 @@ jobs:
       - name: Configure AutoPkg
         run: |
           # Configure AutoPkg with credentials and settings
-          # Note: Environment variables are automatically used
           autopkgctl configure \
             --prefs="$AUTOPKG_PREFS_PATH" \
+            --jss-url="${{ env.JSS_URL }}" \
+            --client-id="${{ env.CLIENT_ID }}" \
+            --client-secret="${{ env.CLIENT_SECRET }}" \
+            --teams-webhook="${{ env.TEAMS_WEBHOOK }}" \
+            --github-token="${{ env.GITHUB_TOKEN }}" \
+            --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
             --fail-without-trust=true
             
       - name: Resolve Recipe Repo Dependencies
@@ -98,7 +109,7 @@ jobs:
           # Run recipes
           autopkgctl run \
             --prefs="$AUTOPKG_PREFS_PATH" \
-            --report="/tmp/autopkg-run-report.json" \
+            --report="$GITHUB_WORKSPACE/autopkg-run-report.json" \
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
             --recipes="${{ github.event.inputs.recipes }}"
@@ -117,4 +128,4 @@ jobs:
         uses: actions/upload-artifact@v4.6.1
         with:
           name: autopkg-run-report
-          path: /tmp/autopkg-run-report.json
+          path: ${{ github.workspace }}/autopkg-run-report.json

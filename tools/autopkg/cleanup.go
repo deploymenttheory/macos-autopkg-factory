@@ -34,8 +34,8 @@ func CleanupCache(options *CleanupOptions) error {
 	if options.PrefsPath != "" {
 		// Try to read from preferences for custom cache location
 		prefs, err := GetAutoPkgPreferences(options.PrefsPath)
-		if err == nil && prefs.AdditionalPreferences != nil {
-			if cachePath, ok := prefs.AdditionalPreferences["CACHE_DIR"].(string); ok {
+		if err == nil {
+			if cachePath, ok := prefs["CACHE_DIR"].(string); ok {
 				cacheDir = cachePath
 			}
 		}
