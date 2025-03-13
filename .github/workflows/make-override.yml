@@ -98,7 +98,7 @@ jobs:
           autopkgctl recipe-repo-deps \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --use-token \
-            --recipes "${{ github.event.inputs.recipes }}"
+            --recipes "${{ github.event.inputs.recipes }}" \
             --repo-list-path="$GITHUB_WORKSPACE/configuration/repo_list.txt"
 
       - name: Create Recipe Override
