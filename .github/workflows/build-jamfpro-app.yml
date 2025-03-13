@@ -41,7 +41,7 @@ env:
 
 jobs:
   autopkg-run:
-    name: 📦 autopkg-run
+    name: 📦 autopkg-run-recipes
     runs-on: macos-latest
     steps:
       - name: Validate Inputs
