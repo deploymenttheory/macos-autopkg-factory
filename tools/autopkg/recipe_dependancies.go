@@ -124,19 +124,15 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 	} else if len(matchedRecipes) > 1 {
 		logger.Logger(fmt.Sprintf("⚠️ Multiple matches found for recipe: %s (%d matches)", recipeName, len(matchedRecipes)), logger.LogWarning)
 
-		// Log details about all matches
 		for i, id := range matchedRecipes {
 			info := index.Identifiers[id]
 			logger.Logger(fmt.Sprintf("  Match %d: %s (from repo: %s)", i+1, id, info.Repo), logger.LogInfo)
 		}
 
-		// Process ALL matching recipes and their dependencies
 		logger.Logger("📦 Adding repositories for all matching recipes and their parents", logger.LogInfo)
 
 		for _, id := range matchedRecipes {
 			logger.Logger(fmt.Sprintf("🔄 Processing dependencies for: %s", id), logger.LogDebug)
-
-			// Process this recipe and add to dependencies
 			processRecipe(id, index, allDependencies, reposToAdd, useToken)
 		}
 	} else {
@@ -150,10 +146,15 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 	}
 
 	// Output unique repositories to the specified file path
-	if len(reposToAdd) > 0 && repoListPath != "" {
-		if err := exportUniqueReposToFile(reposToAdd, repoListPath); err != nil {
-			logger.Logger(fmt.Sprintf("⚠️ %v", err), logger.LogWarning)
-			// Continue execution despite file error
+	if repoListPath != "" {
+		if len(reposToAdd) > 0 {
+			logger.Logger(fmt.Sprintf("📋 Exporting %d repositories to %s", len(reposToAdd), repoListPath), logger.LogInfo)
+			if err := exportUniqueReposToFile(reposToAdd, repoListPath); err != nil {
+				logger.Logger(fmt.Sprintf("⚠️ %v", err), logger.LogWarning)
+				// Continue execution despite file error
+			}
+		} else {
+			logger.Logger(fmt.Sprintf("ℹ️ No new repositories to export to %s", repoListPath), logger.LogInfo)
 		}
 	}
 
@@ -166,7 +167,6 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 
 		logger.Logger(fmt.Sprintf("📦 Adding %d repositories for recipe %s", len(repoNames), recipeName), logger.LogInfo)
 
-		// Use the existing AddRepo function
 		_, err := AddRepo(repoNames, prefsPath)
 		if err != nil {
 			logger.Logger(fmt.Sprintf("⚠️ Error adding repositories: %v", err), logger.LogWarning)
@@ -247,20 +247,16 @@ func exportUniqueReposToFile(repos map[string]string, filePath string) error {
 		return nil
 	}
 
-	// Read existing repo list if it exists
 	existingRepos := make(map[string]bool)
 
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// File doesn't exist, which is fine
 			logger.Logger(fmt.Sprintf("📝 Creating new repo list file at %s", filePath), logger.LogInfo)
 		} else {
-			// Some other error occurred
 			logger.Logger(fmt.Sprintf("⚠️ Error reading repo list file: %v (will create new)", err), logger.LogWarning)
 		}
 	} else {
-		// File exists, parse its content
 		lines := strings.Split(string(fileData), "\n")
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
