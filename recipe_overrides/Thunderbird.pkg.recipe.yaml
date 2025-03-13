@@ -3,7 +3,7 @@ Input:
   LOCALE: en_US
   NAME: Thunderbird
   RELEASE: latest
-ParentRecipe: com.github.autopkg.pkg.Thunderbird
+ParentRecipe: local.pkg.Thunderbird
 ParentRecipeTrustInfo:
   non_core_processors:
     MozillaURLProvider:
@@ -19,3 +19,7 @@ ParentRecipeTrustInfo:
       git_hash: b8ebd97b7fc92cc4a9dc382ccc2ff8090c1b8f21
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.recipes/Mozilla/Thunderbird.pkg.recipe
       sha256_hash: 53ab0ca7148ad892e08daaf7ab942042c92d30d3fdcf68b3757873d3d8385b99
+    local.pkg.Thunderbird:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/Thunderbird.pkg.recipe.yaml
+      sha256_hash: 9abab952b86b7924f6fef8064b35965f5e9d9f130058c1be7cdebc76c3f6ffa1

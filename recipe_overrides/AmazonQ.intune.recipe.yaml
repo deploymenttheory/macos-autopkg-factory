@@ -8,7 +8,7 @@ Input:
     \ companies internal data"
   developer: AMZN Mobile LLC
   display_name: Amazon Q
-ParentRecipe: com.github.almenscorner.intune.AmazonQ
+ParentRecipe: local.intune.AmazonQ
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.almenscorner.intune-upload.processors/IntuneAppIconGetter:
@@ -30,3 +30,7 @@ ParentRecipeTrustInfo:
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.dataJAR-recipes/Amazon
         Q/Amazon Q.download.recipe
       sha256_hash: 860b2f8a57a53dcf73350359aa4de6104a7d3a68776ecb6a2d0dd920b28c85da
+    local.intune.AmazonQ:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/AmazonQ.intune.recipe.yaml
+      sha256_hash: c0b9e7e7a7a8b4db99b007151ea3222f30931e615da5d84007fb4180729aa1de

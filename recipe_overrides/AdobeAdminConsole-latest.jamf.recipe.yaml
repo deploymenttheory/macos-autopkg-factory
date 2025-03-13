@@ -1,0 +1,31 @@
+Identifier: local.jamf.AdobeAdminConsole-latest
+Input:
+  CATEGORY: Adobe
+  NAME: AdobeAdminConsoleDownloadName
+  POLICY_CATEGORY: '%CATEGORY%'
+  POLICY_NAME: '%SITE% %NAME% Latest'
+  POLICY_TEMPLATE: Policy-install-latest-site-all.xml
+  SITE: YourSite
+ParentRecipe: com.github.jazzace.jamf.AdobeAdminConsole-latest
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.dataJAR-recipes.munki.Adobe Lightroom Classic/AdobeAdminConsolePackagesPkgInfoCreator:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPackageUploader.py
+      sha256_hash: 0ca85d733b101e1b48b0e8fb67aff136d50ca347bf3b951238809e3a20120f95
+    com.github.grahampugh.jamf-upload.processors/JamfPolicyUploader:
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPolicyUploader.py
+      sha256_hash: 5d6715bfe85efbb3034ed36c27da2114742235232c0c156343fd70fc63d3d124
+  parent_recipes:
+    com.github.jazzace.jamf.AdobeAdminConsole-latest:
+      git_hash: cca5b18f39cd853065e7d1399be37839c557b93e
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/AdobeAdminConsole/AdobeAdminConsole-latest.jamf.recipe
+      sha256_hash: c722e6cb45adc0688b752f8c6d12de2ec4551497beb5ec02cb28dcab52a2ea01
+    com.github.jazzace.pkg.AdobeAdminConsole:
+      git_hash: 6221ad047484e6b8a5a89b28fbc714d70ff45501
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/AdobeAdminConsole/AdobeAdminConsole.pkg.recipe
+      sha256_hash: 3c5fd32d52bd22765776921532b7a59063ee2e76e0f534a60f935f05016c4b0c

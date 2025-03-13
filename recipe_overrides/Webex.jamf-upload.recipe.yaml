@@ -14,7 +14,7 @@ Input:
   JAMF_PKG_SEND_NOTIFICATION: 'False'
   NAME: Webex
   url: https://binaries.webex.com/webex-macos-apple-silicon/Webex.dmg
-ParentRecipe: com.github.davidbpirie.jamf-upload.Webex
+ParentRecipe: local.jamf-upload.Webex
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
@@ -34,3 +34,7 @@ ParentRecipeTrustInfo:
       git_hash: cb260c53913b7902b7f394a62c7fd78ef08104f7
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.precursorca-recipes/Cisco/Webex.pkg.recipe
       sha256_hash: cdc5bf70dd5172965d1d173d57dc433b3f505f43a4e25f1dee7e7699f87f9da6
+    local.jamf-upload.Webex:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/Webex.jamf-upload.recipe.yaml
+      sha256_hash: caf49f6728cb0af4c27eecfa7b7eeb720f779db770f59f6a34ff1285f1963568

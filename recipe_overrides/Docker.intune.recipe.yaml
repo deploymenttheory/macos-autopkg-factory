@@ -7,7 +7,7 @@ Input:
   description: "Docker Desktop \u2013 the fastest way to containerize applications."
   developer: Docker
   display_name: Docker Desktop
-ParentRecipe: com.github.almenscorner.intune.Docker
+ParentRecipe: local.intune.Docker
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.almenscorner.intune-upload.processors/IntuneAppIconGetter:
@@ -27,3 +27,7 @@ ParentRecipeTrustInfo:
       git_hash: 62821b481086db4e4d6db38e0cb36e58b9b93612
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.homebysix-recipes/Docker/DockerDesktop.download.recipe
       sha256_hash: 3b48e283992c4c2c5a5ab737220b3abd116e327f3b2409ecea265250e86b7cf4
+    local.intune.Docker:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/Docker.intune.recipe.yaml
+      sha256_hash: 5cb2c0030511e402de3642e953ab92c2896df45423088d7256e2889e494881a0
