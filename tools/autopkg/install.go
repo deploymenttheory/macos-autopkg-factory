@@ -27,19 +27,28 @@ type InstallConfig struct {
 func RootCheck() error {
 	uid := os.Geteuid()
 
-	// Get username for debugging
+	// Get effective username (the account executor)
 	currentUser, err := exec.Command("id", "-un").Output()
-	userInfo := string(bytes.TrimSpace(currentUser))
+	effectiveUser := string(bytes.TrimSpace(currentUser))
 	if err != nil {
-		userInfo = fmt.Sprintf("unknown (error: %v)", err)
+		effectiveUser = fmt.Sprintf("unknown (error: %v)", err)
 	}
 
-	userDetails, err := exec.Command("id").Output()
-	if err == nil {
-		userInfo += fmt.Sprintf(" - Details: %s", string(bytes.TrimSpace(userDetails)))
+	userGroups, err := exec.Command("id", "-Gn").Output()
+	effectiveGroups := string(bytes.TrimSpace(userGroups))
+	if err != nil {
+		effectiveGroups = fmt.Sprintf("unknown (error: %v)", err)
 	}
 
-	logger.Logger(fmt.Sprintf("🔍 Debug: Running as UID: %d, User: %s", uid, userInfo), logger.LogDebug)
+	hostname, _ := os.Hostname()
+
+	logger.Logger(fmt.Sprintf("🔍 Debug: Execution Context:\n"+
+		"• Effective User ID: %d\n"+
+		"• Effective Username: %s\n"+
+		"• User Groups: %s\n"+
+		"• Hostname: %s\n"+
+		"• Working Directory: %s",
+		uid, effectiveUser, effectiveGroups, hostname, os.Getenv("PWD")), logger.LogDebug)
 
 	if uid == 0 {
 		return fmt.Errorf("this script is NOT MEANT to run as root; please run without sudo")
