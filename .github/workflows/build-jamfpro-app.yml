@@ -118,7 +118,7 @@ jobs:
             --verify-trust=true \
             --update-trust=true \
             --ignore-verify-failures=false \
-            --recipes="${{ env.RECIPE_OVERRIDE_DIRS }}"
+            --recipes="${{ env.RECIPE_OVERRIDE_DIRS }}/AmazonQ.intune.recipe.yaml"
             
       - name: Cleanup Cache
         if: always()
