@@ -8,7 +8,7 @@ on:
       recipes:
         description: 'Comma-separated list of recipes to run'
         required: true
-        default: 'AmazonQ.intune.recipe,AmazonCLI.intune.recipe,Docker.intune.recipe,Git.intune.recipe,Terraform.intune.recipe,Vagrant.intune.recipe,Thunderbird.pkg.recipe,Firefox.pkg.recipe,Webex.jamf-upload.recipe,VisualStudioCode.jamf-upload.recipe'
+        default: 'AmazonQ.intune.recipe,AmazonCLI.intune.recipe,Docker.intune.recipe,Git.intune.recipe,Terraform.intune.recipe,Vagrant.intune.recipe,Thunderbird.pkg.recipe,Firefox.pkg.recipe,Webex.jamf-upload.recipe,VisualStudioCode.jamf-upload.recipe,AdobeAdminConsole-latest.jamf,Blender-flush.jamf'
       log_level:
         description: 'Log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)'
         required: false
