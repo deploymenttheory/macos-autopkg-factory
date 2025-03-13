@@ -1,4 +1,4 @@
-name: '🔁 AutoPkg Jamf Pro Deployment'
+name: '🖥️ AutoPkg Jamf Pro App Deployment'
 
 on:
   schedule:
@@ -45,6 +45,7 @@ env:
 
 jobs:
   autopkg-run:
+    name: 📦 autopkg-run
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
