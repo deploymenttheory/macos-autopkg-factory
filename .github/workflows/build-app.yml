@@ -8,7 +8,7 @@ on:
       recipes:
         description: 'Comma-separated list of recipes to run'
         required: true
-        default: ''
+        default: 'AmazonQ.intune.recipe,AmazonCLI.intune.recipe,Docker.intune.recipe,Git.intune.recipe,Terraform.intune.recipe,Vagrant.intune.recipe,Thunderbird.pkg.recipe,Firefox.pkg.recipe,Webex.jamf-upload.recipe,VisualStudioCode.jamf-upload.recipe,AdobeAdminConsole-latest.jamf.recipe,Blender-flush.jamf.recipe'
       verify_trust:
         description: 'Verify trust info for recipes'
         required: true
@@ -36,7 +36,6 @@ env:
   CLIENT_SECRET: ${{ secrets.JAMFPRO_CLIENT_SECRET }}
   TENANT_ID: ${{ secrets.TENANT_ID }}
   LOG_LEVEL: ${{ github.event.inputs.log_level || 'INFO' }}
-  RECIPE_REPOS: $GITHUB_WORKSPACE/recipe_overrides
 
 jobs:
   autopkg-run:

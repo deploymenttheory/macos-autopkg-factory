@@ -132,7 +132,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "📌 AutoPkg Override Update: ${{ github.event.inputs.recipes }}"
-          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          committer: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
+          #committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           branch: autopkg-overrides-${{ github.run_id }}
           delete-branch: false
           title: "📌 AutoPkg Override Updates"
