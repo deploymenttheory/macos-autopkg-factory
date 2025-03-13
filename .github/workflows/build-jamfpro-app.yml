@@ -98,15 +98,12 @@ jobs:
             --github-token="${{ env.GITHUB_TOKEN }}" \
             --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
             --fail-without-trust=true
-            
-      - name: Resolve Recipe Repo Dependencies
+      
+      - name: Add Recipe Repos
+        if: ${{ github.event.inputs.verify_trust != 'false' }}
         run: |
-          # Run recipe-repo-deps to resolve dependencies
-          autopkgctl recipe-repo-deps \
-            --prefs="$AUTOPKG_PREFS_PATH" \
-            --use-token \
-            --recipes "${{ github.event.inputs.recipes }}"
-
+          for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
+          
       - name: Verify Trust Info
         if: ${{ github.event.inputs.verify_trust != 'false' }}
         run: |
