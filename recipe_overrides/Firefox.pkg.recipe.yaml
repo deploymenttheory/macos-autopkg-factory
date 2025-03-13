@@ -3,7 +3,7 @@ Input:
   LOCALE: en-US
   NAME: Firefox
   RELEASE: latest
-ParentRecipe: com.github.autopkg.pkg.Firefox_EN
+ParentRecipe: local.pkg.Firefox
 ParentRecipeTrustInfo:
   non_core_processors:
     MozillaURLProvider:
@@ -19,3 +19,7 @@ ParentRecipeTrustInfo:
       git_hash: b8ebd97b7fc92cc4a9dc382ccc2ff8090c1b8f21
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.recipes/Mozilla/Firefox.pkg.recipe
       sha256_hash: a1fafce10730e5d42f56843e6c9323d4651c6b3dad0663f6a6468c01b7cc1041
+    local.pkg.Firefox:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/Firefox.pkg.recipe.yaml
+      sha256_hash: 24b9e2b7361db97dacfd9617eb3144617a68ac4493ac6f04d5afcd9357cda0ad

@@ -18,7 +18,7 @@ Input:
   NAME: VisualStudioCode
   USER_AGENT: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/536.28.10
     (KHTML, like Gecko) Version/6.0.3 Safari/536.28.10
-ParentRecipe: com.github.davidbpirie.jamf-upload.VisualStudioCode
+ParentRecipe: local.jamf-upload.VisualStudioCode
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
@@ -39,3 +39,7 @@ ParentRecipeTrustInfo:
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.valdore86-recipes/Visual
         Studio Code/VisualStudioCode.download.recipe
       sha256_hash: 0dcf57bf7293ff98a56bc6bf32de4b0e4218aa9fe74c07a163c19f7f87e71351
+    local.jamf-upload.VisualStudioCode:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/VisualStudioCode.jamf-upload.recipe.yaml
+      sha256_hash: 54c73f275fffac87f5d8927ea353cc9d78a878128c133b7e09f6d70fac41eb49

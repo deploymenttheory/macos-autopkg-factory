@@ -1,0 +1,42 @@
+Identifier: local.jamf.Blender-flush
+Input:
+  ARCHITECTURE: x64
+  CATEGORY: Applications
+  GROUP_NAME: Group Name
+  NAME: Blender
+  POLICY_CATEGORY: '%CATEGORY%'
+  POLICY_NAME: '%SITE% %NAME% Latest'
+  POLICY_TEMPLATE: Policy-install-latest-site-group.xml
+  SITE: IAML
+ParentRecipe: com.github.jazzace.jamf.Blender-flush
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPackageUploader.py
+      sha256_hash: 0ca85d733b101e1b48b0e8fb67aff136d50ca347bf3b951238809e3a20120f95
+    com.github.grahampugh.jamf-upload.processors/JamfPolicyLogFlusher:
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPolicyLogFlusher.py
+      sha256_hash: 8f61c69bbc39097f2496451da2cc5d02a93ce0e28839f0aed3d500845469a804
+    com.github.grahampugh.jamf-upload.processors/JamfPolicyUploader:
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPolicyUploader.py
+      sha256_hash: 5d6715bfe85efbb3034ed36c27da2114742235232c0c156343fd70fc63d3d124
+  parent_recipes:
+    com.github.jazzace.jamf.Blender-flush:
+      git_hash: 46a2a25813481e3956cfc23f804373d32aa4fbdd
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/Blender/Blender-flush.jamf.recipe
+      sha256_hash: b48f9d51790322d9d33836acabebcce82d53e414ab24f0dfdce275ae137bc746
+    com.github.jazzace.jamf.Blender-latest:
+      git_hash: cbcdc220ae827dd106116615dc6179f4a3f63bb8
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/Blender/Blender-latest.jamf.recipe
+      sha256_hash: 66c81b84c896c47e0279bb1dfef6bdc5a3b0f6a9412c3ae8bf2a83353d7b17c4
+    io.github.hjuutilainen.download.Blender:
+      git_hash: 783f66cf51e8e0cda597f80f5462395344eb96f3
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.hjuutilainen-recipes/Blender/Blender.download.recipe
+      sha256_hash: cef4c7e1b450558cac03052b4e8cbd786ec493705742a66b5048763bec054840
+    io.github.hjuutilainen.pkg.Blender:
+      git_hash: 643eb9b592f2242c407310ac7a90b88761dd484f
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.hjuutilainen-recipes/Blender/Blender.pkg.recipe
+      sha256_hash: 2e93ac6a550e79a774a51dfcf446ca24904216dd3101db4f66edf2e4e40e9851

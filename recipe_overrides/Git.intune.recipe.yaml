@@ -10,7 +10,7 @@ Input:
   developer: Tim Charper
   display_name: '%NAME%'
   icon_path: ''
-ParentRecipe: com.github.almenscorner.intune.Git
+ParentRecipe: local.intune.Git
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.almenscorner.intune-upload.processors/IntuneAppUploader:
@@ -26,3 +26,7 @@ ParentRecipeTrustInfo:
       git_hash: 4b31dc37c8bc00f92ce38108e4fd73c5a85c0dd3
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jleggat-recipes/Git/Git.download.recipe
       sha256_hash: 0ce0cae0cb4b0b5cb2af963b760bfe11081e848147d3b74d6a3f154ca9a00d56
+    local.intune.Git:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/Git.intune.recipe.yaml
+      sha256_hash: 29c22c9533ea32a4239774ca29e45200e6adf5d240c7d0fa70e521c78e0fac3e

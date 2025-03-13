@@ -8,7 +8,7 @@ Input:
     environments.
   developer: HashiCorp
   display_name: Vagrant
-ParentRecipe: com.github.almenscorner.intune.Vagrant
+ParentRecipe: local.intune.Vagrant
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.almenscorner.intune-upload.processors/IntuneAppUploader:
@@ -28,3 +28,7 @@ ParentRecipeTrustInfo:
       git_hash: eaaafaaeb569c06a0e88be2417632dd87a4e6d4d
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.hjuutilainen-recipes/HashiCorp/Vagrant.download.recipe
       sha256_hash: d29157b92e8abc9bdbed31fdf0f20006fbff3f138fd44b7cab3011288fc4f7c6
+    local.intune.Vagrant:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/Vagrant.intune.recipe.yaml
+      sha256_hash: 96286826c2690c04b30b4a89f45fe833d4d8b79e21c98cc1a32647cf9f3c9f7f

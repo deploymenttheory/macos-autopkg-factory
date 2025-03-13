@@ -7,7 +7,7 @@ Input:
     AWS services, symlinked into your path at /usr/local/bin/aws
   developer: Amazon Web Services
   display_name: Amazon CLI
-ParentRecipe: com.github.almenscorner.intune.AmazonCLI
+ParentRecipe: local.intune.AmazonCLI
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.almenscorner.intune-upload.processors/IntuneAppUploader:
@@ -24,3 +24,7 @@ ParentRecipeTrustInfo:
       git_hash: b76a7d0419c0f028ed9275c474dbf7faf846fb40
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.homebysix-recipes/Amazon/AWSCLI.download.recipe
       sha256_hash: a378a70d339946beb7b9f521a2848f3c21e40e168789b8f9ab554cee1853e544
+    local.intune.AmazonCLI:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/AmazonCLI.intune.recipe.yaml
+      sha256_hash: 5629c1a47e02482ffc7f26b1dabbdcbdad060d9e441d7b93d3db74b6af1fef5c

@@ -13,7 +13,7 @@ Input:
   developer: HashiCorp
   display_name: Terraform
   icon_path: ''
-ParentRecipe: com.github.almenscorner.intune.Terraform
+ParentRecipe: local.intune.Terraform
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.almenscorner.intune-upload.processors/IntuneAppUploader:
@@ -37,3 +37,7 @@ ParentRecipeTrustInfo:
       git_hash: 04f5159f12eae992ca2caa2dc0d140e84e992b9c
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.timsutton-recipes/HashiCorp/Terraform.pkg.recipe
       sha256_hash: 971729f8f786cf231a19f3f6768f5f7539bae309705d6d8e95adbf94af790bb6
+    local.intune.Terraform:
+      git_hash: f90d2413410c90103dd232e5735076259e5e9922
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/Terraform.intune.recipe.yaml
+      sha256_hash: 48c5ebf347d6eeca95ccac9242fc02d4b264b7696ea590466be50f655672b615
