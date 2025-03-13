@@ -23,9 +23,25 @@ type InstallConfig struct {
 	UseBeta     bool
 }
 
-// RootCheck ensures the script is not running as root
+// RootCheck ensures the script is not running as root and logs the current user
 func RootCheck() error {
-	if os.Geteuid() == 0 {
+	uid := os.Geteuid()
+
+	// Get username for debugging
+	currentUser, err := exec.Command("id", "-un").Output()
+	userInfo := string(bytes.TrimSpace(currentUser))
+	if err != nil {
+		userInfo = fmt.Sprintf("unknown (error: %v)", err)
+	}
+
+	userDetails, err := exec.Command("id").Output()
+	if err == nil {
+		userInfo += fmt.Sprintf(" - Details: %s", string(bytes.TrimSpace(userDetails)))
+	}
+
+	logger.Logger(fmt.Sprintf("🔍 Debug: Running as UID: %d, User: %s", uid, userInfo), logger.LogDebug)
+
+	if uid == 0 {
 		return fmt.Errorf("this script is NOT MEANT to run as root; please run without sudo")
 	}
 	return nil
