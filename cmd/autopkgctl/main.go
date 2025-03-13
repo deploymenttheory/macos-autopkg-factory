@@ -39,9 +39,22 @@ var (
 	updateTrust bool
 
 	// Run command flags
-	reportPath   string
-	concurrency  int
-	teamsWebhook string
+	reportPath           string
+	concurrency          int
+	teamsWebhook         string
+	stopOnFirstError     bool
+	verboseLevel         int
+	verifyTrust          bool
+	updateTrustOnFailure bool
+	ignoreVerifyFailures bool
+	searchDirs           []string
+	slackWebhookRun      string // Separate from the configure flag
+	slackUsernameRun     string // Separate from the configure flag
+	slackChannel         string
+	slackIcon            string
+	variables            map[string]string
+	preprocessors        []string
+	postprocessors       []string
 
 	// Cleanup command flags
 	removeDownloads   bool
@@ -240,10 +253,33 @@ func main() {
 		},
 	}
 
+	// Basic run options
 	runCmd.Flags().StringVar(&recipesStr, "recipes", "", "Comma-separated list of recipes to run")
 	runCmd.Flags().StringVar(&reportPath, "report", "", "Path to save the report")
 	runCmd.Flags().IntVar(&concurrency, "concurrency", 4, "Maximum concurrent recipes")
+	runCmd.Flags().BoolVar(&stopOnFirstError, "stop-on-error", false, "Stop processing if any recipe fails")
+	runCmd.Flags().IntVar(&verboseLevel, "verbose", 2, "Verbosity level (0-3)")
+
+	// Trust verification options
+	runCmd.Flags().BoolVar(&verifyTrust, "verify-trust", true, "Verify trust info before running recipes")
+	runCmd.Flags().BoolVar(&updateTrustOnFailure, "update-trust", true, "Update trust info if verification fails")
+	runCmd.Flags().BoolVar(&ignoreVerifyFailures, "ignore-verify-failures", false, "Run recipes even if trust verification fails")
+
+	// Search and override directories
+	runCmd.Flags().StringSliceVar(&searchDirs, "search-dir", []string{}, "Additional recipe search directories")
+	runCmd.Flags().StringSliceVar(&overrideDirs, "override-dir", []string{}, "Additional recipe override directories")
+
+	// Notification options - Teams
 	runCmd.Flags().StringVar(&teamsWebhook, "notify-teams", "", "Microsoft Teams webhook for notifications")
+
+	// Notification options - Slack
+	runCmd.Flags().StringVar(&slackWebhook, "notify-slack", "", "Slack webhook for notifications")
+	runCmd.Flags().StringVar(&slackUsername, "slack-username", "AutoPkg Bot", "Username to display in Slack notifications")
+	runCmd.Flags().StringVar(&slackChannel, "slack-channel", "", "Slack channel for notifications")
+	runCmd.Flags().StringVar(&slackIcon, "slack-icon", ":package:", "Emoji icon for Slack notifications")
+
+	// Variables
+	runCmd.Flags().StringToStringVar(&variables, "var", nil, "Set variables for recipes (format: KEY=VALUE)")
 
 	// Cleanup command
 	cleanupCmd := &cobra.Command{
@@ -635,13 +671,24 @@ func runRecipes() error {
 
 	options := &autopkg.RecipeBatchRunOptions{
 		PrefsPath:            prefsPath,
-		MaxConcurrentRecipes: concurrency,
-		StopOnFirstError:     false,
-		VerboseLevel:         2,
+		SearchDirs:           searchDirs,
+		OverrideDirs:         overrideDirs,
+		VerifyTrust:          verifyTrust,
+		UpdateTrustOnFailure: updateTrustOnFailure,
+		IgnoreVerifyFailures: ignoreVerifyFailures,
 		ReportPlist:          reportPath,
+		VerboseLevel:         verboseLevel,
+		Variables:            variables,
+		MaxConcurrentRecipes: concurrency,
+		StopOnFirstError:     stopOnFirstError,
 		Notification: autopkg.NotificationOptions{
-			EnableTeams:  teamsWebhook != "",
-			TeamsWebhook: teamsWebhook,
+			EnableTeams:   teamsWebhook != "",
+			TeamsWebhook:  teamsWebhook,
+			EnableSlack:   slackWebhook != "",
+			SlackWebhook:  slackWebhook,
+			SlackUsername: slackUsername,
+			SlackChannel:  slackChannel,
+			SlackIcon:     slackIcon,
 		},
 	}
 

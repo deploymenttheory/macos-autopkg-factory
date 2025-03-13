@@ -104,15 +104,6 @@ jobs:
         run: |
           for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
           
-      - name: Verify Trust Info
-        if: ${{ github.event.inputs.verify_trust != 'false' }}
-        run: |
-          # Verify trust info
-          autopkgctl verify-trust \
-            --prefs="$AUTOPKG_PREFS_PATH" \
-            --update=${{ github.event.inputs.update_trust || 'true' }} \
-            --recipes="${{ env.RECIPE_OVERRIDE_DIRS }}"
-      
       - name: Run AutoPkg Recipes
         run: |
           # Run recipes
@@ -122,6 +113,11 @@ jobs:
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
             --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}"
+            --stop-on-error=false \
+            --verbose=2 \
+            --verify-trust=true \
+            --update-trust=true \
+            --ignore-verify-failures=false
             
       - name: Cleanup Cache
         if: always()
