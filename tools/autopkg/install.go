@@ -59,8 +59,12 @@ func RootCheck() error {
 // CheckGit verifies git is installed, and installs it if needed
 func CheckGit() error {
 	gitCmd := exec.Command("git", "--version")
-	if err := gitCmd.Run(); err == nil {
-		logger.Logger("✅ Git is installed and functional", logger.LogSuccess)
+	output, err := gitCmd.Output()
+
+	if err == nil {
+		gitVersion := strings.TrimSpace(string(output))
+		logger.Logger(fmt.Sprintf("✅ Git is installed and functional: %s", gitVersion), logger.LogSuccess)
+		logger.Logger(fmt.Sprintf("ℹ️ Using: %s", gitVersion), logger.LogInfo)
 		return nil
 	}
 

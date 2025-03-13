@@ -253,18 +253,18 @@ func runSetup() error {
 	// Execute setup
 	if checkRoot {
 		if err := autopkg.RootCheck(); err != nil {
-			fmt.Printf("❌ Root check failed: %v\n", err)
+			fmt.Printf("❌ Root account check failed: %v\n", err)
 			return err
 		}
-		fmt.Println("✅ Root check passed - not running as root")
+		fmt.Println("✅ Root account check passed - not running as root")
 	}
 
 	if checkGit {
 		if err := autopkg.CheckGit(); err != nil {
-			fmt.Printf("❌ Git check failed: %v\n", err)
+			fmt.Printf("❌ Git install check failed: %v\n", err)
 			return err
 		}
-		fmt.Println("✅ Git check passed")
+		fmt.Println("✅ Git install check passed")
 	}
 
 	config := &autopkg.InstallConfig{
