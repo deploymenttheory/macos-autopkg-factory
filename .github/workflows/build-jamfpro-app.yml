@@ -112,8 +112,8 @@ jobs:
             --report="$GITHUB_WORKSPACE/autopkg-run-report.json" \
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
-            --recipes="${{ github.event.inputs.recipes }}"
-      
+            --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}"
+            
       - name: Cleanup Cache
         if: always()
         run: |
