@@ -92,13 +92,13 @@ jobs:
             --prefs="$AUTOPKG_PREFS_PATH" \
             --fail-without-trust=true
             
-      # - name: Resolve Recipe Repo Dependencies
-      #   run: |
-      #     # Run recipe-repo-deps to resolve dependencies
-      #     autopkgctl recipe-repo-deps \
-      #       --prefs="$AUTOPKG_PREFS_PATH" \
-      #       --use-token \
-      #       --recipes "${{ github.event.inputs.recipes }}"
+      - name: Resolve Recipe Repo Dependencies
+        run: |
+          # Run recipe-repo-deps to resolve dependencies
+          autopkgctl recipe-repo-deps \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --use-token \
+            --recipes "${{ github.event.inputs.recipes }}"
 
       - name: Create Recipe Override
         run: |
@@ -109,9 +109,9 @@ jobs:
             
             autopkgctl make-override "$recipe" \
               --prefs="$AUTOPKG_PREFS_PATH" \
-              --pull \
               --force="${{ github.event.inputs.override_force }}" \
-              --format="${{ github.event.inputs.override_format }}"
+              --format="${{ github.event.inputs.override_format }}" \
+              --repo-list-path="$GITHUB_WORKSPACE/configuration/"
             
             # Correctly move the override file without adding extra ".recipe"
             OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.${{ github.event.inputs.override_format }}"

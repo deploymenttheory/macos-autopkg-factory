@@ -45,8 +45,22 @@ var recipeIndexCache *RecipeIndex
 // Keep the existing regex pattern
 var recipeRegex = regexp.MustCompile(`(?i)^.*\.recipe(?:\.yaml|\.plist)?$`)
 
-// ResolveRecipeDependencies resolves all repository dependencies for a recipe using the index
-func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string, dryRun bool) ([]RecipeRepo, error) {
+// ResolveRecipeDependencies resolves all repository dependencies for a recipe using the AutoPkg index.
+// Parameters:
+//   - recipeName: The name or identifier of the recipe to resolve dependencies for
+//   - useToken: Whether to use GitHub token for authentication when accessing repositories
+//   - prefsPath: Path to the AutoPkg preferences file
+//   - dryRun: If true, only identify dependencies without adding repositories
+//   - repoListPath: Path to a file where unique repository URLs will be exported (no action if empty)
+//
+// Returns:
+//   - []RecipeRepo: A slice of RecipeRepo structures containing all dependencies
+//   - error: An error if the operation fails
+//
+// The function identifies all parent, child, and related repositories needed for the specified recipe
+// and optionally adds them to AutoPkg. If repoListPath is provided, it will append unique repository
+// URLs to that file for future autopkg run purposes.
+func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath string, dryRun bool, repoListPath string) ([]RecipeRepo, error) {
 	logger.Logger(fmt.Sprintf("🔍 Resolving dependencies for: %s", recipeName), logger.LogDebug)
 
 	// Check if recipeName is a valid recipe format
@@ -134,6 +148,14 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 		return nil, fmt.Errorf("no valid dependencies found for recipe: %s", recipeName)
 	}
 
+	// Output unique repositories to the specified file path
+	if len(reposToAdd) > 0 && repoListPath != "" {
+		if err := exportUniqueReposToFile(reposToAdd, repoListPath); err != nil {
+			logger.Logger(fmt.Sprintf("⚠️ %v", err), logger.LogWarning)
+			// Continue execution despite file error
+		}
+	}
+
 	// If not in dry run mode, add the repositories
 	if !dryRun && len(reposToAdd) > 0 {
 		var repoNames []string
@@ -215,6 +237,52 @@ func FetchRecipeIndex(useToken bool) (*RecipeIndex, error) {
 	logger.Logger(fmt.Sprintf("✅ Successfully loaded %d recipes from index", len(identifiers)), logger.LogDebug)
 
 	return recipeIndexCache, nil
+}
+
+// exportUniqueReposToFile appends unique autopkg repositories identified to a file
+func exportUniqueReposToFile(repos map[string]string, filePath string) error {
+	if len(repos) == 0 {
+		logger.Logger("No repositories to save", logger.LogDebug)
+		return nil
+	}
+
+	// Read existing repo list if it exists
+	existingRepos := make(map[string]bool)
+
+	if fileData, err := os.ReadFile(filePath); err == nil {
+		// File exists, parse its content
+		lines := strings.Split(string(fileData), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				existingRepos[line] = true
+			}
+		}
+		logger.Logger(fmt.Sprintf("📋 Read %d existing repos from %s", len(existingRepos), filePath), logger.LogInfo)
+	}
+
+	// Append new unique repos
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open repo list file: %w", err)
+	}
+	defer file.Close()
+
+	newRepoCount := 0
+	for repoName := range repos {
+		// Only write if not already in the existing repos
+		if !existingRepos[repoName] {
+			if _, err := file.WriteString(repoName + "\n"); err != nil {
+				logger.Logger(fmt.Sprintf("⚠️ Failed to write repo to list: %v", err), logger.LogWarning)
+			} else {
+				newRepoCount++
+				existingRepos[repoName] = true
+			}
+		}
+	}
+
+	logger.Logger(fmt.Sprintf("📝 Added %d new repos to %s", newRepoCount, filePath), logger.LogInfo)
+	return nil
 }
 
 // processRecipe recursively processes a recipe and its dependencies

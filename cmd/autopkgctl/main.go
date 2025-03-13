@@ -16,8 +16,9 @@ import (
 
 var (
 	// Global flags
-	logLevel  string
-	prefsPath string
+	logLevel     string
+	prefsPath    string
+	repoListPath string
 
 	// Setup command flags
 	forceUpdate bool
@@ -228,6 +229,7 @@ func main() {
 	makeOverrideCmd.Flags().BoolVar(&overridePull, "pull", false, "Pull the parent repos if they are missing")
 	makeOverrideCmd.Flags().BoolVar(&overrideIgnoreDeprec, "ignore-deprecation", false, "Ignore deprecation warnings and create the override")
 	makeOverrideCmd.Flags().StringVar(&overrideFormat, "format", "plist", "Format of the override file (default: plist, options: plist, yaml)")
+	makeOverrideCmd.Flags().StringVar(&repoListPath, "repo-list-path", "", "Location to export added repo's to a text file for future autopkg runs")
 
 	// Run command
 	runCmd := &cobra.Command{
@@ -548,7 +550,7 @@ func runRecipeDeps() error {
 	for _, recipe := range recipes {
 		logger.Logger(fmt.Sprintf("🔄 Resolving dependencies for: %s", recipe), logger.LogInfo)
 
-		dependencies, err := autopkg.ResolveRecipeDependencies(recipe, useToken, prefsPath, dryRun)
+		dependencies, err := autopkg.ResolveRecipeDependencies(recipe, useToken, prefsPath, dryRun, repoListPath)
 		if err != nil {
 			logger.Logger(fmt.Sprintf("❌ Failed to resolve dependencies for %s: %v", recipe, err), logger.LogError)
 			continue
