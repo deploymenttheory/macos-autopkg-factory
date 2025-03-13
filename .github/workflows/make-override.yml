@@ -40,7 +40,7 @@ env:
 
 jobs:
   autopkg-run:
-    name: 📦 autopkg-make-override
+    name: 🛠️ autopkg-make-override
     runs-on: macos-latest
     steps:
       - name: Checkout Repository

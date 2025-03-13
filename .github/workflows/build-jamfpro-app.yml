@@ -111,7 +111,7 @@ jobs:
           autopkgctl verify-trust \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --update=${{ github.event.inputs.update_trust || 'true' }} \
-            --recipes="${{ github.event.inputs.recipes }}"
+            --recipes="${{ env.RECIPE_OVERRIDE_DIRS }}"
       
       - name: Run AutoPkg Recipes
         run: |
