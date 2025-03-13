@@ -188,7 +188,6 @@ func FetchRecipeIndex(useToken bool) (*RecipeIndex, error) {
 
 	logger.Logger("🔄 Fetching AutoPkg recipe index", logger.LogDebug)
 
-	// Use token if provided
 	var cmd *exec.Cmd
 	if useToken {
 		token := os.Getenv("GITHUB_TOKEN")
@@ -209,14 +208,12 @@ func FetchRecipeIndex(useToken bool) (*RecipeIndex, error) {
 		return nil, fmt.Errorf("failed to fetch index: %w", err)
 	}
 
-	// Parse the JSON
 	var index map[string]json.RawMessage
 	if err := json.Unmarshal(output, &index); err != nil {
 		logger.Logger("❌ Failed to parse AutoPkg index JSON", logger.LogError)
 		return nil, fmt.Errorf("failed to parse index: %w", err)
 	}
 
-	// Extract the identifiers section
 	identifiersRaw, exists := index["identifiers"]
 	if !exists {
 		logger.Logger("❌ Index JSON does not contain 'identifiers' section", logger.LogError)
@@ -247,16 +244,26 @@ func exportUniqueReposToFile(repos map[string]string, filePath string) error {
 		return nil
 	}
 
+	// Create parent directories if they don't exist
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory for repo list file: %w", err)
+	}
+
+	// Read existing repo list if it exists
 	existingRepos := make(map[string]bool)
 
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// File doesn't exist, which is fine
 			logger.Logger(fmt.Sprintf("📝 Creating new repo list file at %s", filePath), logger.LogInfo)
 		} else {
+			// Some other error occurred
 			logger.Logger(fmt.Sprintf("⚠️ Error reading repo list file: %v (will create new)", err), logger.LogWarning)
 		}
 	} else {
+		// File exists, parse its content
 		lines := strings.Split(string(fileData), "\n")
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
@@ -265,12 +272,6 @@ func exportUniqueReposToFile(repos map[string]string, filePath string) error {
 			}
 		}
 		logger.Logger(fmt.Sprintf("📋 Read %d existing repos from %s", len(existingRepos), filePath), logger.LogInfo)
-	}
-
-	// Create parent directories if they don't exist
-	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory for repo list file: %w", err)
 	}
 
 	// Append new unique repos
@@ -316,7 +317,6 @@ func processRecipe(identifier string, index *RecipeIndex, allDependencies map[st
 		if VerifyRepoExists(info.Repo, useToken) {
 			reposToAdd[info.Repo] = info.Repo
 
-			// Add the recipe to dependencies
 			allDependencies[identifier] = RecipeRepo{
 				RecipeIdentifier: identifier,
 				RepoName:         info.Repo,
@@ -324,13 +324,11 @@ func processRecipe(identifier string, index *RecipeIndex, allDependencies map[st
 				IsParent:         false,
 			}
 
-			// Process parent recipe if it exists
 			if info.Parent != "" {
 				logger.Logger(fmt.Sprintf("🧩 Found parent recipe: %s", info.Parent), logger.LogDebug)
 
 				parentInfo, exists := index.Identifiers[info.Parent]
 				if exists {
-					// Process the parent recipe
 					processRecipe(info.Parent, index, allDependencies, reposToAdd, useToken)
 
 					if parentInfo.Repo != "" && VerifyRepoExists(parentInfo.Repo, useToken) {
@@ -354,7 +352,6 @@ func processRecipe(identifier string, index *RecipeIndex, allDependencies map[st
 				}
 			}
 
-			// Process children recipes if available
 			if len(info.Children) > 0 {
 				for _, childID := range info.Children {
 					logger.Logger(fmt.Sprintf("🧩 Found child recipe: %s", childID), logger.LogDebug)
@@ -376,7 +373,6 @@ func VerifyRepoExists(repoName string, useToken bool) bool {
 	var cmd *exec.Cmd
 
 	if useToken {
-		// Try to use GITHUB_TOKEN for authentication if available
 		token := os.Getenv("GITHUB_TOKEN")
 		if token != "" {
 			// For git operations with token, we need to format it as https://token@github.com/...
