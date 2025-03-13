@@ -124,7 +124,7 @@ jobs:
             --verify-trust=true \
             --update-trust=true \
             --ignore-verify-failures=false \
-            --recipes="${{ env.RECIPE_OVERRIDE_DIRS }}/$RUN_RECIPE"
+            --recipes="$RUN_RECIPE"
 
       - name: Cleanup Cache
         if: always()
