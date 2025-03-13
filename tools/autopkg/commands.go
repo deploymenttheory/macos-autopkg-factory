@@ -120,7 +120,7 @@ func GetRecipeInfo(recipe string, options *InfoOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("get recipe info failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -216,7 +216,7 @@ func InstallRecipe(recipes []string, options *InstallOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("install recipe failed: %w", err)
 	}
 
 	logger.Logger("✅ Recipe installation completed", logger.LogSuccess)
@@ -242,7 +242,7 @@ func ListProcessors(prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("list processors failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -306,7 +306,7 @@ func ListRecipes(options *ListRecipeOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("list recipes failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -331,7 +331,7 @@ func ListRepos(prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("list repo's failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -420,7 +420,7 @@ func MakeOverride(recipe string, options *MakeOverrideOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("make recipe override failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Created override for recipe: %s", recipe), logger.LogSuccess)
@@ -472,7 +472,7 @@ func NewRecipeFile(recipePath string, options *NewRecipeOptions) (string, error)
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("new recipe failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Created new recipe template: %s", recipePath), logger.LogSuccess)
@@ -524,7 +524,7 @@ func GetProcessorInfo(processor string, options *ProcessorInfoOptions) (string, 
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("get processor info failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -587,7 +587,7 @@ func DeleteRepo(repoName string, prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("delete repo failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Deleted repository: %s", repoName), logger.LogSuccess)
@@ -618,7 +618,7 @@ func UpdateRepo(repos []string, prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("update repo failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Updated %s", repoDesc), logger.LogSuccess)
@@ -691,7 +691,7 @@ func GetVersion() (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("get autopkg failed: %w", err)
 	}
 
 	version := strings.TrimSpace(outputBuffer.String())
@@ -826,7 +826,7 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("recipe run failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -1045,7 +1045,7 @@ func UpdateTrustInfoForRecipes(recipes []string, options *UpdateTrustInfoOptions
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		return outputBuffer.String(), fmt.Errorf("update trust info for recipes failed: %w", err)
 	}
 
 	logger.Logger("✅ Trust info updated for all recipes", logger.LogSuccess)

@@ -258,7 +258,7 @@ func main() {
 	runCmd.Flags().StringVar(&reportPath, "report", "", "Path to save the report")
 	runCmd.Flags().IntVar(&concurrency, "concurrency", 4, "Maximum concurrent recipes")
 	runCmd.Flags().BoolVar(&stopOnFirstError, "stop-on-error", false, "Stop processing if any recipe fails")
-	runCmd.Flags().IntVar(&verboseLevel, "verbose", 2, "Verbosity level (0-3)")
+	runCmd.Flags().IntVar(&verboseLevel, "verbose", 2, "autopkg run verbosity level (0-3)")
 
 	// Trust verification options
 	runCmd.Flags().BoolVar(&verifyTrust, "verify-trust", true, "Verify trust info before running recipes")
