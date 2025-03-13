@@ -113,8 +113,8 @@ jobs:
             --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
             --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}"
-            --stop-on-error=false \
-            --verbose=2 \
+            --stop-on-error=true \
+            --verbose=3 \
             --verify-trust=true \
             --update-trust=true \
             --ignore-verify-failures=false \

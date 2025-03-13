@@ -278,9 +278,6 @@ func main() {
 	runCmd.Flags().StringVar(&slackChannel, "slack-channel", "", "Slack channel for notifications")
 	runCmd.Flags().StringVar(&slackIcon, "slack-icon", ":package:", "Emoji icon for Slack notifications")
 
-	// Variables
-	runCmd.Flags().StringToStringVar(&variables, "var", nil, "Set variables for recipes (format: KEY=VALUE)")
-
 	// Cleanup command
 	cleanupCmd := &cobra.Command{
 		Use:   "cleanup",
