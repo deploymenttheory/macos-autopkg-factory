@@ -272,6 +272,21 @@ func SetAutoPkgPreferences(prefsPath string, prefs *PreferencesData) error {
 		}
 	}
 
+	cmd := exec.Command("defaults", "read", prefsPath)
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Logger(fmt.Sprintf("⚠️ Failed to read final preferences for debug output: %v", err), logger.LogWarning)
+	} else {
+		logger.Logger(fmt.Sprintf("🔍 Debug: AutoPkg preferences file at %s contains:\n%s", prefsPath, string(output)), logger.LogDebug)
+	}
+
+	absPath, err := filepath.Abs(prefsPath)
+	if err != nil {
+		logger.Logger(fmt.Sprintf("⚠️ Failed to get absolute file path: %v", err), logger.LogWarning)
+	} else {
+		logger.Logger(fmt.Sprintf("📍 AutoPkg preferences absolute file path: %s", absPath), logger.LogDebug)
+	}
+
 	logger.Logger("✅ AutoPkg preferences updated successfully", logger.LogSuccess)
 	return nil
 }
