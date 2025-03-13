@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -239,7 +240,7 @@ func FetchRecipeIndex(useToken bool) (*RecipeIndex, error) {
 	return recipeIndexCache, nil
 }
 
-// exportUniqueReposToFile appends unique autopkg repositories identified to a file
+// exportUniqueReposToFile appends unique repository names to a file
 func exportUniqueReposToFile(repos map[string]string, filePath string) error {
 	if len(repos) == 0 {
 		logger.Logger("No repositories to save", logger.LogDebug)
@@ -249,7 +250,16 @@ func exportUniqueReposToFile(repos map[string]string, filePath string) error {
 	// Read existing repo list if it exists
 	existingRepos := make(map[string]bool)
 
-	if fileData, err := os.ReadFile(filePath); err == nil {
+	fileData, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist, which is fine
+			logger.Logger(fmt.Sprintf("📝 Creating new repo list file at %s", filePath), logger.LogInfo)
+		} else {
+			// Some other error occurred
+			logger.Logger(fmt.Sprintf("⚠️ Error reading repo list file: %v (will create new)", err), logger.LogWarning)
+		}
+	} else {
 		// File exists, parse its content
 		lines := strings.Split(string(fileData), "\n")
 		for _, line := range lines {
@@ -259,6 +269,12 @@ func exportUniqueReposToFile(repos map[string]string, filePath string) error {
 			}
 		}
 		logger.Logger(fmt.Sprintf("📋 Read %d existing repos from %s", len(existingRepos), filePath), logger.LogInfo)
+	}
+
+	// Create parent directories if they don't exist
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory for repo list file: %w", err)
 	}
 
 	// Append new unique repos
