@@ -28,7 +28,7 @@ on:
       recipe_list_file:
         description: 'Path to recipe list file (.json or .plist)'
         required: false
-        default: './configuration/recipes.json'
+        default: './configuration/recipe_list.json'
         type: string
 
 env:
