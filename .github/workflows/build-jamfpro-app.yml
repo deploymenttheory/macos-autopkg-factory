@@ -28,7 +28,7 @@ on:
       recipe_list_file:
         description: 'Path to recipe list file (.json or .plist)'
         required: false
-        default: './configuration/recipe_list.json'
+        default: ''
         type: string
 
 env:
@@ -52,7 +52,7 @@ env:
   # Using RUN_RECIPE instead of RECIPE to match the parser's expected env var name
   RUN_RECIPE: ${{ github.event.inputs.recipe }}
   # Recipe list file path
-  RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file || './configuration/recipes.json' }}
+  RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file || '$GITHUB_WORKSPACE/configuration/recipes.json' }}
 
 jobs:
   autopkg-run:
