@@ -91,7 +91,7 @@ jobs:
           # Note: Environment variables are automatically used
           autopkgctl configure \
             --prefs="$AUTOPKG_PREFS_PATH" \
-            --fail-without-trust=true
+            --fail-recipes-without-trust=true
             
       - name: Resolve Recipe Repo Dependencies
         run: |

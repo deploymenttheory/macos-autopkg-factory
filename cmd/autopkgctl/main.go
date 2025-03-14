@@ -714,7 +714,6 @@ func runRecipes() error {
 		return fmt.Errorf("recipe execution failed: %d recipes failed", failCount)
 	}
 
-	logger.Logger("🎉 Pipeline status: SUCCESS - All recipes succeeded.", logger.LogSuccess)
 	return nil
 }
 
