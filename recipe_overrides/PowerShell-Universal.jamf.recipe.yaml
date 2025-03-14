@@ -20,21 +20,25 @@ Input:
   SELF_SERVICE_ICON: '%SOFTWARE_TITLE%.png'
   SOFTWARE_TITLE: '%NAME%'
   UPDATE_PREDICATE: pkg_uploaded == False
-ParentRecipe: com.github.smithjw.jamf.PowerShell-Universal
+ParentRecipe: local.jamf.PowerShell-Universal
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.grahampugh.jamf-upload.processors/JamfCategoryUploader:
-      path: ''
-      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfCategoryUploader.py
+      sha256_hash: 04c8db5b4863bfae7d3e56700ac2a0ac64030826541249be9a0e300f6ff6ee3e
     com.github.grahampugh.jamf-upload.processors/JamfComputerGroupUploader:
-      path: ''
-      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfComputerGroupUploader.py
+      sha256_hash: aa8ebac9c377a86525b80bd12b68b9d81352fedfe643b674c8a16b6273f0cd6d
     com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
-      path: ''
-      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPackageUploader.py
+      sha256_hash: 0ca85d733b101e1b48b0e8fb67aff136d50ca347bf3b951238809e3a20120f95
     com.github.grahampugh.jamf-upload.processors/JamfPolicyUploader:
-      path: ''
-      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+      git_hash: febfabb5d43579197a98dd738b85840321c2a369
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/JamfUploaderProcessors/JamfPolicyUploader.py
+      sha256_hash: 5d6715bfe85efbb3034ed36c27da2114742235232c0c156343fd70fc63d3d124
     com.github.mlbz521.SharedProcessors/XPathParser:
       path: ''
       sha256_hash: PROCESSOR FILEPATH NOT FOUND
@@ -58,3 +62,7 @@ ParentRecipeTrustInfo:
       git_hash: 8328b6b74465c2557b13391f87393e6ddd8b0caa
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.smithjw-recipes/PowerShell/PowerShell-Universal.pkg.recipe.yaml
       sha256_hash: 23083b5bddc748a62af68c17e14efa0b20b0761de7a1145a54be87b3d6ed4b60
+    local.jamf.PowerShell-Universal:
+      git_hash: 9d9a83b60fa63e45f30993a8a928391a7b18506d
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/PowerShell-Universal.jamf.recipe.yaml
+      sha256_hash: 742d205df481ead04566011c17d6dc0b317f83fc8b99f0a67e943de56d771d0a
