@@ -125,25 +125,14 @@ jobs:
           for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
       
       - name: Resolve Recipe Repo Dependencies
+        env:
+          RECIPE: ${{ github.event.inputs.recipe }}
+          RECIPES: ${{ github.event.inputs.recipes }}
+          RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file }}
+          AUTOPKG_PREFS_PATH: ${{ env.AUTOPKG_PREFS_PATH }}
         run: |
-          ARGS=("--prefs=$AUTOPKG_PREFS_PATH")
-      
-          if [[ -n "${{ github.event.inputs.recipe }}" ]]; then
-            echo "📌 Single recipe detected: ${{ github.event.inputs.recipe }}"
-            ARGS+=("--recipes=${{ github.event.inputs.recipe }}")
-          elif [[ -n "${{ github.event.inputs.recipes }}" ]]; then
-            echo "📌 Multiple recipes detected: ${{ github.event.inputs.recipes }}"
-            ARGS+=("--recipes=${{ github.event.inputs.recipes }}")
-          elif [[ -n "${{ github.event.inputs.recipe_list_file }}" ]]; then
-            echo "📌 Recipe list file detected: ${{ github.event.inputs.recipe_list_file }}"
-            ARGS+=("--recipe-list=${{ github.event.inputs.recipe_list_file }}")
-          else
-            DEFAULT_RECIPE_LIST="$GITHUB_WORKSPACE/configuration/recipe_list.txt"
-            echo "📌 No recipe inputs detected, defaulting to: $DEFAULT_RECIPE_LIST"
-            ARGS+=("--recipe-list=$DEFAULT_RECIPE_LIST")
-          fi
-      
-          autopkgctl recipe-repo-deps "${ARGS[@]}"
+          chmod +x ./scripts/resolve_recipe_deps.sh
+          ./scripts/resolve_recipe_deps.sh
     
       # Environment Variable Approach
       - name: Run AutoPkg Recipe via Environment Variable
