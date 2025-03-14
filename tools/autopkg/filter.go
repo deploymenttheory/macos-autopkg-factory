@@ -6,9 +6,42 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
 )
+
+// RecipeFilterCriteria defines the criteria for filtering recipes
+type RecipeFilterCriteria struct {
+	NamePattern       string    // Regex pattern for recipe names
+	ExcludePattern    string    // Regex pattern for excluding recipes
+	RecipeTypes       []string  // Specific recipe types (e.g., "download", "pkg", "install")
+	ModifiedAfter     time.Time // Only include recipes modified after this time
+	ModifiedBefore    time.Time // Only include recipes modified before this time
+	TrustInfoRequired bool      // Only include recipes with trust info
+	VerifiedTrustOnly bool      // Only include recipes that pass trust verification
+	IncludeOverrides  bool      // Include recipe overrides
+	IncludeDisabled   bool      // Include disabled recipes (with "disabled" in name)
+	MaxRecipes        int       // Maximum number of recipes to return (0 = all)
+}
+
+// FilterRecipesResult contains information about filtered recipes
+type FilterRecipesResult struct {
+	MatchingRecipes []string              // List of recipes that match the filter criteria
+	TrustStatus     map[string]bool       // Trust verification status for each recipe
+	RecipeInfo      map[string]RecipeInfo // Additional information about each recipe
+}
+
+// RecipeInfo contains metadata about a recipe
+type RecipeInfo struct {
+	Path          string
+	Identifier    string
+	Type          string
+	ParentRecipes []string
+	IsOverride    bool
+	IsDisabled    bool
+	ModTime       time.Time
+}
 
 // FilterRecipes filters recipes based on various criteria
 func FilterRecipes(options *RecipeFilterCriteria, prefsPath string) (*FilterRecipesResult, error) {
