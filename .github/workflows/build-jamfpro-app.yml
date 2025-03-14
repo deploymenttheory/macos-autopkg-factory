@@ -31,7 +31,7 @@ on:
         default: ''
         type: string
       recipe_list_file:
-        description: 'Optionally set a repo path to a recipe list file (.json or .plist). Defaults to path $GITHUB_WORKSPACE/configuration/recipe_list.txt if blank.'
+        description: 'Optionally set a repo path to a recipe list file (.json or .plist). Defaults to path ./configuration/recipe_list.txt if blank.'
         required: false
         default: './configuration/recipe_list.txt'
         type: string
@@ -57,7 +57,8 @@ env:
   # Using RUN_RECIPE instead of RECIPE to match the parser's expected env var name
   RUN_RECIPE: ${{ github.event.inputs.recipe }}
   # Recipe list file path
-  RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file || '$GITHUB_WORKSPACE/configuration/recipe_list.txt' }}
+  RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file || format('{0}/configuration/recipe_list.txt', github.workspace) }}
+
 
 jobs:
   autopkg-run:
