@@ -63,23 +63,23 @@ var (
 	keepDays          int
 
 	// Configure command flags
-	gitHubToken      string
-	jssURL           string
-	apiUsername      string
-	apiPassword      string
-	smbURL           string
-	smbUsername      string
-	smbPassword      string
-	clientID         string
-	clientSecret     string
-	tenantID         string
-	teamsWebhookUrl  string
-	slackUsername    string
-	slackWebhook     string
-	failWithoutTrust bool
-	overrideDir      string
-	cacheDir         string
-	jcds2Mode        bool
+	gitHubToken                 string
+	jssURL                      string
+	apiUsername                 string
+	apiPassword                 string
+	smbURL                      string
+	smbUsername                 string
+	smbPassword                 string
+	clientID                    string
+	clientSecret                string
+	tenantID                    string
+	teamsWebhookUrl             string
+	slackUsername               string
+	slackWebhook                string
+	failRecipesWithoutTrustInfo bool
+	overrideDir                 string
+	cacheDir                    string
+	jcds2Mode                   bool
 
 	// Make-override command flags
 	overrideSearchDirs   []string
@@ -162,7 +162,7 @@ func main() {
 	configureCmd.Flags().StringVar(&slackWebhook, "slack-webhook", "", "Slack webhook URL for notifications")
 
 	// AutoPkg behavior settings
-	configureCmd.Flags().BoolVar(&failWithoutTrust, "fail-without-trust", false, "Fail recipes without trust info for improved security")
+	configureCmd.Flags().BoolVar(&failRecipesWithoutTrustInfo, "fail-recipes-without-trust-info", false, "Fail recipes without trust info for improved security")
 	configureCmd.Flags().StringVar(&overrideDir, "override-dir", "", "Directory path for storing recipe overrides")
 	configureCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Custom directory for AutoPkg cache storage")
 	configureCmd.Flags().StringVar(&gitHubToken, "github-token", "", "GitHub API token for accessing private repositories and higher rate limits")
@@ -432,8 +432,8 @@ func runConfigure(cmd *cobra.Command) error {
 	}
 
 	// AutoPkg behavior settings
-	if cmd.Flags().Changed("fail-without-trust") {
-		updates["FAIL_RECIPES_WITHOUT_TRUST_INFO"] = failWithoutTrust
+	if cmd.Flags().Changed("fail-recipes-without-trust-info") {
+		updates["FAIL_RECIPES_WITHOUT_TRUST_INFO"] = failRecipesWithoutTrustInfo
 	}
 	if overrideDir != "" {
 		updates["RECIPE_OVERRIDE_DIRS"] = overrideDir

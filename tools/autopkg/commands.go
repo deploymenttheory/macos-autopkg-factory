@@ -63,7 +63,9 @@ func AuditRecipe(recipes []string, options *AuditOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe audit failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("recipe audit failed: %w", err)
 	}
 
 	logger.Logger("✅ Recipe audit completed", logger.LogSuccess)
@@ -120,7 +122,9 @@ func GetRecipeInfo(recipe string, options *InfoOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("get recipe info failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("get recipe info failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -216,7 +220,9 @@ func InstallRecipe(recipes []string, options *InstallOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("install recipe failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("install recipe failed: %w", err)
 	}
 
 	logger.Logger("✅ Recipe installation completed", logger.LogSuccess)
@@ -242,7 +248,9 @@ func ListProcessors(prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("list processors failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("list processors failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -306,7 +314,9 @@ func ListRecipes(options *ListRecipeOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("list recipes failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("list recipes failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -331,7 +341,9 @@ func ListRepos(prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("list repo's failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("list repo's failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -420,7 +432,9 @@ func MakeOverride(recipe string, options *MakeOverrideOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("make recipe override failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("make recipe override failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Created override for recipe: %s", recipe), logger.LogSuccess)
@@ -472,7 +486,9 @@ func NewRecipeFile(recipePath string, options *NewRecipeOptions) (string, error)
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("new recipe failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("new recipe failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Created new recipe template: %s", recipePath), logger.LogSuccess)
@@ -524,7 +540,9 @@ func GetProcessorInfo(processor string, options *ProcessorInfoOptions) (string, 
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("get processor info failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("get processor info failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -587,7 +605,9 @@ func DeleteRepo(repoName string, prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("delete repo failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("delete repo failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Deleted repository: %s", repoName), logger.LogSuccess)
@@ -618,7 +638,9 @@ func UpdateRepo(repos []string, prefsPath string) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("update repo failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("update repo failed: %w", err)
 	}
 
 	logger.Logger(fmt.Sprintf("✅ Updated %s", repoDesc), logger.LogSuccess)
@@ -674,7 +696,9 @@ func SearchRecipes(term string, options *SearchOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe search failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("recipe search failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
@@ -691,7 +715,9 @@ func GetVersion() (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("get autopkg failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("getting autopkg version failed: %w", err)
 	}
 
 	version := strings.TrimSpace(outputBuffer.String())
