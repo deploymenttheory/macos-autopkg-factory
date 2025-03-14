@@ -90,8 +90,10 @@ func (s *JSONFileRecipeSource) GetRecipes() ([]string, error) {
 	return normalizeRecipeNames(recipes), nil
 }
 
-// Then modify NewParserFromInput to check for JSON files
-func NewParserFromInput(input string) *RecipeParser {
+// ParseRecipeInput parses recipe input types and prepares them for autopkg
+// supported scenarios are single recipe as an env var or from a cli flag
+// a comma delimited list of recipes, or recipes stored in a list.
+func ParseRecipeInput(input string) *RecipeParser {
 	if input == "" {
 		return &RecipeParser{source: &EnvironmentRecipeSource{EnvVarName: "RUN_RECIPE"}}
 	}

@@ -74,7 +74,7 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 	}
 
 	results := make(map[string]*RecipeBatchResult)
-	parser := NewParserFromInput(recipeInput)
+	parser := ParseRecipeInput(recipeInput)
 	recipes, err := parser.Parse()
 	if err != nil {
 		logger.Logger(fmt.Sprintf("❌ Failed to parse recipes: %v", err), logger.LogError)
