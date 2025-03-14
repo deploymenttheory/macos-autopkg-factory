@@ -145,7 +145,7 @@ jobs:
       
       # Recipes Approach
       - name: Run AutoPkg Recipes
-        if: ${{ github.event.inputs.recipes == !'' }}
+        if: ${{ github.event.inputs.recipes != '' }}
         run: |
           echo "Running recipe from environment variable: $RUN_RECIPE"
           
@@ -160,12 +160,12 @@ jobs:
             --verbose=3 \
             --verify-trust=true \
             --update-trust=false \
-            --ignore-verify-failures=false
+            --ignore-verify-failures=false \
             --recipes="${{ github.event.inputs.recipes }}"
 
       # Recipe List File Approach
       - name: Run AutoPkg Recipes via Recipe List File
-        if: ${{ github.event.inputs.recipe_list_file == !'' }}
+        if: ${{ github.event.inputs.recipe_list_file != '' }}
         run: |
           echo "Running recipes from list file: ${{ env.RECIPE_LIST_FILE }}"
           
