@@ -21,12 +21,12 @@ on:
         default: 'DEBUG'
         type: string
       recipe:
-        description: 'The specific autopkg recipe to run (leave empty to use recipe list file)'
+        description: 'Optionally set a specific autopkg recipe to run (leave empty to use recipe list file)'
         required: false
         default: ''
         type: string
       recipe_list_file:
-        description: 'Path to recipe list file (.json or .plist)'
+        description: 'Optionally set a repo path to a recipe list file (.json or .plist). Defaults to $GITHUB_WORKSPACE/configuration/recipe_list.txt if blank.'
         required: false
         default: ''
         type: string
