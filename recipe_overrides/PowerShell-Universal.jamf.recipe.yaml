@@ -1,0 +1,60 @@
+Identifier: local.jamf.PowerShell-Universal
+Input:
+  CATEGORY: Development
+  GROUP_NAME: '%NAME%-update-smart'
+  GROUP_TEMPLATE: SmartGroup-update-smart.xml
+  INSTALL_BUTTON_TEXT: Install
+  MAJOR_VERSION: '7.2'
+  NAME: PowerShell
+  POLICY_CATEGORY: Testing
+  POLICY_NAME: Install Latest %NAME%
+  POLICY_RUN_COMMAND: ' '
+  POLICY_TEMPLATE: PolicyTemplate.xml
+  REINSTALL_BUTTON_TEXT: Install
+  SELF_SERVICE_DESCRIPTION: PowerShell Core is a cross-platform (Windows, Linux, and
+    macOS) automation and configuration tool/framework that works well with your existing
+    tools and is optimized for dealing with structured data (e.g. JSON, CSV, XML,
+    etc.), REST APIs, and object models. It includes a command-line shell, an associated
+    scripting language and a framework for processing cmdlets.
+  SELF_SERVICE_DISPLAY_NAME: Install Latest %NAME%
+  SELF_SERVICE_ICON: '%SOFTWARE_TITLE%.png'
+  SOFTWARE_TITLE: '%NAME%'
+  UPDATE_PREDICATE: pkg_uploaded == False
+ParentRecipe: com.github.smithjw.jamf.PowerShell-Universal
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.grahampugh.jamf-upload.processors/JamfCategoryUploader:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.grahampugh.jamf-upload.processors/JamfComputerGroupUploader:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.grahampugh.jamf-upload.processors/JamfPackageUploader:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.grahampugh.jamf-upload.processors/JamfPolicyUploader:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.mlbz521.SharedProcessors/XPathParser:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.mlbz521.SharedProcessors/XarExtractSingleFile:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+    com.github.smithjw.processors/FriendlyPathDeleter:
+      git_hash: c26a799a9933074405c283ed2041d94cebab027f
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.smithjw-recipes/SharedProcessors/FriendlyPathDeleter.py
+      sha256_hash: 0b6bd25a9286ce875da80ca2a8e61bdb59b79214d5d1e5f465eab14b5d607e6c
+  parent_recipes:
+    com.github.smithjw.download.PowerShell-Universal:
+      git_hash: 8328b6b74465c2557b13391f87393e6ddd8b0caa
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.smithjw-recipes/PowerShell/PowerShell-Universal.download.recipe.yaml
+      sha256_hash: 1163866318504357a0328a8c124771e8b4f112f9b02e2c049f405371f077bb8b
+    com.github.smithjw.jamf.PowerShell-Universal:
+      git_hash: 8328b6b74465c2557b13391f87393e6ddd8b0caa
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.smithjw-recipes/PowerShell/PowerShell-Universal.jamf.recipe.yaml
+      sha256_hash: 29d91f695932948f047d6e95953f47e33e856378fa1647db94527f8f0daff7e3
+    com.github.smithjw.pkg.PowerShell-Universal:
+      git_hash: 8328b6b74465c2557b13391f87393e6ddd8b0caa
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.smithjw-recipes/PowerShell/PowerShell-Universal.pkg.recipe.yaml
+      sha256_hash: 23083b5bddc748a62af68c17e14efa0b20b0761de7a1145a54be87b3d6ed4b60
