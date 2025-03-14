@@ -25,6 +25,11 @@ on:
         required: false
         default: ''
         type: string
+      recipes:
+        description: 'Optionally set a comma delimited list of recipes (leave empty to use recipe list file)'
+        required: false
+        default: ''
+        type: string
       recipe_list_file:
         description: 'Optionally set a repo path to a recipe list file (.json or .plist). Defaults to $GITHUB_WORKSPACE/configuration/recipe_list.txt if blank.'
         required: false
