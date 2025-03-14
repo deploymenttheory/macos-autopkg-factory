@@ -21,9 +21,14 @@ on:
         default: 'DEBUG'
         type: string
       recipe:
-        description: 'optionally define the autopkg recipe to run. will use recipe_list.txt if left blank'
+        description: 'The specific autopkg recipe to run (leave empty to use recipe list file)'
         required: false
         default: ''
+        type: string
+      recipe_list_file:
+        description: 'Path to recipe list file (.json or .plist)'
+        required: false
+        default: './configuration/recipes.json'
         type: string
 
 env:
@@ -43,8 +48,11 @@ env:
   LOG_LEVEL: ${{ github.event.inputs.log_level || 'INFO' }}
   # Recipe override directory
   RECIPE_OVERRIDE_DIRS: ${{ github.workspace }}/recipe_overrides
+  # Recipe input (environment variable approach)
+  # Using RUN_RECIPE instead of RECIPE to match the parser's expected env var name
   RUN_RECIPE: ${{ github.event.inputs.recipe }}
-  RECIPE_LIST_FILE: ./configuration/recipe_list.txt
+  # Recipe list file path
+  RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file || './configuration/recipes.json' }}
 
 jobs:
   autopkg-run:
@@ -110,14 +118,29 @@ jobs:
         if: ${{ github.event.inputs.verify_trust != 'false' }}
         run: |
           for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
+      
+      # Create recipe list JSON file if it doesn't exist
+      - name: Ensure Recipe List File Exists
+        run: |
+          mkdir -p $(dirname "${{ env.RECIPE_LIST_FILE }}")
+          echo '[
+            "Firefox.intune",
+            "Chrome.intune",
+            "AmazonQ.intune"
+          ]' > "${{ env.RECIPE_LIST_FILE }}"
+          echo "Created recipe list file at ${{ env.RECIPE_LIST_FILE }}"
           
+          # Make sure it's valid JSON
+          cat "${{ env.RECIPE_LIST_FILE }}"
+      
       # Environment Variable Approach
       - name: Run AutoPkg Recipes via Environment Variable
         if: ${{ github.event.inputs.recipe != '' }}
         run: |
-          echo "Running recipe from environment variable: $RUN_RECIPE"
+          echo "Running recipe from environment variable: $RECIPE"
           
-          # Run recipes using the RUN_RECIPE environment variable (already set)
+          # We don't need to pass the --recipes flag when using RECIPE env var
+          # Our parser will automatically detect the RECIPE environment variable
           autopkgctl run \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --report="$GITHUB_WORKSPACE/autopkg-run-report-env.json" \
@@ -134,6 +157,9 @@ jobs:
         if: ${{ github.event.inputs.recipe == '' }}
         run: |
           echo "Running recipes from list file: ${{ env.RECIPE_LIST_FILE }}"
+          
+          # Make sure the file exists and is readable
+          ls -la "${{ env.RECIPE_LIST_FILE }}"
           
           # Run recipes using the recipe list file
           autopkgctl run \
