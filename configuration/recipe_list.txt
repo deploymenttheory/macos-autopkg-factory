@@ -1,0 +1,2 @@
+AdobeAdminConsole-latest.jamf
+swiftDialog.download.recipe

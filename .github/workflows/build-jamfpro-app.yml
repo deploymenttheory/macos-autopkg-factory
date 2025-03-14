@@ -21,9 +21,9 @@ on:
         default: 'DEBUG'
         type: string
       recipe:
-        description: 'the autopkg recipe to run'
+        description: 'optionally define the autopkg recipe to run. will use recipe_list.txt if left blank'
         required: false
-        default: 'AmazonQ.intune.recipe'
+        default: ''
         type: string
 
 env:
@@ -44,6 +44,7 @@ env:
   # Recipe override directory
   RECIPE_OVERRIDE_DIRS: ${{ github.workspace }}/recipe_overrides
   RUN_RECIPE: ${{ github.event.inputs.recipe }}
+  RECIPE_LIST_FILE: ./configuration/recipe_list.txt
 
 jobs:
   autopkg-run:
