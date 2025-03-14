@@ -667,6 +667,8 @@ func runRecipes() error {
 		recipeInput = recipesPath
 	} else if recipesListPath != "" {
 		recipeInput = recipesListPath
+	} else if os.Getenv("RECIPE_RUN") != "" {
+		recipeInput = os.Getenv("RECIPE_RUN")
 	}
 
 	options := &autopkg.RecipeBatchRunOptions{
