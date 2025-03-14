@@ -2,6 +2,7 @@
 package autopkg
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 )
@@ -70,14 +71,39 @@ type RecipeParser struct {
 	source RecipeSource
 }
 
-// NewParserFromInput creates a parser based on provided input type.
+// Add a new JSONFileRecipeSource implementation
+type JSONFileRecipeSource struct {
+	FilePath string
+}
+
+func (s *JSONFileRecipeSource) GetRecipes() ([]string, error) {
+	data, err := os.ReadFile(s.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var recipes []string
+	if err := json.Unmarshal(data, &recipes); err != nil {
+		return nil, err
+	}
+
+	return normalizeRecipeNames(recipes), nil
+}
+
+// Then modify NewParserFromInput to check for JSON files
 func NewParserFromInput(input string) *RecipeParser {
 	if input == "" {
 		return &RecipeParser{source: &EnvironmentRecipeSource{EnvVarName: "RUN_RECIPE"}}
 	}
 
-	if _, err := os.Stat(input); err == nil && strings.HasSuffix(strings.ToLower(input), ".txt") {
-		return &RecipeParser{source: &FileRecipeSource{FilePath: input}}
+	if _, err := os.Stat(input); err == nil {
+		// File exists, check extension
+		inputLower := strings.ToLower(input)
+		if strings.HasSuffix(inputLower, ".txt") {
+			return &RecipeParser{source: &FileRecipeSource{FilePath: input}}
+		} else if strings.HasSuffix(inputLower, ".json") {
+			return &RecipeParser{source: &JSONFileRecipeSource{FilePath: input}}
+		}
 	}
 
 	if strings.Contains(input, ",") {
