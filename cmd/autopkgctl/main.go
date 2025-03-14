@@ -655,8 +655,8 @@ func runVerifyTrust() error {
 
 // runRecipes executes recipes based on CLI flags, delegating execution to RunRecipeBatch
 func runRecipes() error {
-	if recipePath == "" && recipesPath == "" && recipesListPath == "" && os.Getenv("RECIPE_RUN") == "" {
-		logger.Logger("❌ No recipes specified via --recipe, --recipes, --recipe-list flags, or RECIPE_RUN environment variable", logger.LogError)
+	if recipePath == "" && recipesPath == "" && recipesListPath == "" && os.Getenv("RUN_RECIPE") == "" {
+		logger.Logger("❌ No recipes specified via --recipe, --recipes, --recipe-list flags, or RUN_RECIPE environment variable", logger.LogError)
 		return fmt.Errorf("no recipes specified")
 	}
 
@@ -667,8 +667,8 @@ func runRecipes() error {
 		recipeInput = recipesPath
 	} else if recipesListPath != "" {
 		recipeInput = recipesListPath
-	} else if os.Getenv("RECIPE_RUN") != "" {
-		recipeInput = os.Getenv("RECIPE_RUN")
+	} else if os.Getenv("RUN_RECIPE") != "" {
+		recipeInput = os.Getenv("RUN_RECIPE")
 	}
 
 	options := &autopkg.RecipeBatchRunOptions{
