@@ -137,6 +137,19 @@ jobs:
             --verify-trust=true \
             --update-trust=false \
             --ignore-verify-failures=false
+            
+      - name: Examine recipe list file
+        run: |
+          echo "Contents of recipe list file:"
+          cat "$GITHUB_WORKSPACE/configuration/recipe_list.txt"
+          
+          echo "Looking for recipe(s) in search path:"
+          for recipe in $(cat "$GITHUB_WORKSPACE/configuration/recipe_list.txt"); do
+            find /usr/local/autopkg/RecipeRepos -name "${recipe}*.recipe" -o -name "${recipe}*.recipe" 2>/dev/null || echo "Recipe not found: $recipe"
+          done
+          
+          echo "Testing direct autopkg command:"
+          autopkg run --recipe-list="$GITHUB_WORKSPACE/configuration/recipe_list.txt" -vvv || echo "Exit code: $?"
 
       # Recipe List File Approach
       - name: Run AutoPkg Recipes via Recipe List File

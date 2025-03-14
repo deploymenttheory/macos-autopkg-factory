@@ -817,12 +817,6 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 		args = append(args, recipe)
 	}
 
-	if options.RecipeList != "" {
-		logger.Logger(fmt.Sprintf("🚀 Running recipe list: %s", options.RecipeList), logger.LogInfo)
-	} else {
-		logger.Logger(fmt.Sprintf("🚀 Running recipe: %s", recipe), logger.LogInfo)
-	}
-
 	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
 	cmd := exec.Command("autopkg", args...)
@@ -832,7 +826,9 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 	cmd.Stderr = &outputBuffer
 
 	if err := cmd.Run(); err != nil {
-		return outputBuffer.String(), fmt.Errorf("recipe run failed: %w", err)
+		outputStr := outputBuffer.String()
+		logger.Logger(fmt.Sprintf("❌ Command output: %s", outputStr), logger.LogError)
+		return outputStr, fmt.Errorf("recipe run failed: %w", err)
 	}
 
 	return outputBuffer.String(), nil
