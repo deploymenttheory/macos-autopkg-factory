@@ -2,14 +2,8 @@
 package autopkg
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-
-	"github.com/deploymenttheory/macos-autopkg-factory/tools/logger"
-	"howett.net/plist"
 )
 
 // RecipeSource defines an interface for different recipe sources
@@ -17,149 +11,96 @@ type RecipeSource interface {
 	GetRecipes() ([]string, error)
 }
 
-// EnvironmentRecipeSource gets recipes from environment variables
+// EnvironmentRecipeSource implementation
 type EnvironmentRecipeSource struct {
 	EnvVarName string
 }
 
-// GetRecipes retrieves recipes from an environment variable
 func (s *EnvironmentRecipeSource) GetRecipes() ([]string, error) {
 	envRecipes := os.Getenv(s.EnvVarName)
 	if envRecipes == "" {
 		return nil, nil
 	}
-
-	logger.Logger(fmt.Sprintf("Using recipes from environment variable %s: %s", s.EnvVarName, envRecipes), logger.LogInfo)
-	recipes := strings.Split(envRecipes, ", ")
-
+	recipes := strings.Split(envRecipes, ",")
 	return normalizeRecipeNames(recipes), nil
 }
 
-// FileRecipeSource gets recipes from a file
+// FileRecipeSource implementation (expects a .txt file)
 type FileRecipeSource struct {
 	FilePath string
 }
 
-// GetRecipes retrieves recipes from a file (JSON or plist)
 func (s *FileRecipeSource) GetRecipes() ([]string, error) {
-	if s.FilePath == "" {
-		return nil, nil
-	}
-
 	data, err := os.ReadFile(s.FilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read recipe list file: %w", err)
+		return nil, err
 	}
-
+	lines := strings.Split(string(data), "\n")
 	var recipes []string
-	ext := strings.ToLower(filepath.Ext(s.FilePath))
-
-	switch ext {
-	case ".json":
-		err = json.Unmarshal(data, &recipes)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse JSON recipe list: %w", err)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			recipes = append(recipes, line)
 		}
-	case ".plist":
-		var recipeList struct {
-			Recipes []string
-		}
-		_, err = plist.Unmarshal(data, &recipeList)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse plist recipe list: %w", err)
-		}
-		recipes = recipeList.Recipes
-	default:
-		return nil, fmt.Errorf("unsupported recipe list format: %s (expected .json or .plist)", ext)
 	}
-
-	logger.Logger(fmt.Sprintf("Parsed %d recipes from %s", len(recipes), s.FilePath), logger.LogInfo)
 	return normalizeRecipeNames(recipes), nil
 }
 
-// DirectRecipeSource allows providing recipes directly
+// CommaDelimitedRecipeSource implementation
+type CommaDelimitedRecipeSource struct {
+	Input string
+}
+
+func (s *CommaDelimitedRecipeSource) GetRecipes() ([]string, error) {
+	rawRecipes := strings.Split(s.Input, ",")
+	return normalizeRecipeNames(rawRecipes), nil
+}
+
+// DirectRecipeSource implementation
 type DirectRecipeSource struct {
 	Recipes []string
 }
 
-// GetRecipes returns the directly provided recipes
 func (s *DirectRecipeSource) GetRecipes() ([]string, error) {
 	return normalizeRecipeNames(s.Recipes), nil
 }
 
-// normalizeRecipeNames ensures all recipes have the .recipe extension
-func normalizeRecipeNames(recipes []string) []string {
-	result := make([]string, len(recipes))
-	for i, recipe := range recipes {
-		if !strings.HasSuffix(recipe, ".recipe") {
-			result[i] = recipe + ".recipe"
-		} else {
-			result[i] = recipe
-		}
-	}
-	return result
-}
-
-// RecipeParser manages the parsing process with multiple potential sources
+// RecipeParser handles input normalization for recipe execution.
 type RecipeParser struct {
-	sources []RecipeSource
+	source RecipeSource
 }
 
-// NewRecipeParser creates a new parser with the given sources
-func NewRecipeParser(sources ...RecipeSource) *RecipeParser {
-	return &RecipeParser{
-		sources: sources,
+// NewParserFromInput creates a parser based on provided input type.
+func NewParserFromInput(input string) *RecipeParser {
+	if input == "" {
+		return &RecipeParser{source: &EnvironmentRecipeSource{EnvVarName: "RUN_RECIPE"}}
 	}
+
+	if _, err := os.Stat(input); err == nil && strings.HasSuffix(strings.ToLower(input), ".txt") {
+		return &RecipeParser{source: &FileRecipeSource{FilePath: input}}
+	}
+
+	if strings.Contains(input, ",") {
+		return &RecipeParser{source: &CommaDelimitedRecipeSource{Input: input}}
+	}
+
+	return &RecipeParser{source: &DirectRecipeSource{Recipes: []string{input}}}
 }
 
-// ParseRecipes attempts to get recipes from all configured sources
-func (p *RecipeParser) ParseRecipes() ([]string, error) {
-	var allRecipes []string
+// Parse returns a normalized slice of recipe names.
+func (rp *RecipeParser) Parse() ([]string, error) {
+	return rp.source.GetRecipes()
+}
 
-	for _, source := range p.sources {
-		recipes, err := source.GetRecipes()
-		if err != nil {
-			return nil, err
+// normalizeRecipeNames normalizes recipe names by trimming whitespace and appending .recipe if missing
+func normalizeRecipeNames(recipes []string) []string {
+	normalized := make([]string, 0, len(recipes))
+	for _, recipe := range recipes {
+		recipe = strings.TrimSpace(recipe)
+		if !strings.HasSuffix(recipe, ".recipe") {
+			recipe += ".recipe"
 		}
-
-		if len(recipes) > 0 {
-			allRecipes = append(allRecipes, recipes...)
-		}
+		normalized = append(normalized, recipe)
 	}
-
-	if len(allRecipes) == 0 {
-		return nil, fmt.Errorf("no recipes found from any configured source")
-	}
-
-	return allRecipes, nil
-}
-
-// RunRecipesFromList parses and runs recipes from list files and/or environment variables
-func RunRecipesFromList(recipeListPath string, options *RecipeBatchRunOptions) (map[string]*RecipeBatchResult, error) {
-	// Create a parser with file and environment sources
-	parser := NewRecipeParser(
-		&FileRecipeSource{FilePath: recipeListPath},
-		&EnvironmentRecipeSource{EnvVarName: "RUN_RECIPE"},
-	)
-
-	// Parse recipes from all sources
-	recipes, err := parser.ParseRecipes()
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse recipes: %w", err)
-	}
-
-	// Run the recipe batch processing
-	logger.Logger(fmt.Sprintf("Processing %d recipes", len(recipes)), logger.LogInfo)
-
-	return RunRecipeBatch(recipes, options)
-}
-
-// ParseRecipeList parses recipes from files and environment variables (for backward compatibility)
-func ParseRecipeList(filePath string) ([]string, error) {
-	parser := NewRecipeParser(
-		&FileRecipeSource{FilePath: filePath},
-		&EnvironmentRecipeSource{EnvVarName: "RUN_RECIPE"},
-	)
-
-	return parser.ParseRecipes()
+	return normalized
 }

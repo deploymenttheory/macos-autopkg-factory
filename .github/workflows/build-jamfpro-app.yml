@@ -158,7 +158,7 @@ jobs:
             --verify-trust=true \
             --update-trust=true \
             --ignore-verify-failures=false \
-            --recipes="${{ env.RECIPE_LIST_FILE }}"
+            --recipe-list="${{ env.RECIPE_LIST_FILE }}"
 
       - name: Cleanup Cache
         if: always()

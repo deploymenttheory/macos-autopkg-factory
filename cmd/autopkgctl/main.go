@@ -2,7 +2,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,8 +38,10 @@ var (
 	updateTrust bool
 
 	// Run command flags
+	recipePath           string
+	recipesPath          string
+	recipesListPath      string
 	reportPath           string
-	concurrency          int
 	teamsWebhook         string
 	stopOnFirstError     bool
 	verboseLevel         int
@@ -254,7 +255,9 @@ func main() {
 	}
 
 	// Basic run options
-	runCmd.Flags().StringVar(&recipesStr, "recipes", "", "Comma-separated list of autopkg recipes to run")
+	runCmd.Flags().StringVar(&recipePath, "recipe", "", "Path to an autopkg recipe to run")
+	runCmd.Flags().StringVar(&recipesPath, "recipes", "", "Path to a comma-separated list of autopkg recipes to run")
+	runCmd.Flags().StringVar(&recipesListPath, "recipe-list", "", "Path to an autopkg recipe list to run. Can be a .txt or json file in array format")
 	runCmd.Flags().StringVar(&reportPath, "report", "", "Path to save the report")
 	runCmd.Flags().BoolVar(&stopOnFirstError, "stop-on-error", false, "Stop processing if any recipe fails")
 	runCmd.Flags().IntVar(&verboseLevel, "verbose", 2, "autopkg run verbosity level (0-3)")
@@ -650,41 +653,22 @@ func runVerifyTrust() error {
 	return nil
 }
 
+// runRecipes executes recipes based on CLI flags, delegating execution to RunRecipeBatch
 func runRecipes() error {
-	var recipesFile string
-	var directRecipes []string
-
-	// Parse recipes from flag
-	if recipesStr != "" {
-		// Check if the recipesStr looks like a file path with json or plist extension
-		ext := strings.ToLower(filepath.Ext(recipesStr))
-		if ext == ".json" || ext == ".plist" {
-			// If it looks like a file path, treat it as a recipe list file
-			if _, err := os.Stat(recipesStr); err == nil {
-				recipesFile = recipesStr
-				logger.Logger(fmt.Sprintf("Using recipe list file: %s", recipesFile), logger.LogInfo)
-			} else {
-				// File doesn't exist, fall back to treating as a comma-separated list
-				logger.Logger(fmt.Sprintf("Recipe file not found: %s, treating as comma-separated list", recipesStr), logger.LogWarning)
-				for _, r := range strings.Split(recipesStr, ",") {
-					r = strings.TrimSpace(r)
-					if r != "" {
-						directRecipes = append(directRecipes, r)
-					}
-				}
-			}
-		} else {
-			// Treat as a comma-separated list of recipes
-			for _, r := range strings.Split(recipesStr, ",") {
-				r = strings.TrimSpace(r)
-				if r != "" {
-					directRecipes = append(directRecipes, r)
-				}
-			}
-		}
+	if recipePath == "" && recipesPath == "" && recipesListPath == "" {
+		logger.Logger("❌ No recipes specified via --recipe, --recipes, or --recipe-list flags", logger.LogError)
+		return fmt.Errorf("no recipes specified")
 	}
 
-	// Create run options
+	var recipeInput string
+	if recipePath != "" {
+		recipeInput = recipePath
+	} else if recipesPath != "" {
+		recipeInput = recipesPath
+	} else if recipesListPath != "" {
+		recipeInput = recipesListPath
+	}
+
 	options := &autopkg.RecipeBatchRunOptions{
 		PrefsPath:            prefsPath,
 		SearchDirs:           searchDirs,
@@ -709,82 +693,35 @@ func runRecipes() error {
 		},
 	}
 
-	var results map[string]*autopkg.RecipeBatchResult
-	var err error
-
-	// Determine how to execute based on recipe source
-	if len(directRecipes) > 0 {
-		// If we have direct recipes from command line, create a direct recipe source
-		logger.Logger(fmt.Sprintf("Running %d recipes from command line arguments", len(directRecipes)), logger.LogInfo)
-
-		// Create parser with direct recipes
-		parser := autopkg.NewRecipeParser(
-			&autopkg.DirectRecipeSource{Recipes: directRecipes},
-			&autopkg.EnvironmentRecipeSource{EnvVarName: "RECIPE"},
-		)
-
-		// Parse recipes
-		recipes, parseErr := parser.ParseRecipes()
-		if parseErr != nil {
-			return fmt.Errorf("failed to parse recipes: %w", parseErr)
-		}
-
-		// Run the recipes
-		results, err = autopkg.RunRecipeBatch(recipes, options)
-	} else if recipesFile != "" {
-		// If we have a recipe list file, use it
-		logger.Logger(fmt.Sprintf("Running recipes from file: %s", recipesFile), logger.LogInfo)
-		results, err = autopkg.RunRecipesFromList(recipesFile, options)
-	} else {
-		// Check if RECIPE environment variable is set
-		envRecipe := os.Getenv("RUN_RECIPE")
-		if envRecipe != "" {
-			logger.Logger("Running recipes from RUN_RECIPE environment variable", logger.LogInfo)
-			results, err = autopkg.RunRecipesFromList("", options)
-		} else {
-			return fmt.Errorf("no recipes specified via --recipes flag or RUN_RECIPE environment variable")
-		}
-	}
-
-	// Check for execution errors
+	results, err := autopkg.RunRecipeBatch(recipeInput, options)
 	if err != nil {
-		logger.Logger(fmt.Sprintf("Error during recipe execution: %v", err), logger.LogError)
+		logger.Logger(fmt.Sprintf("❌ Error during recipe execution: %v", err), logger.LogError)
 	}
 
-	// Display results
-	successCount := 0
-	failCount := 0
-
-	fmt.Println("\nRecipe Execution Results:")
-	fmt.Println("=========================")
-
+	// Summarize results
+	successCount, failCount := 0, 0
 	for recipe, result := range results {
-		if result.ExecutionError == nil {
-			successCount++
-			fmt.Printf("✅ %s: Success\n", recipe)
-		} else {
+		if result.ExecutionError != nil {
 			failCount++
-			fmt.Printf("❌ %s: %v\n", recipe, result.ExecutionError)
-		}
-	}
-
-	fmt.Printf("\nSummary: %d successful, %d failed\n", successCount, failCount)
-
-	// Write report if requested
-	if reportPath != "" {
-		reportData, _ := json.MarshalIndent(results, "", "  ")
-		if err := os.WriteFile(reportPath, reportData, 0644); err != nil {
-			fmt.Printf("⚠️ Failed to write report: %v\n", err)
+			logger.Logger(fmt.Sprintf("❌ Recipe failed: %s | Error: %v", recipe, result.ExecutionError), logger.LogError)
 		} else {
-			fmt.Printf("✅ Report written to %s\n", reportPath)
+			successCount++
+			logger.Logger(fmt.Sprintf("✅ Recipe succeeded: %s", recipe), logger.LogSuccess)
 		}
 	}
 
-	if failCount > 0 || err != nil {
+	// Extended summary for pipeline reporting
+	logger.Logger("\n🚀 Pipeline Execution Summary", logger.LogInfo)
+	logger.Logger(fmt.Sprintf("Total recipes executed: %d", len(results)), logger.LogInfo)
+	logger.Logger(fmt.Sprintf("✅ Successful: %d", successCount), logger.LogSuccess)
+	logger.Logger(fmt.Sprintf("❌ Failed: %d", failCount), logger.LogError)
+
+	if failCount > 0 {
+		logger.Logger("🚨 Pipeline status: FAILURE - Some recipes failed.", logger.LogError)
 		return fmt.Errorf("recipe execution failed: %d recipes failed", failCount)
 	}
 
-	fmt.Println("✅ All recipes processed successfully")
+	logger.Logger("🎉 Pipeline status: SUCCESS - All recipes succeeded.", logger.LogSuccess)
 	return nil
 }
 

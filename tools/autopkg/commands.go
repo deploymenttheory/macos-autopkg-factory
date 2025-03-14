@@ -832,29 +832,6 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 	return outputBuffer.String(), nil
 }
 
-// RunRecipes runs multiple recipes by calling RunRecipe for each one
-func RunRecipes(recipes []string, options *RunOptions) (string, error) {
-	if len(recipes) == 0 {
-		return "", fmt.Errorf("at least one recipe name is required")
-	}
-
-	logger.Logger(fmt.Sprintf("🚀 Running %d recipes: %s", len(recipes), strings.Join(recipes, ", ")), logger.LogInfo)
-
-	var combinedOutput bytes.Buffer
-
-	for _, recipe := range recipes {
-		output, err := RunRecipe(recipe, options)
-		combinedOutput.WriteString(output)
-
-		if err != nil {
-			return combinedOutput.String(), err
-		}
-	}
-
-	logger.Logger("✅ All recipes completed successfully", logger.LogSuccess)
-	return combinedOutput.String(), nil
-}
-
 // CreateLocalRepository creates a new local repository
 func CreateLocalRepository(repoName, repoPath string) (string, error) {
 	if repoName == "" || repoPath == "" {
