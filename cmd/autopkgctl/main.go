@@ -256,7 +256,6 @@ func main() {
 	// Basic run options
 	runCmd.Flags().StringVar(&recipesStr, "recipes", "", "Comma-separated list of autopkg recipes to run")
 	runCmd.Flags().StringVar(&reportPath, "report", "", "Path to save the report")
-	runCmd.Flags().IntVar(&concurrency, "concurrency", 4, "Maximum concurrent recipes")
 	runCmd.Flags().BoolVar(&stopOnFirstError, "stop-on-error", false, "Stop processing if any recipe fails")
 	runCmd.Flags().IntVar(&verboseLevel, "verbose", 2, "autopkg run verbosity level (0-3)")
 
@@ -698,7 +697,6 @@ func runRecipes() error {
 		Variables:            variables,
 		PreProcessors:        preprocessors,
 		PostProcessors:       postprocessors,
-		MaxConcurrentRecipes: concurrency,
 		StopOnFirstError:     stopOnFirstError,
 		Notification: autopkg.NotificationOptions{
 			EnableTeams:   teamsWebhook != "",

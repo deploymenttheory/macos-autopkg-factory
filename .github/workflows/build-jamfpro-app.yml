@@ -116,7 +116,6 @@ jobs:
           autopkgctl run \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --report="$GITHUB_WORKSPACE/autopkg-run-report.json" \
-            --concurrency=4 \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
             --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
             --stop-on-error=true \

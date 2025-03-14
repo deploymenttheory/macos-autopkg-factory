@@ -21,7 +21,6 @@ type RecipeBatchRunOptions struct {
 	Variables            map[string]string
 	PreProcessors        []string
 	PostProcessors       []string
-	MaxConcurrentRecipes int
 	StopOnFirstError     bool
 	Notification         NotificationOptions
 }
