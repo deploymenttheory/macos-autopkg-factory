@@ -5,3 +5,4 @@ autopkg/novaksam-recipes
 autopkg/apizz-recipes
 autopkg/smithjw-recipes
 autopkg/natewalck-recipes
+autopkg/grahampugh-recipes
