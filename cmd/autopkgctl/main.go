@@ -737,12 +737,12 @@ func runRecipes() error {
 		results, err = autopkg.RunRecipesFromList(recipesFile, options)
 	} else {
 		// Check if RECIPE environment variable is set
-		envRecipe := os.Getenv("RECIPE")
+		envRecipe := os.Getenv("RUN_RECIPE")
 		if envRecipe != "" {
-			logger.Logger("Running recipes from RECIPE environment variable", logger.LogInfo)
+			logger.Logger("Running recipes from RUN_RECIPE environment variable", logger.LogInfo)
 			results, err = autopkg.RunRecipesFromList("", options)
 		} else {
-			return fmt.Errorf("no recipes specified via --recipes flag or RECIPE environment variable")
+			return fmt.Errorf("no recipes specified via --recipes flag or RUN_RECIPE environment variable")
 		}
 	}
 
