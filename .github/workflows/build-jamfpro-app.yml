@@ -119,20 +119,6 @@ jobs:
         run: |
           for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
       
-      # Create recipe list JSON file if it doesn't exist
-      - name: Ensure Recipe List File Exists
-        run: |
-          mkdir -p $(dirname "${{ env.RECIPE_LIST_FILE }}")
-          echo '[
-            "Firefox.intune",
-            "Chrome.intune",
-            "AmazonQ.intune"
-          ]' > "${{ env.RECIPE_LIST_FILE }}"
-          echo "Created recipe list file at ${{ env.RECIPE_LIST_FILE }}"
-          
-          # Make sure it's valid JSON
-          cat "${{ env.RECIPE_LIST_FILE }}"
-      
       # Environment Variable Approach
       - name: Run AutoPkg Recipes via Environment Variable
         if: ${{ github.event.inputs.recipe != '' }}
