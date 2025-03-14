@@ -114,9 +114,9 @@ jobs:
       - name: Run AutoPkg Recipes via Environment Variable
         if: ${{ github.event.inputs.recipe != '' }}
         run: |
-          echo "Running recipe from environment variable: $RECIPE"
+          echo "Running recipe from environment variable: $RUN_RECIPE"
           
-          # Run recipes using the RECIPE environment variable (already set)
+          # Run recipes using the RUN_RECIPE environment variable (already set)
           autopkgctl run \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --report="$GITHUB_WORKSPACE/autopkg-run-report-env.json" \
