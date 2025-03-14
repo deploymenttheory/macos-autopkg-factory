@@ -33,7 +33,7 @@ on:
       recipe_list_file:
         description: 'Optionally set a repo path to a recipe list file (.json or .plist). Defaults to path $GITHUB_WORKSPACE/configuration/recipe_list.txt if blank.'
         required: false
-        default: ''
+        default: '$GITHUB_WORKSPACE/configuration/recipe_list.txt'
         type: string
 
 env:
@@ -119,10 +119,10 @@ jobs:
             --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
             --fail-recipes-without-trust-info=true
       
-      - name: Add Recipe Repos
-        if: ${{ github.event.inputs.verify_trust != 'false' }}
-        run: |
-          for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
+      # - name: Add Recipe Repos
+      #   if: ${{ github.event.inputs.verify_trust != 'false' }}
+      #   run: |
+      #     for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
       
       - name: Resolve Recipe Repo Dependencies
         env:
