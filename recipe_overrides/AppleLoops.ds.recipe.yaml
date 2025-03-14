@@ -1,0 +1,24 @@
+Identifier: local.ds.AppleLoops
+Input:
+  DOWNLOAD_URL: https://raw.githubusercontent.com/Lawrence-Public-Schools/appleloops/master/dist/zipapp/usr/local/bin/appleloops
+  DS_NAME: '%NAME%'
+  DS_PKGS_PATH: /Volumes/DSServer/Users/Shared/Deploy/Packages
+  GITHUB_REPO: Lawrence-Public-Schools/appleloops
+  INCLUDE_PRERELEASES: ''
+  NAME: appleloops
+  SEARCH_PATTERN: VERSION\ =\ \'(.*?)\'
+  SEARCH_URL: https://raw.githubusercontent.com/Lawrence-Public-Schools/appleloops/64fa0ffde6c80e1d38625bfb707af5c85376c505/src/loopslib/version.py
+ParentRecipe: com.github.jazzace.ds.appleLoops
+ParentRecipeTrustInfo:
+  non_core_processors: {}
+  parent_recipes:
+    com.github.jazzace.ds.appleLoops:
+      git_hash: c4b4f652a43d484eb76fc8b1bd109dd6b5f343ac
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/Apple
+        Loops/AppleLoops.ds.recipe
+      sha256_hash: 5d137d50bb385c7eb2be756869991b912cf212d3404b89ff758827b24a6ad51c
+    com.github.novaksam.pkg.appleLoops:
+      git_hash: 703c87be739462cdd714915eee06097e7051a53d
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.novaksam-recipes/Recipes
+        - pkg/appleLoops.pkg.recipe
+      sha256_hash: 0ae6fdeb1402d862f98285a2d9c894d382469f8503095e952472aa833c9f445d
