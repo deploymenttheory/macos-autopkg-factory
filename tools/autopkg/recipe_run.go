@@ -45,10 +45,29 @@ type RecipeBatchResult struct {
 	Output            string
 	VerificationError error
 	ExecutionError    error
+	ExecutionTime     time.Duration
+	Status            string // "updated", "unchanged", "skipped", "failed"
+}
+
+// RecipeBatchSummary contains aggregated metrics from a batch run
+type RecipeBatchSummary struct {
+	TotalDuration    time.Duration
+	TotalRecipes     int
+	SuccessCount     int
+	FailedCount      int
+	SkippedCount     int
+	UpdatedCount     int
+	UnchangedCount   int
+	UpdatedRecipes   []string
+	UnchangedRecipes []string
+	SkippedRecipes   []string
+	FailedRecipes    []string
 }
 
 // RunRecipeBatch executes parsed recipes using appropriate flags and notifications.
 func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[string]*RecipeBatchResult, error) {
+	batchStartTime := time.Now()
+
 	if options == nil {
 		options = &RecipeBatchRunOptions{}
 	}
@@ -83,6 +102,18 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 		output, err := RunRecipe("", runOpts)
 		executionTime := time.Since(startTime)
 
+		// Determine status based on output and error
+		status := "failed"
+		if err == nil {
+			if strings.Contains(output, "No new updates available") || strings.Contains(output, "No changes") {
+				status = "unchanged"
+			} else if strings.Contains(output, "Downloaded") || strings.Contains(output, "Installing") || strings.Contains(output, "new version") {
+				status = "updated"
+			} else {
+				status = "unchanged" // Default if we can't determine
+			}
+		}
+
 		result := &RecipeBatchResult{
 			Recipe:         recipeInput,
 			Output:         output,
@@ -90,6 +121,8 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 			ExecutionError: err,
 			TrustVerified:  true,
 			TrustUpdated:   options.UpdateTrustOnFailure,
+			ExecutionTime:  executionTime,
+			Status:         status,
 		}
 
 		results[recipeInput] = result
@@ -97,10 +130,18 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 
 		if err != nil {
 			logger.Logger(fmt.Sprintf("❌ Recipe list %s failed after %s: %v", recipeInput, executionTime, err), logger.LogError)
+
+			// Generate and log summary even on error
+			LogRecipeBatchSummary(results, batchStartTime)
+
 			return results, err
 		}
 
 		logger.Logger(fmt.Sprintf("✅ Recipe list %s succeeded in %s", recipeInput, executionTime), logger.LogSuccess)
+
+		// Generate and log summary
+		LogRecipeBatchSummary(results, batchStartTime)
+
 		return results, nil
 	}
 
@@ -129,6 +170,20 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 					}
 				}
 				if !options.IgnoreVerifyFailures {
+					// Add to results as "skipped"
+					executionTime := time.Since(startTime)
+					result := &RecipeBatchResult{
+						Recipe:            recipe,
+						Executed:          false,
+						VerificationError: verifyErr,
+						TrustVerified:     false,
+						TrustUpdated:      options.UpdateTrustOnFailure,
+						ExecutionTime:     executionTime,
+						Status:            "skipped",
+					}
+					results[recipe] = result
+					handleNotifications(result, options)
+
 					if options.StopOnFirstError {
 						break
 					}
@@ -152,11 +207,25 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 		output, err := RunRecipe(recipe, runOpts)
 		executionTime := time.Since(startTime)
 
+		// Determine status based on output and error
+		status := "failed"
+		if err == nil {
+			if strings.Contains(output, "No new updates available") || strings.Contains(output, "No changes") {
+				status = "unchanged"
+			} else if strings.Contains(output, "Downloaded") || strings.Contains(output, "Installing") || strings.Contains(output, "new version") {
+				status = "updated"
+			} else {
+				status = "unchanged" // Default if we can't determine
+			}
+		}
+
 		result := &RecipeBatchResult{
 			Recipe:         recipe,
 			Output:         output,
 			Executed:       true,
 			ExecutionError: err,
+			ExecutionTime:  executionTime,
+			Status:         status,
 		}
 		results[recipe] = result
 		handleNotifications(result, options)
@@ -171,7 +240,89 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 		}
 	}
 
+	// Generate and log summary
+	LogRecipeBatchSummary(results, batchStartTime)
+
 	return results, nil
+}
+
+// LogRecipeBatchSummary logs a summary of the recipe batch execution
+func LogRecipeBatchSummary(results map[string]*RecipeBatchResult, startTime time.Time) {
+	// Calculate summary metrics
+	summary := &RecipeBatchSummary{
+		TotalDuration:    time.Since(startTime),
+		TotalRecipes:     len(results),
+		UpdatedRecipes:   make([]string, 0),
+		UnchangedRecipes: make([]string, 0),
+		SkippedRecipes:   make([]string, 0),
+		FailedRecipes:    make([]string, 0),
+	}
+
+	// Categorize recipes by status
+	for recipe, result := range results {
+		switch result.Status {
+		case "updated":
+			summary.SuccessCount++
+			summary.UpdatedCount++
+			summary.UpdatedRecipes = append(summary.UpdatedRecipes, recipe)
+		case "unchanged":
+			summary.SuccessCount++
+			summary.UnchangedCount++
+			summary.UnchangedRecipes = append(summary.UnchangedRecipes, recipe)
+		case "skipped":
+			summary.SkippedCount++
+			summary.SkippedRecipes = append(summary.SkippedRecipes, recipe)
+		case "failed":
+			summary.FailedCount++
+			summary.FailedRecipes = append(summary.FailedRecipes, recipe)
+		}
+	}
+
+	// Log the summary
+	logger.Logger("\n🚀 Pipeline Execution Summary", logger.LogInfo)
+	logger.Logger(fmt.Sprintf("Total execution time: %s", summary.TotalDuration), logger.LogInfo)
+	logger.Logger(fmt.Sprintf("Total recipes processed: %d", summary.TotalRecipes), logger.LogInfo)
+	logger.Logger(fmt.Sprintf("✅ Successful: %d", summary.SuccessCount), logger.LogSuccess)
+	logger.Logger(fmt.Sprintf("  - Updated: %d", summary.UpdatedCount), logger.LogSuccess)
+	logger.Logger(fmt.Sprintf("  - Unchanged: %d", summary.UnchangedCount), logger.LogInfo)
+	logger.Logger(fmt.Sprintf("⏩ Skipped: %d", summary.SkippedCount), logger.LogInfo)
+	logger.Logger(fmt.Sprintf("❌ Failed: %d", summary.FailedCount), logger.LogError)
+
+	// Log detailed recipe lists by category
+	if len(summary.UpdatedRecipes) > 0 {
+		logger.Logger("\n📦 Updated Recipes:", logger.LogSuccess)
+		for _, recipe := range summary.UpdatedRecipes {
+			logger.Logger(fmt.Sprintf("  • %s", recipe), logger.LogSuccess)
+		}
+	}
+
+	if len(summary.UnchangedRecipes) > 0 {
+		logger.Logger("\n🔄 Unchanged Recipes:", logger.LogInfo)
+		for _, recipe := range summary.UnchangedRecipes {
+			logger.Logger(fmt.Sprintf("  • %s", recipe), logger.LogInfo)
+		}
+	}
+
+	if len(summary.SkippedRecipes) > 0 {
+		logger.Logger("\n⏩ Skipped Recipes:", logger.LogInfo)
+		for _, recipe := range summary.SkippedRecipes {
+			logger.Logger(fmt.Sprintf("  • %s", recipe), logger.LogInfo)
+		}
+	}
+
+	if len(summary.FailedRecipes) > 0 {
+		logger.Logger("\n❌ Failed Recipes:", logger.LogError)
+		for _, recipe := range summary.FailedRecipes {
+			logger.Logger(fmt.Sprintf("  • %s", recipe), logger.LogError)
+		}
+	}
+
+	// Final summary
+	if summary.FailedCount > 0 {
+		logger.Logger("🚨 Pipeline status: FAILURE - Some recipes failed.", logger.LogError)
+	} else {
+		logger.Logger("🎉 Pipeline status: SUCCESS - All recipes succeeded.", logger.LogSuccess)
+	}
 }
 
 // Helper function to handle notification
