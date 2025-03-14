@@ -106,6 +106,7 @@ jobs:
               --prefs="$AUTOPKG_PREFS_PATH" \
               --force="${{ github.event.inputs.override_force }}" \
               --format="${{ github.event.inputs.override_format }}" \
+              --pull=true
               
             # Correctly move the override file without adding extra ".recipe"
             OVERRIDE_FILE="$HOME/Library/AutoPkg/RecipeOverrides/$recipe.${{ github.event.inputs.override_format }}"
