@@ -1,5 +1,4 @@
 [
-  "AdobeAdminConsole-latest.jamf",
-  "swiftDialog.download.recipe",
-  "AmazonQ.intune"
+  "AppleLoops.ds.recipe",
+  "AppleEpsonPrinterDrivers.pkg.recipe"
 ]
