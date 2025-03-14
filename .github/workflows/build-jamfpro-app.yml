@@ -120,11 +120,6 @@ jobs:
             --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
             --fail-recipes-without-trust-info=true
       
-      # - name: Add Recipe Repos
-      #   if: ${{ github.event.inputs.verify_trust != 'false' }}
-      #   run: |
-      #     for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
-      
       - name: Resolve Recipe Repo Dependencies
         env:
           RECIPE: ${{ github.event.inputs.recipe }}
