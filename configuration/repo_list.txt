@@ -1,2 +1,5 @@
 autopkg/dataJAR-recipes
 autopkg/almenscorner-recipes
+autopkg/jazzace-recipes
+autopkg/novaksam-recipes
+autopkg/apizz-recipes
