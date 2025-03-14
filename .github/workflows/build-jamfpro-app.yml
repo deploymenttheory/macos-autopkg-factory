@@ -147,10 +147,8 @@ jobs:
       - name: Run AutoPkg Recipes
         if: ${{ github.event.inputs.recipes != '' }}
         run: |
-          echo "Running recipe from environment variable: $RUN_RECIPE"
+          echo "Running recipes:"
           
-          # We don't need to pass the --recipes flag when using RUN_RECIPE env var
-          # Our parser will automatically detect the RUN_RECIPE environment variable
           autopkgctl run \
             --prefs="$AUTOPKG_PREFS_PATH" \
             --report="$GITHUB_WORKSPACE/autopkg-run-report-env.json" \
