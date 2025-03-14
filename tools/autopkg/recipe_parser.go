@@ -139,7 +139,7 @@ func RunRecipesFromList(recipeListPath string, options *RecipeBatchRunOptions) (
 	// Create a parser with file and environment sources
 	parser := NewRecipeParser(
 		&FileRecipeSource{FilePath: recipeListPath},
-		&EnvironmentRecipeSource{EnvVarName: "RECIPE"},
+		&EnvironmentRecipeSource{EnvVarName: "RUN_RECIPE"},
 	)
 
 	// Parse recipes from all sources
@@ -158,7 +158,7 @@ func RunRecipesFromList(recipeListPath string, options *RecipeBatchRunOptions) (
 func ParseRecipeList(filePath string) ([]string, error) {
 	parser := NewRecipeParser(
 		&FileRecipeSource{FilePath: filePath},
-		&EnvironmentRecipeSource{EnvVarName: "RECIPE"},
+		&EnvironmentRecipeSource{EnvVarName: "RUN_RECIPE"},
 	)
 
 	return parser.ParseRecipes()
