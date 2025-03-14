@@ -142,10 +142,30 @@ jobs:
             --verify-trust=true \
             --update-trust=false \
             --ignore-verify-failures=false
+      
+      # Recipes Approach
+      - name: Run AutoPkg Recipes via Environment Variable
+        if: ${{ github.event.inputs.recipes == !'' }}
+        run: |
+          echo "Running recipe from environment variable: $RUN_RECIPE"
+          
+          # We don't need to pass the --recipes flag when using RUN_RECIPE env var
+          # Our parser will automatically detect the RUN_RECIPE environment variable
+          autopkgctl run \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --report="$GITHUB_WORKSPACE/autopkg-run-report-env.json" \
+            --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
+            --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
+            --stop-on-error=true \
+            --verbose=3 \
+            --verify-trust=true \
+            --update-trust=false \
+            --ignore-verify-failures=false
+            --recipes="${{ github.event.inputs.recipes }}"
 
       # Recipe List File Approach
       - name: Run AutoPkg Recipes via Recipe List File
-        if: ${{ github.event.inputs.recipe == '' }}
+        if: ${{ github.event.inputs.recipe_list_file == !'' }}
         run: |
           echo "Running recipes from list file: ${{ env.RECIPE_LIST_FILE }}"
           
