@@ -52,7 +52,7 @@ env:
   # Using RUN_RECIPE instead of RECIPE to match the parser's expected env var name
   RUN_RECIPE: ${{ github.event.inputs.recipe }}
   # Recipe list file path
-  RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file || '$GITHUB_WORKSPACE/configuration/recipe_list.json' }}
+  RECIPE_LIST_FILE: ${{ github.event.inputs.recipe_list_file || '$GITHUB_WORKSPACE/configuration/recipe_list.txt' }}
 
 jobs:
   autopkg-run:
