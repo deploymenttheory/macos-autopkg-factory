@@ -69,6 +69,7 @@ func RunRecipeBatch(recipes []string, options *RecipeBatchRunOptions) (map[strin
 				PrefsPath:    options.PrefsPath,
 				SearchDirs:   options.SearchDirs,
 				OverrideDirs: options.OverrideDirs,
+				VerboseLevel: options.VerboseLevel,
 			}
 
 			success, _, _, err := VerifyTrustInfoForRecipes([]string{recipe}, verifyOptions)
@@ -81,6 +82,7 @@ func RunRecipeBatch(recipes []string, options *RecipeBatchRunOptions) (map[strin
 						PrefsPath:    options.PrefsPath,
 						SearchDirs:   options.SearchDirs,
 						OverrideDirs: options.OverrideDirs,
+						VerboseLevel: options.VerboseLevel,
 					}
 
 					_, err := UpdateTrustInfoForRecipes([]string{recipe}, updateOptions)

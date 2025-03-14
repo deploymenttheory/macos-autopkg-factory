@@ -110,12 +110,34 @@ jobs:
         run: |
           for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
           
-      - name: Run AutoPkg Recipes
+      # Environment Variable Approach
+      - name: Run AutoPkg Recipes via Environment Variable
+        if: ${{ github.event.inputs.recipe != '' }}
         run: |
-          # Run recipes
+          echo "Running recipe from environment variable: $RECIPE"
+          
+          # Run recipes using the RECIPE environment variable (already set)
           autopkgctl run \
             --prefs="$AUTOPKG_PREFS_PATH" \
-            --report="$GITHUB_WORKSPACE/autopkg-run-report.json" \
+            --report="$GITHUB_WORKSPACE/autopkg-run-report-env.json" \
+            --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
+            --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
+            --stop-on-error=true \
+            --verbose=3 \
+            --verify-trust=true \
+            --update-trust=true \
+            --ignore-verify-failures=false
+
+      # Recipe List File Approach
+      - name: Run AutoPkg Recipes via Recipe List File
+        if: ${{ github.event.inputs.recipe == '' }}
+        run: |
+          echo "Running recipes from list file: ${{ env.RECIPE_LIST_FILE }}"
+          
+          # Run recipes using the recipe list file
+          autopkgctl run \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --report="$GITHUB_WORKSPACE/autopkg-run-report-list.json" \
             --notify-teams="${{ env.TEAMS_WEBHOOK }}" \
             --override-dir="${{ env.RECIPE_OVERRIDE_DIRS }}" \
             --stop-on-error=true \
@@ -123,7 +145,7 @@ jobs:
             --verify-trust=true \
             --update-trust=true \
             --ignore-verify-failures=false \
-            --recipes="$RUN_RECIPE"
+            --recipes="${{ env.RECIPE_LIST_FILE }}"
 
       - name: Cleanup Cache
         if: always()
@@ -139,4 +161,6 @@ jobs:
         uses: actions/upload-artifact@v4.6.1
         with:
           name: autopkg-run-report
-          path: ${{ github.workspace }}/autopkg-run-report.json
+          path: |
+            ${{ github.workspace }}/autopkg-run-report-env.json
+            ${{ github.workspace }}/autopkg-run-report-list.json

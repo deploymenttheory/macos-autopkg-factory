@@ -912,6 +912,7 @@ type UpdateTrustInfoOptions struct {
 	PrefsPath    string
 	SearchDirs   []string
 	OverrideDirs []string
+	VerboseLevel int // 0 = normal, 1 = -v, 2 = -vv, 3 = -vvv
 }
 
 // VerifyTrustInfoForRecipes verifies parent recipe trust info for one or more recipe overrides
