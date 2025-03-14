@@ -135,7 +135,7 @@ jobs:
             --stop-on-error=true \
             --verbose=3 \
             --verify-trust=true \
-            --update-trust=true \
+            --update-trust=false \
             --ignore-verify-failures=false
 
       # Recipe List File Approach
@@ -156,7 +156,7 @@ jobs:
             --stop-on-error=true \
             --verbose=3 \
             --verify-trust=true \
-            --update-trust=true \
+            --update-trust=false \
             --ignore-verify-failures=false \
             --recipe-list="${{ env.RECIPE_LIST_FILE }}"
 
