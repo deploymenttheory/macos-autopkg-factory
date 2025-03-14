@@ -813,9 +813,15 @@ func RunRecipe(recipe string, options *RunOptions) (string, error) {
 		args = append(args, "--update-trust-info")
 	}
 
-	args = append(args, recipe)
+	if options.RecipeList == "" && recipe != "" {
+		args = append(args, recipe)
+	}
 
-	logger.Logger(fmt.Sprintf("🚀 Running recipe: %s", recipe), logger.LogInfo)
+	if options.RecipeList != "" {
+		logger.Logger(fmt.Sprintf("🚀 Running recipe list: %s", options.RecipeList), logger.LogInfo)
+	} else {
+		logger.Logger(fmt.Sprintf("🚀 Running recipe: %s", recipe), logger.LogInfo)
+	}
 
 	logger.Logger(fmt.Sprintf("🖥️ Running command: autopkg %s", strings.Join(args, " ")), logger.LogDebug)
 
