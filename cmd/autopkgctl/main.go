@@ -49,8 +49,6 @@ var (
 	updateTrustOnFailure bool
 	ignoreVerifyFailures bool
 	searchDirs           []string
-	slackWebhookRun      string // Separate from the configure flag
-	slackUsernameRun     string // Separate from the configure flag
 	slackChannel         string
 	slackIcon            string
 	variables            map[string]string

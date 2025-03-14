@@ -124,6 +124,15 @@ jobs:
         run: |
           for repo in $(cat ./configuration/repo_list.txt); do autopkg repo-add "$repo" && autopkg repo-update "$repo"; done
       
+      - name: Resolve Recipe Repo Dependencies
+        run: |
+          # Run recipe-repo-deps to resolve dependencies
+          autopkgctl recipe-repo-deps \
+            --prefs="$AUTOPKG_PREFS_PATH" \
+            --use-token \
+            --recipes "${{ github.event.inputs.recipes }}" \
+            --repo-list-path="./configuration/repo_list.txt"
+      
       # Environment Variable Approach
       - name: Run AutoPkg Recipe via Environment Variable
         if: ${{ github.event.inputs.recipe != '' }}
