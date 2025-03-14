@@ -1,0 +1,12 @@
+Identifier: local.download.MacadminsPython
+Input:
+  INCLUDE_PRERELEASES: 'True'
+  NAME: MacadminsPython
+ParentRecipe: com.github.jazzace.download.MacadminsPython
+ParentRecipeTrustInfo:
+  non_core_processors: {}
+  parent_recipes:
+    com.github.jazzace.download.MacadminsPython:
+      git_hash: fddf438618df648a8f3f82db1495aa69d463709f
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/macadmins/MacadminsPython.download.recipe
+      sha256_hash: 9cba96bd1b8109cf0e3e9901a0f1e01ec43c8ba449106fc5acd556044bdd1323
