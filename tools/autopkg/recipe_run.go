@@ -3,6 +3,7 @@ package autopkg
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -82,8 +83,33 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 
 	isRecipeListFile := strings.HasSuffix(strings.ToLower(recipeInput), ".txt")
 
+	// Modified section for recipe list file handling
 	if isRecipeListFile {
 		logger.Logger(fmt.Sprintf("🚀 Running recipes from list file: %s", recipeInput), logger.LogInfo)
+
+		// Read the list file to extract recipe names
+		fileData, readErr := os.ReadFile(recipeInput)
+		if readErr != nil {
+			logger.Logger(fmt.Sprintf("❌ Failed to read recipe list file: %v", readErr), logger.LogError)
+			return nil, readErr
+		}
+
+		// Parse individual recipe names from the file
+		var recipeNames []string
+		lines := strings.Split(string(fileData), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" && !strings.HasPrefix(line, "#") {
+				// Store raw recipe name without .recipe suffix (parser will add it later)
+				if strings.HasSuffix(line, ".recipe") {
+					line = line[:len(line)-7]
+				}
+				recipeNames = append(recipeNames, line)
+			}
+		}
+
+		logger.Logger(fmt.Sprintf("📋 Found %d recipes in list file", len(recipeNames)), logger.LogInfo)
+
 		startTime := time.Now()
 
 		runOpts := &RunOptions{
@@ -102,31 +128,65 @@ func RunRecipeBatch(recipeInput string, options *RecipeBatchRunOptions) (map[str
 		output, err := RunRecipe("", runOpts)
 		executionTime := time.Since(startTime)
 
-		// Determine status based on output and error
-		status := "failed"
-		if err == nil {
-			if strings.Contains(output, "No new updates available") || strings.Contains(output, "No changes") {
-				status = "unchanged"
-			} else if strings.Contains(output, "Downloaded") || strings.Contains(output, "Installing") || strings.Contains(output, "new version") {
-				status = "updated"
-			} else {
-				status = "unchanged" // Default if we can't determine
+		if len(recipeNames) > 0 {
+			// Create individual result entries for each recipe in the list
+			for _, recipeName := range recipeNames {
+				// Try to determine status for this specific recipe
+				recipeStatus := "unchanged" // Default
+
+				if err != nil {
+					recipeStatus = "failed"
+				} else {
+					// Look for recipe-specific output indicators
+					recipeOutput := extractRecipeOutput(output, recipeName)
+					if strings.Contains(recipeOutput, "new version") ||
+						strings.Contains(recipeOutput, "Downloaded") ||
+						strings.Contains(recipeOutput, "Installing") {
+						recipeStatus = "updated"
+					}
+				}
+
+				recipeResult := &RecipeBatchResult{
+					Recipe:         recipeName,
+					Output:         output, // Full output, could be filtered per recipe
+					Executed:       true,
+					ExecutionError: err, // Same error status for all recipes
+					TrustVerified:  true,
+					TrustUpdated:   options.UpdateTrustOnFailure,
+					ExecutionTime:  executionTime, // Same execution time for all recipes
+					Status:         recipeStatus,
+				}
+
+				results[recipeName] = recipeResult
+				handleNotifications(recipeResult, options)
 			}
-		}
+		} else {
+			// Fallback if we couldn't extract recipe names
+			status := "failed"
+			if err == nil {
+				if strings.Contains(output, "No new updates available") || strings.Contains(output, "No changes") {
+					status = "unchanged"
+				} else if strings.Contains(output, "Downloaded") || strings.Contains(output, "Installing") || strings.Contains(output, "new version") {
+					status = "updated"
+				} else {
+					status = "unchanged" // Default if we can't determine
+				}
+			}
 
-		result := &RecipeBatchResult{
-			Recipe:         recipeInput,
-			Output:         output,
-			Executed:       true,
-			ExecutionError: err,
-			TrustVerified:  true,
-			TrustUpdated:   options.UpdateTrustOnFailure,
-			ExecutionTime:  executionTime,
-			Status:         status,
-		}
+			result := &RecipeBatchResult{
+				Recipe:         recipeInput,
+				Output:         output,
+				Executed:       true,
+				ExecutionError: err,
+				TrustVerified:  true,
+				TrustUpdated:   options.UpdateTrustOnFailure,
+				ExecutionTime:  executionTime,
+				Status:         status,
+			}
 
-		results[recipeInput] = result
-		handleNotifications(result, options)
+			results[recipeInput] = result
+			handleNotifications(result, options)
+		}
 
 		if err != nil {
 			logger.Logger(fmt.Sprintf("❌ Recipe list %s failed after %s: %v", recipeInput, executionTime, err), logger.LogError)
@@ -363,4 +423,30 @@ func handleNotifications(result *RecipeBatchResult, options *RecipeBatchRunOptio
 			slackNotifier.NotifySlack(recipeLifecycle)
 		}
 	}
+}
+
+// extractRecipeOutput tries to extract output pertaining to a specific recipe
+func extractRecipeOutput(fullOutput, recipeName string) string {
+	lines := strings.Split(fullOutput, "\n")
+	var recipeOutput []string
+	inRecipeSection := false
+
+	for _, line := range lines {
+		if strings.Contains(line, recipeName) {
+			inRecipeSection = true
+			recipeOutput = append(recipeOutput, line)
+		} else if inRecipeSection {
+			// Continue collecting lines until we see another recipe header
+			// or a clear section delimiter
+			if strings.Contains(line, "Processing ") ||
+				strings.Contains(line, "===") ||
+				strings.Contains(line, "---") {
+				inRecipeSection = false
+			} else {
+				recipeOutput = append(recipeOutput, line)
+			}
+		}
+	}
+
+	return strings.Join(recipeOutput, "\n")
 }

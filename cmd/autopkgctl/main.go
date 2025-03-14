@@ -710,14 +710,7 @@ func runRecipes() error {
 		}
 	}
 
-	// Extended summary for pipeline reporting
-	logger.Logger("\n🚀 Pipeline Execution Summary", logger.LogInfo)
-	logger.Logger(fmt.Sprintf("Total recipes executed: %d", len(results)), logger.LogInfo)
-	logger.Logger(fmt.Sprintf("✅ Successful: %d", successCount), logger.LogSuccess)
-	logger.Logger(fmt.Sprintf("❌ Failed: %d", failCount), logger.LogError)
-
 	if failCount > 0 {
-		logger.Logger("🚨 Pipeline status: FAILURE - Some recipes failed.", logger.LogError)
 		return fmt.Errorf("recipe execution failed: %d recipes failed", failCount)
 	}
 
