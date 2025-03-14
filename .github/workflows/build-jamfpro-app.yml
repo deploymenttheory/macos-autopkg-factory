@@ -126,13 +126,25 @@ jobs:
       
       - name: Resolve Recipe Repo Dependencies
         run: |
-          # Run recipe-repo-deps to resolve dependencies
-          autopkgctl recipe-repo-deps \
-            --prefs="$AUTOPKG_PREFS_PATH" \
-            --use-token \
-            --recipes "${{ github.event.inputs.recipes }}" \
-            --repo-list-path="./configuration/repo_list.txt"
+          ARGS=("--prefs=$AUTOPKG_PREFS_PATH")
       
+          if [[ -n "${{ github.event.inputs.recipe }}" ]]; then
+            echo "📌 Single recipe detected: ${{ github.event.inputs.recipe }}"
+            ARGS+=("--recipes=${{ github.event.inputs.recipe }}")
+          elif [[ -n "${{ github.event.inputs.recipes }}" ]]; then
+            echo "📌 Multiple recipes detected: ${{ github.event.inputs.recipes }}"
+            ARGS+=("--recipes=${{ github.event.inputs.recipes }}")
+          elif [[ -n "${{ github.event.inputs.recipe_list_file }}" ]]; then
+            echo "📌 Recipe list file detected: ${{ github.event.inputs.recipe_list_file }}"
+            ARGS+=("--recipe-list=${{ github.event.inputs.recipe_list_file }}")
+          else
+            DEFAULT_RECIPE_LIST="$GITHUB_WORKSPACE/configuration/recipe_list.txt"
+            echo "📌 No recipe inputs detected, defaulting to: $DEFAULT_RECIPE_LIST"
+            ARGS+=("--recipe-list=$DEFAULT_RECIPE_LIST")
+          fi
+      
+          autopkgctl recipe-repo-deps "${ARGS[@]}"
+    
       # Environment Variable Approach
       - name: Run AutoPkg Recipe via Environment Variable
         if: ${{ github.event.inputs.recipe != '' }}
