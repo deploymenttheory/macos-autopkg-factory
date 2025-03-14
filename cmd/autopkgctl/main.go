@@ -96,7 +96,7 @@ func main() {
 		Short: "A CLI tool for managing AutoPkg",
 		Long:  "autopkgctl is a command-line interface for managing AutoPkg operations in CI/CD environments",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// Set log level
+
 			level := getLogLevel(logLevel)
 			logger.SetLogLevel(level)
 
@@ -114,7 +114,6 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "Set log level (DEBUG, INFO, WARNING, ERROR, SUCCESS)")
 	rootCmd.PersistentFlags().StringVar(&prefsPath, "prefs", "", "Path to AutoPkg preferences file")
 
-	// Setup command
 	setupCmd := &cobra.Command{
 		Use:   "setup",
 		Short: "Set up AutoPkg environment",
@@ -128,7 +127,6 @@ func main() {
 	setupCmd.Flags().BoolVar(&checkGit, "check-git", true, "Check if Git is installed")
 	setupCmd.Flags().BoolVar(&checkRoot, "check-root", true, "Check if running as root")
 
-	// Configure command
 	configureCmd := &cobra.Command{
 		Use:   "configure",
 		Short: "Configure AutoPkg settings",
@@ -165,7 +163,6 @@ func main() {
 	configureCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Custom directory for AutoPkg cache storage")
 	configureCmd.Flags().StringVar(&gitHubToken, "github-token", "", "GitHub API token for accessing private repositories and higher rate limits")
 
-	// Repo-add command
 	repoAddCmd := &cobra.Command{
 		Use:   "repo-add",
 		Short: "Add AutoPkg repositories",
@@ -176,7 +173,6 @@ func main() {
 
 	repoAddCmd.Flags().StringVar(&reposStr, "repos", "", "Comma-separated list of repositories to add")
 
-	// Recipe-repo-deps command
 	recipeDepsCmd := &cobra.Command{
 		Use:   "recipe-repo-deps",
 		Short: "Resolve recipe repository dependencies",
@@ -191,7 +187,6 @@ func main() {
 	recipeDepsCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Only show dependencies without adding them")
 	recipeDepsCmd.Flags().StringVar(&repoListPath, "repo-list-path", "", "Location to export added repo's to a text file for future autopkg runs")
 
-	// Verify-trust command
 	verifyTrustCmd := &cobra.Command{
 		Use:   "verify-trust",
 		Short: "Verify trust info for recipes",
@@ -301,7 +296,6 @@ func main() {
 	rootCmd.AddCommand(cleanupCmd)
 	rootCmd.AddCommand(makeOverrideCmd)
 
-	// Execute
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
@@ -309,7 +303,6 @@ func main() {
 }
 
 func runSetup() error {
-	// Execute setup
 	if checkRoot {
 		if err := autopkg.RootCheck(); err != nil {
 			fmt.Printf("❌ Root account check failed: %v\n", err)
@@ -353,20 +346,17 @@ func runConfigure(cmd *cobra.Command) error {
 		}
 	}
 
-	// Create preferences directory if it doesn't exist
 	prefsDir := filepath.Dir(expandedPrefsPath)
 	if err := os.MkdirAll(prefsDir, 0755); err != nil {
 		logger.Logger(fmt.Sprintf("❌ Failed to create preferences directory: %v", err), logger.LogError)
 		return err
 	}
 
-	// Get existing preferences or initialize empty map
 	_, err := autopkg.GetAutoPkgPreferences(expandedPrefsPath)
 	if err != nil {
 		logger.Logger("ℹ️ Creating new preferences file", logger.LogInfo)
 	}
 
-	// Prepare updates to preferences
 	updates := make(map[string]interface{})
 
 	// GitHub token
@@ -503,9 +493,7 @@ func runConfigure(cmd *cobra.Command) error {
 		updates["CACHE_DIR"] = os.Getenv("CACHE_DIR")
 	}
 
-	// Check if we have any updates to make
 	if len(updates) > 0 {
-		// Update preferences
 		if err := autopkg.UpdateAutoPkgPreferences(expandedPrefsPath, updates); err != nil {
 			logger.Logger(fmt.Sprintf("❌ Failed to write preferences: %v", err), logger.LogError)
 			return err
@@ -533,7 +521,6 @@ func runConfigure(cmd *cobra.Command) error {
 }
 
 func runRepoAdd() error {
-	// Parse repos
 	var repos []string
 	if reposStr != "" {
 		for _, r := range strings.Split(reposStr, ",") {
@@ -548,7 +535,6 @@ func runRepoAdd() error {
 		return fmt.Errorf("no repositories specified")
 	}
 
-	// Add repositories
 	output, err := autopkg.AddRepo(repos, prefsPath)
 	if err != nil {
 		fmt.Printf("❌ Failed to add repositories: %v\n", err)
@@ -698,7 +684,6 @@ func runRecipes() error {
 		logger.Logger(fmt.Sprintf("❌ Error during recipe execution: %v", err), logger.LogError)
 	}
 
-	// Summarize results
 	successCount, failCount := 0, 0
 	for recipe, result := range results {
 		if result.ExecutionError != nil {
