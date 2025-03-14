@@ -1,0 +1,20 @@
+Identifier: local.pkg.macOSLAPS3
+Input:
+  GITHUB_REPO: joshua-d-miller/macOSLAPS
+  INCLUDE_PRERELEASES: 'True'
+  NAME: macOSLAPS
+ParentRecipe: com.github.grahampugh.recipes.pkg.macOSLAPS
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.homebysix.VersionSplitter/VersionSplitter:
+      path: ''
+      sha256_hash: PROCESSOR FILEPATH NOT FOUND
+  parent_recipes:
+    com.github.grahampugh.recipes.download.macOSLAPS:
+      git_hash: 26a3505d57e3f86e4023ecab725e137e4872a14b
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/macOSLAPS/macOSLAPS3.download.recipe.yaml
+      sha256_hash: 29540dede1f8786bc8b9acdf030704af8945e35800c319c5ce5e2acb2dbe77e7
+    com.github.grahampugh.recipes.pkg.macOSLAPS:
+      git_hash: 24d80eb7f99f86c856f3ee177e736ccce0854b62
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/macOSLAPS/macOSLAPS3.pkg.recipe.yaml
+      sha256_hash: 99948dc31892ee7cba475aaca5db831f6710152892bee559846122138c98a19a
