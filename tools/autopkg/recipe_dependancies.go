@@ -129,7 +129,7 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 			logger.Logger(fmt.Sprintf("  Match %d: %s (from repo: %s)", i+1, id, info.Repo), logger.LogInfo)
 		}
 
-		logger.Logger("📦 Adding repositories for all matching recipes and their parents", logger.LogInfo)
+		logger.Logger("📂 Adding repositories for all matching recipes and their parents", logger.LogInfo)
 
 		for _, id := range matchedRecipes {
 			logger.Logger(fmt.Sprintf("🔄 Processing dependencies for: %s", id), logger.LogDebug)
@@ -165,7 +165,7 @@ func ResolveRecipeDependencies(recipeName string, useToken bool, prefsPath strin
 			repoNames = append(repoNames, repoName)
 		}
 
-		logger.Logger(fmt.Sprintf("📦 Adding %d repositories for recipe %s", len(repoNames), recipeName), logger.LogInfo)
+		logger.Logger(fmt.Sprintf("📂 Adding %d repositories for recipe %s", len(repoNames), recipeName), logger.LogInfo)
 
 		_, err := AddRepo(repoNames, prefsPath)
 		if err != nil {

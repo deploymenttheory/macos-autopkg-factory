@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 autopkg/dataJAR-recipes
 autopkg/almenscorner-recipes
 autopkg/jazzace-recipes
 autopkg/novaksam-recipes
 autopkg/apizz-recipes
+=======
+AutoPkg-Release.download.recipe.yaml
+>>>>>>> 9515d2c (tweaks)
