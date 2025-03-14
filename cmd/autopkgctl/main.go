@@ -655,8 +655,8 @@ func runVerifyTrust() error {
 
 // runRecipes executes recipes based on CLI flags, delegating execution to RunRecipeBatch
 func runRecipes() error {
-	if recipePath == "" && recipesPath == "" && recipesListPath == "" {
-		logger.Logger("❌ No recipes specified via --recipe, --recipes, or --recipe-list flags", logger.LogError)
+	if recipePath == "" && recipesPath == "" && recipesListPath == "" && os.Getenv("RECIPE_RUN") == "" {
+		logger.Logger("❌ No recipes specified via --recipe, --recipes, --recipe-list flags, or RECIPE_RUN environment variable", logger.LogError)
 		return fmt.Errorf("no recipes specified")
 	}
 
