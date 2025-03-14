@@ -1,0 +1,20 @@
+Identifier: local.pkg.MicrosoftMacProductFWLink
+Input:
+  NAME: MicrosoftProduct
+  PRODUCTID: '2009112'
+ParentRecipe: com.github.jazzace.pkg.microsoftmacproductfwlink
+ParentRecipeTrustInfo:
+  non_core_processors:
+    com.github.jazzace.processors/TextSearcher:
+      git_hash: 56ad67165615959c8e8b74e8144a4ba12c4c20da
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/JazzAce/TextSearcher.py
+      sha256_hash: 823dd071ef899e3618f39f126c20794cd4264de405bb71ae466c708ed47dc668
+  parent_recipes:
+    com.github.jazzace.download.microsoftmacproductfwlink:
+      git_hash: c58b4fbd332b388110b82cffe5fd70b6bc1d0711
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/Microsoft/MicrosoftMacProductFWLink.download.recipe
+      sha256_hash: 951646c631c2a439b0b564a39221b3d192181ee99506bc233bc4b281d5eabeeb
+    com.github.jazzace.pkg.microsoftmacproductfwlink:
+      git_hash: 9465f24b803bf286610777655fee56965429a2ec
+      path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.jazzace-recipes/Microsoft/MicrosoftMacProductFWLink.pkg.recipe
+      sha256_hash: 30352abb63bf9a07d4a5a7b5b342d179509371014df770d6f8a8c5770a66d4f7
