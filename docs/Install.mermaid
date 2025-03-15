@@ -1,0 +1,120 @@
+flowchart TD
+    start["Script Start\n#!/bin/zsh --no-rcs"] --> initVars[Initialize Variables]
+    initVars --> checkRosetta[Check Rosetta Installation]
+    
+    checkRosetta --> versionCheck["Check macOS Version\n(requires 10.14+)"]
+    versionCheck -->|"Pass"| argParsing["Parse Arguments\nGet Label"]
+    versionCheck -->|"Fail"| exitError["Exit with Error 98"]
+    
+    argParsing -->|"No args"| listLabels["Print Available Labels"]
+    argParsing -->|"version arg"| printVersion["Print Version and Exit"]
+    argParsing -->|"Valid label"| setupLogging["Setup Logging\nCheck Debug Mode"]
+    
+    setupLogging --> setupProxy["Setup Proxy\n(if defined)"]
+    setupProxy --> getUserInfo["Get Current User\nCheck for Root"]
+    getUserInfo --> checkSwiftDialog["Check Swift Dialog\nPresence & Version"]
+    
+    checkSwiftDialog --> processingLabel["Process Label\n(case statement)"]
+    processingLabel --> valuesfromarguments["Process Values\nfrom Arguments"]
+    processingLabel --> main["Main Script Execution"]
+    
+    main --> checkArgs[Check Arguments]
+    main --> printlog[printlog]
+    main --> cleanupAndExit[cleanupAndExit]
+    
+    subgraph "Installation Flow"
+        main --> getAppVersion[getAppVersion]
+        getAppVersion --> appCustomVersion["appCustomVersion()\n(if defined in label)"]
+        
+        main --> runUpdateTool[runUpdateTool]
+        runUpdateTool --> updateDialog
+        
+        main --> downloadURL["Download Archive\n(curl)"]
+        downloadURL --> initNamedPipe
+        downloadURL --> readDownloadPipe
+        readDownloadPipe --> updateDialog
+        
+        main --> checkRunningProcesses[checkRunningProcesses]
+        checkRunningProcesses --> displaydialog
+        checkRunningProcesses --> displaydialogContinue
+        checkRunningProcesses --> runAsUser
+        checkRunningProcesses --> cleanupAndExit
+        
+        main --> installPackage["Package Installation\nBased on Type"]
+        
+        installPackage --> installFromDMG
+        installPackage --> installFromPKG
+        installPackage --> installFromZIP
+        installPackage --> installFromTBZ
+        installPackage --> installPkgInDmg
+        installPackage --> installPkgInZip
+        installPackage --> installAppInDmgInZip
+        
+        installFromDMG --> mountDMG
+        installFromDMG --> installAppWithPath
+        mountDMG --> cleanupAndExit
+        
+        installPkgInDmg --> mountDMG
+        installPkgInDmg --> installFromPKG
+        
+        installFromPKG --> readPKGInstallPipe
+        installFromPKG --> cleanupAndExit
+        
+        installFromZIP --> installAppWithPath
+        installFromTBZ --> installAppWithPath
+        
+        installPkgInZip --> installFromPKG
+        
+        installAppInDmgInZip --> installFromDMG
+        
+        installAppWithPath --> cleanupAndExit
+        
+        main --> finishing[finishing]
+        finishing --> getAppVersion
+        finishing --> displaynotification
+    end
+    
+    subgraph "Cleanup and Utilities"
+        cleanupAndExit --> reopenClosedProcess
+        cleanupAndExit --> updateDialog
+        cleanupAndExit --> printlog
+        
+        printlog --> deduplicatelogs
+        
+        reopenClosedProcess --> reloadAsUser
+    end
+    
+    subgraph "Helper Functions"
+        runAsUser["runAsUser\nRun command as logged-in user"]
+        reloadAsUser["reloadAsUser\nReload user environment"]
+        displaydialog["displaydialog\nShow dialog with options"]
+        displaydialogContinue["displaydialogContinue\nShow dialog with continue only"]
+        displaynotification["displaynotification\nShow notification"]
+        initNamedPipe["initNamedPipe\nCreate or delete pipe"]
+        readDownloadPipe["readDownloadPipe\nRead download progress"]
+        readPKGInstallPipe["readPKGInstallPipe\nRead installation progress"]
+        killProcess["killProcess\nKill process by PID"]
+        hasDisplaySleepAssertion["hasDisplaySleepAssertion\nCheck for DND apps"]
+        deduplicatelogs["deduplicatelogs\nRemove duplicate log entries"]
+        updateDialog["updateDialog\nUpdate progress in Swift Dialog"]
+    end
+    
+    subgraph "GitHub Utilities"
+        downloadURLFromGit["downloadURLFromGit\nGet latest GitHub release URL"]
+        versionFromGit["versionFromGit\nGet latest GitHub version"]
+        xpath["xpath\nProcess XML data"]
+        getJSONValue["getJSONValue\nProcess JSON data"]
+        
+        downloadURLFromGit --> cleanupAndExit
+        versionFromGit --> printlog
+    end
+    
+    subgraph "Configuration Variables"
+        initVars --> DEBUG["DEBUG\nDebug mode (0-2)"]
+        initVars --> NOTIFY["NOTIFY\nNotification behavior"]
+        initVars --> BLOCKING_PROCESS_ACTION["BLOCKING_PROCESS_ACTION\nHow to handle running apps"]
+        initVars --> LOGO["LOGO\nIcon for dialogs"]
+        initVars --> SYSTEMOWNER["SYSTEMOWNER\nApp ownership setting"]
+        initVars --> REOPEN["REOPEN\nReopen closed apps"]
+        initVars --> DIALOG_CMD_FILE["DIALOG_CMD_FILE\nSwift Dialog integration"]
+    end
