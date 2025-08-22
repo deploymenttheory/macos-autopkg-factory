@@ -3,7 +3,7 @@ Input:
   GITHUB_REPO: joshua-d-miller/macOSLAPS
   INCLUDE_PRERELEASES: 'True'
   NAME: macOSLAPS
-ParentRecipe: com.github.grahampugh.recipes.pkg.macOSLAPS
+ParentRecipe: local.pkg.macOSLAPS3
 ParentRecipeTrustInfo:
   non_core_processors:
     com.github.homebysix.VersionSplitter/VersionSplitter:
@@ -18,3 +18,7 @@ ParentRecipeTrustInfo:
       git_hash: 24d80eb7f99f86c856f3ee177e736ccce0854b62
       path: ~/Library/AutoPkg/RecipeRepos/com.github.autopkg.grahampugh-recipes/macOSLAPS/macOSLAPS3.pkg.recipe.yaml
       sha256_hash: 99948dc31892ee7cba475aaca5db831f6710152892bee559846122138c98a19a
+    local.pkg.macOSLAPS3:
+      git_hash: 9d9a83b60fa63e45f30993a8a928391a7b18506d
+      path: ~/work/macos-autopkg-factory/macos-autopkg-factory/recipe_overrides/macOSLAPS3.pkg.recipe.yaml
+      sha256_hash: 5ed6023898dda86a6593975ecdb5f273f8ad678e067fae0a85a47e05adec01a6
